@@ -1,10 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Star, Send, CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
-import { ConsultationData } from '../lib/supabase';
 import { submitFeedback } from '../services/feedbackService';
 
+// Flexible interface that can handle both old and new data structures
+interface ConsultationInfo {
+  // New structure
+  session_id?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  
+  // Old structure (for backward compatibility)
+  id?: string;
+  name?: string;
+  phone?: string;
+  
+  created_at?: string;
+}
+
 interface FeedbackFormProps {
-  consultation: ConsultationData;
+  consultation: ConsultationInfo;
   onBack: () => void;
   onComplete: () => void;
 }
@@ -27,13 +41,18 @@ interface FeedbackData {
 }
 
 const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onComplete }) => {
+  // Helper functions to handle both old and new data structures
+  const getAppointmentId = () => consultation.session_id || consultation.id || '';
+  const getCustomerName = () => consultation.customer_name || consultation.name || '';
+  const getCustomerPhone = () => consultation.customer_phone || consultation.phone || '';
+
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [attemptedNext, setAttemptedNext] = useState(false);
   const [formData, setFormData] = useState<FeedbackData>({
-    appointmentId: consultation.id || '',
-    customerName: consultation.name,
+    appointmentId: getAppointmentId(),
+    customerName: getCustomerName(),
     services: [],
     staffMember: '',
     serviceDuration: '',
@@ -49,6 +68,60 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
   });
 
   const totalSteps = 6;
+
+  // Auto-focus functionality
+  const firstInputRef = useRef<HTMLInputElement>(null);
+  const firstTextareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Auto-focus on first input when step changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const activeElement = firstInputRef.current || firstTextareaRef.current;
+      if (activeElement && !activeElement.value) {
+        activeElement.focus();
+      }
+    }, 100); // Small delay to ensure DOM is rendered
+    
+    return () => clearTimeout(timer);
+  }, [currentStep]);
+
+  // Fill form with dummy data for testing - only fill empty fields
+  const fillWithDummyData = () => {
+    const dummyData = {
+      appointmentId: getAppointmentId(),
+      customerName: getCustomerName(),
+      services: ['Facial Treatment', 'Skin Analysis'],
+      staffMember: 'Sarah Johnson',
+      serviceDuration: '90 minutes',
+      overallRating: 5,
+      serviceQuality: 5,
+      staffRating: 5,
+      cleanliness: 5,
+      valueForMoney: 4,
+      textFeedback: 'Excellent service! The facial treatment was very relaxing and my skin feels amazing. Sarah was very professional and knowledgeable.',
+      additionalComments: 'Would definitely recommend to friends. Great facility and atmosphere.',
+      recommendationScore: 9,
+      wouldReturn: 'Yes, definitely'
+    };
+
+    // Smart fill: only fill empty/default values
+    setFormData(prevData => ({
+      appointmentId: prevData.appointmentId || dummyData.appointmentId,
+      customerName: prevData.customerName || dummyData.customerName,
+      services: prevData.services.length > 0 ? prevData.services : dummyData.services,
+      staffMember: prevData.staffMember.trim() !== '' ? prevData.staffMember : dummyData.staffMember,
+      serviceDuration: prevData.serviceDuration !== '' ? prevData.serviceDuration : dummyData.serviceDuration,
+      overallRating: prevData.overallRating > 0 ? prevData.overallRating : dummyData.overallRating,
+      serviceQuality: prevData.serviceQuality > 0 ? prevData.serviceQuality : dummyData.serviceQuality,
+      staffRating: prevData.staffRating > 0 ? prevData.staffRating : dummyData.staffRating,
+      cleanliness: prevData.cleanliness > 0 ? prevData.cleanliness : dummyData.cleanliness,
+      valueForMoney: prevData.valueForMoney > 0 ? prevData.valueForMoney : dummyData.valueForMoney,
+      textFeedback: prevData.textFeedback.trim() !== '' ? prevData.textFeedback : dummyData.textFeedback,
+      additionalComments: prevData.additionalComments.trim() !== '' ? prevData.additionalComments : dummyData.additionalComments,
+      recommendationScore: prevData.recommendationScore > 0 ? prevData.recommendationScore : dummyData.recommendationScore,
+      wouldReturn: prevData.wouldReturn !== '' ? prevData.wouldReturn : dummyData.wouldReturn
+    }));
+  };
 
   const handleNext = () => {
     setAttemptedNext(true);
@@ -114,6 +187,31 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
       setIsSubmitting(false);
     }
   };
+
+  // Handle Enter key to advance to next step (avoid stale state by using latest handlers)
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        // Don't trigger on textarea (allow normal enter behavior)
+        if (e.target instanceof HTMLTextAreaElement) {
+          return;
+        }
+
+        e.preventDefault();
+
+        if (currentStep === totalSteps) {
+          // On final step, Enter submits the form; validation is handled inside
+          handleSubmit();
+        } else {
+          // On other steps, Enter goes to next step; validation is handled inside
+          handleNext();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [currentStep, totalSteps, handleNext, handleSubmit]);
 
   const StarRating: React.FC<{
     rating: number;
@@ -224,9 +322,22 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
                   Staff Member Name *
                 </label>
                 <input
+                  ref={currentStep === 1 ? firstInputRef : undefined}
                   type="text"
                   value={formData.staffMember}
-                  onChange={(e) => setFormData({ ...formData, staffMember: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, staffMember: e.target.value });
+                    // Clear validation errors when user starts typing (always clear if there's content)
+                    if (e.target.value.trim() !== '') {
+                      setAttemptedNext(false);
+                    }
+                  }}
+                  onFocus={() => {
+                    // Clear validation errors when field gets focus
+                    if (formData.staffMember.trim() !== '') {
+                      setAttemptedNext(false);
+                    }
+                  }}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                     attemptedNext && formData.staffMember.trim() === '' 
                       ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
@@ -251,7 +362,12 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
                         checked={formData.services.includes(service)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setFormData({ ...formData, services: [...formData.services, service] });
+                            const newServices = [...formData.services, service];
+                            setFormData({ ...formData, services: newServices });
+                            // Clear validation errors when services are selected
+                            if (newServices.length > 0) {
+                              setAttemptedNext(false);
+                            }
                           } else {
                             setFormData({ ...formData, services: formData.services.filter(s => s !== service) });
                           }
@@ -279,7 +395,13 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
                         name="serviceDuration"
                         value={duration}
                         checked={formData.serviceDuration === duration}
-                        onChange={(e) => setFormData({ ...formData, serviceDuration: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, serviceDuration: e.target.value });
+                          // Clear validation errors when duration is selected
+                          if (e.target.value !== '') {
+                            setAttemptedNext(false);
+                          }
+                        }}
                         className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
                       <span className="text-sm text-gray-700">{duration}</span>
@@ -309,7 +431,13 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
             <div className="text-center space-y-6">
               <StarRating
                 rating={formData.overallRating}
-                onRatingChange={(rating) => setFormData({ ...formData, overallRating: rating })}
+                onRatingChange={(rating) => {
+                  setFormData({ ...formData, overallRating: rating });
+                  // Clear validation errors when user makes rating selection (always clear if rating > 0)
+                  if (rating > 0) {
+                    setAttemptedNext(false);
+                  }
+                }}
               />
               <p className="text-lg text-gray-700 font-medium">
                 {formData.overallRating === 0 && "Please select a rating"}
@@ -343,7 +471,12 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
                 <h3 className="text-gray-800 font-medium mb-3">Service Quality</h3>
                 <StarRating
                   rating={formData.serviceQuality}
-                  onRatingChange={(rating) => setFormData({ ...formData, serviceQuality: rating })}
+                  onRatingChange={(rating) => {
+                    setFormData({ ...formData, serviceQuality: rating });
+                    if (rating > 0) {
+                      setAttemptedNext(false);
+                    }
+                  }}
                   size="small"
                 />
                 {attemptedNext && formData.serviceQuality === 0 && (
@@ -355,7 +488,12 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
                 <h3 className="text-gray-800 font-medium mb-3">Staff Performance</h3>
                 <StarRating
                   rating={formData.staffRating}
-                  onRatingChange={(rating) => setFormData({ ...formData, staffRating: rating })}
+                  onRatingChange={(rating) => {
+                    setFormData({ ...formData, staffRating: rating });
+                    if (rating > 0) {
+                      setAttemptedNext(false);
+                    }
+                  }}
                   size="small"
                 />
                 {attemptedNext && formData.staffRating === 0 && (
@@ -367,7 +505,12 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
                 <h3 className="text-gray-800 font-medium mb-3">Facility Cleanliness</h3>
                 <StarRating
                   rating={formData.cleanliness}
-                  onRatingChange={(rating) => setFormData({ ...formData, cleanliness: rating })}
+                  onRatingChange={(rating) => {
+                    setFormData({ ...formData, cleanliness: rating });
+                    if (rating > 0) {
+                      setAttemptedNext(false);
+                    }
+                  }}
                   size="small"
                 />
                 {attemptedNext && formData.cleanliness === 0 && (
@@ -379,7 +522,12 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
                 <h3 className="text-gray-800 font-medium mb-3">Value for Money</h3>
                 <StarRating
                   rating={formData.valueForMoney}
-                  onRatingChange={(rating) => setFormData({ ...formData, valueForMoney: rating })}
+                  onRatingChange={(rating) => {
+                    setFormData({ ...formData, valueForMoney: rating });
+                    if (rating > 0) {
+                      setAttemptedNext(false);
+                    }
+                  }}
                   size="small"
                 />
                 {attemptedNext && formData.valueForMoney === 0 && (
@@ -408,8 +556,21 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
                   What did you like most about your experience? *
                 </label>
                 <textarea
+                  ref={currentStep === 4 ? firstTextareaRef : undefined}
                   value={formData.textFeedback}
-                  onChange={(e) => setFormData({ ...formData, textFeedback: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, textFeedback: e.target.value });
+                    // Clear validation errors when user starts typing (always clear if there's content)
+                    if (e.target.value.trim() !== '') {
+                      setAttemptedNext(false);
+                    }
+                  }}
+                  onFocus={() => {
+                    // Clear validation errors when field gets focus
+                    if (formData.textFeedback.trim() !== '') {
+                      setAttemptedNext(false);
+                    }
+                  }}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none ${
                     attemptedNext && formData.textFeedback.trim() === '' 
                       ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
@@ -454,7 +615,13 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
             <div>
               <RecommendationScale
                 score={formData.recommendationScore}
-                onScoreChange={(score) => setFormData({ ...formData, recommendationScore: score })}
+                onScoreChange={(score) => {
+                  setFormData({ ...formData, recommendationScore: score });
+                  // Clear validation errors when score is selected
+                  if (score > 0) {
+                    setAttemptedNext(false);
+                  }
+                }}
               />
               {attemptedNext && formData.recommendationScore === 0 && (
                 <p className="text-red-500 text-sm mt-4 text-center">Please select a recommendation score</p>
@@ -483,7 +650,13 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
                     name="wouldReturn"
                     value={option}
                     checked={formData.wouldReturn === option}
-                    onChange={(e) => setFormData({ ...formData, wouldReturn: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, wouldReturn: e.target.value });
+                      // Clear validation errors when option is selected
+                      if (e.target.value !== '') {
+                        setAttemptedNext(false);
+                      }
+                    }}
                     className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                   />
                   <span className="text-gray-700 font-medium">{option}</span>
@@ -512,7 +685,7 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
                 Client Feedback
               </h1>
               <p className="text-gray-600">
-                Feedback for <span className="font-semibold text-blue-600">{consultation.name}</span>
+                Feedback for <span className="font-semibold text-blue-600">{getCustomerName()}</span>
               </p>
             </div>
             
@@ -548,13 +721,26 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
         {/* Navigation */}
         <footer className="bg-white border-t border-gray-200 px-6 py-4">
           <div className="max-w-4xl mx-auto flex justify-between items-center">
-            <button
-              onClick={currentStep === 1 ? onBack : handlePrevious}
-              className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              <ArrowLeft size={20} />
-              <span>{currentStep === 1 ? 'Back to Clients' : 'Previous'}</span>
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={currentStep === 1 ? onBack : handlePrevious}
+                className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                <ArrowLeft size={20} />
+                <span>{currentStep === 1 ? 'Back to Clients' : 'Previous'}</span>
+              </button>
+              
+              {/* Smart Dummy Data Button - Only show on first step */}
+              {currentStep === 1 && (
+                <button
+                  onClick={fillWithDummyData}
+                  className="px-4 py-2 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                  title="Fill remaining empty fields with test data (preserves your existing entries)"
+                >
+                  Fill Remaining (Test)
+                </button>
+              )}
+            </div>
             
             {currentStep === totalSteps ? (
               <button

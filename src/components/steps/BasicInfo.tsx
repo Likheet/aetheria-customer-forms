@@ -69,7 +69,7 @@ const BasicInfo: React.FC<StepProps> = ({ formData, updateFormData, onNext, onBa
         return (
           <div>
             <p className="text-white/60 text-sm mb-3 text-center">
-              Use Gmail, Yahoo, Outlook, or Hotmail
+              Enter a valid email address (you can use your own domain)
             </p>
             <input
               type="email"
@@ -77,7 +77,7 @@ const BasicInfo: React.FC<StepProps> = ({ formData, updateFormData, onNext, onBa
               onChange={(e) => handleInputChange(e.target.value)}
               onKeyPress={handleKeyPress}
               className="w-full px-6 py-4 text-lg border-2 border-white/30 rounded-2xl focus:ring-4 focus:ring-rose-400/30 focus:border-rose-400 transition-all duration-300 text-center bg-white/20 backdrop-blur-sm shadow-lg hover:shadow-xl font-light text-white placeholder-white/60"
-              placeholder="yourname@gmail.com"
+              placeholder="you@yourdomain.com"
             />
             {errors.email && <p className="text-red-500 text-sm mt-2 text-center">{errors.email}</p>}
           </div>

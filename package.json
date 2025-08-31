@@ -5,15 +5,30 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npx tsx scripts/buildProductIndex.ts && vite build",
+    "build:products": "npx tsx scripts/buildProductIndex.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@coreui/coreui": "^5.4.2",
+    "@coreui/react-pro": "^5.20.0",
+    "@mantine/core": "^8.2.7",
+    "@mantine/dates": "^8.2.7",
+    "@mantine/hooks": "^8.2.7",
+    "@radix-ui/react-popover": "^1.1.15",
+    "@radix-ui/react-slot": "^1.2.3",
     "@supabase/supabase-js": "^2.50.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "dayjs": "^1.11.18",
+    "flexsearch": "^0.8.205",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-day-picker": "^9.9.0",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",

@@ -1,15 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { User, Search, Clock, ArrowRight } from 'lucide-react';
-import { getConsultations } from '../services/consultationService';
-import { ConsultationData } from '../lib/supabase';
+import { getRecentConsultationSessions } from '../services/newConsultationService';
+
+// Updated interface for new consultation structure
+interface ConsultationSession {
+  session_id: string;
+  customer_id: string;
+  customer_name: string;
+  customer_phone: string;
+  created_at: string;
+  location?: string;
+  answers?: any;
+}
 
 interface ClientSelectionPageProps {
-  onSelectClient: (consultation: ConsultationData) => void;
+  onSelectClient: (consultation: ConsultationSession) => void;
   onBack: () => void;
 }
 
 const ClientSelectionPage: React.FC<ClientSelectionPageProps> = ({ onSelectClient, onBack }) => {
-  const [consultations, setConsultations] = useState<ConsultationData[]>([]);
+  const [consultations, setConsultations] = useState<ConsultationSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -23,10 +33,10 @@ const ClientSelectionPage: React.FC<ClientSelectionPageProps> = ({ onSelectClien
     setError(null);
     
     try {
-      const result = await getConsultations();
+      const result = await getRecentConsultationSessions();
       if (result.success && result.data) {
         // Sort by most recent first
-        const sortedData = result.data.sort((a, b) => 
+        const sortedData = result.data.sort((a: ConsultationSession, b: ConsultationSession) => 
           new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
         );
         setConsultations(sortedData);
@@ -42,9 +52,8 @@ const ClientSelectionPage: React.FC<ClientSelectionPageProps> = ({ onSelectClien
   };
 
   const filteredConsultations = consultations.filter(consultation =>
-    consultation.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    consultation.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    consultation.phone.includes(searchTerm)
+    consultation.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    consultation.customer_phone.includes(searchTerm)
   );
 
   const formatDate = (dateString: string) => {
@@ -138,7 +147,7 @@ const ClientSelectionPage: React.FC<ClientSelectionPageProps> = ({ onSelectClien
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredConsultations.map((consultation) => (
                   <div
-                    key={consultation.id}
+                    key={consultation.session_id}
                     onClick={() => onSelectClient(consultation)}
                     className="group bg-white/80 backdrop-blur-sm rounded-xl p-6 border border-slate-200/50 cursor-pointer transition-all duration-300 hover:bg-white hover:shadow-xl hover:border-slate-300 hover:-translate-y-1 hover:scale-[1.02]"
                   >
@@ -149,9 +158,9 @@ const ClientSelectionPage: React.FC<ClientSelectionPageProps> = ({ onSelectClien
                         </div>
                         <div>
                           <h3 className="text-slate-900 font-semibold text-lg" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                            {consultation.name}
+                            {consultation.customer_name}
                           </h3>
-                          <p className="text-slate-600 text-sm font-light">{consultation.email}</p>
+                          <p className="text-slate-600 text-sm font-light">{consultation.customer_phone}</p>
                         </div>
                       </div>
                       <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-1 transition-all duration-300" />
@@ -163,22 +172,25 @@ const ClientSelectionPage: React.FC<ClientSelectionPageProps> = ({ onSelectClien
                         <span>{formatDate(consultation.created_at || '')}</span>
                       </div>
                       <div className="text-slate-600 font-light">
-                        <span className="font-medium">Phone:</span> {consultation.phone}
+                        <span className="font-medium">Phone:</span> {consultation.customer_phone}
                       </div>
-                      <div className="text-slate-600 font-light">
-                        <span className="font-medium">Age:</span> {consultation.age} • 
-                        <span className="font-medium ml-1">Gender:</span> {consultation.gender}
-                      </div>
+                      {consultation.location && (
+                        <div className="text-slate-600 font-light">
+                          <span className="font-medium">Location:</span> {consultation.location}
+                        </div>
+                      )}
                     </div>
                     
                     <div className="mt-4 pt-4 border-t border-slate-200">
                       <div className="flex flex-wrap gap-2">
                         <span className="px-3 py-1 bg-gradient-to-r from-slate-100 to-slate-200 rounded-full text-slate-700 text-xs font-medium shadow-sm">
-                          {consultation.skin_type} skin
+                          Recent Consultation
                         </span>
-                        <span className="px-3 py-1 bg-gradient-to-r from-slate-100 to-slate-200 rounded-full text-slate-700 text-xs font-medium shadow-sm">
-                          {consultation.top_skin_concern}
-                        </span>
+                        {consultation.answers && (
+                          <span className="px-3 py-1 bg-gradient-to-r from-green-100 to-green-200 rounded-full text-green-700 text-xs font-medium shadow-sm">
+                            Complete
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

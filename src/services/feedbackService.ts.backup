@@ -69,6 +69,18 @@ export const submitFeedback = async (feedbackData: FeedbackData): Promise<{ succ
     };
   }
 };
+    }
+
+    console.log('Feedback submitted successfully:', data);
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'An unexpected error occurred' 
+    };
+  }
+};
 
 export const getFeedback = async (): Promise<{ success: boolean; data?: any[]; error?: string }> => {
   try {
@@ -107,7 +119,7 @@ export const getFeedbackByAppointmentId = async (appointmentId: string): Promise
 
     return { success: true, data };
   } catch (error) {
-    console.error('Error fetching feedback by appointment ID:', error);
+    console.error('Error fetching feedback:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'An unexpected error occurred' 

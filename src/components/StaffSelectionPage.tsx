@@ -1,16 +1,18 @@
 import React from 'react';
-import { User, Star, Sparkles, Clipboard } from 'lucide-react';
+import { User, Star, Sparkles, Clipboard, FileEdit } from 'lucide-react';
 
 interface StaffSelectionPageProps {
   onSelectConsultation: () => void;
   onSelectFeedback: () => void;
   onSelectConsultantInput: () => void;
+  onSelectUpdatedConsult: () => void;
 }
 
 const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
   onSelectConsultation,
   onSelectFeedback,
-  onSelectConsultantInput
+  onSelectConsultantInput,
+  onSelectUpdatedConsult
 }) => {
   const handleKeyPress = (event: KeyboardEvent) => {
     if (event.key === '1') {
@@ -19,6 +21,8 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
       onSelectFeedback();
     } else if (event.key === '3') {
       onSelectConsultantInput();
+    } else if (event.key === '4') {
+      onSelectUpdatedConsult();
     }
   };
 
@@ -37,7 +41,7 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
         style={{
           background: 'linear-gradient(135deg, #0f172a 0%, #581c87 30%, #7c2d12 70%, #0f172a 100%)',
           backgroundSize: '200% 200%',
-          animation: 'gradientShift 8s ease-in-out infinite alternate'
+          animation: 'gradientShift 4s ease-in-out infinite alternate'
         }}
       />
       
@@ -60,7 +64,7 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
           style={{ 
             fontFamily: "'Poppins', sans-serif",
             textShadow: '0 4px 20px rgba(0,0,0,0.3)',
-            animationDelay: '0.2s',
+            animationDelay: '0.1s',
             opacity: 0,
             animationFillMode: 'forwards'
           }}
@@ -74,7 +78,7 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
           className="text-xl text-white/80 font-light animate-fade-in-up"
           style={{ 
             fontFamily: "'Poppins', sans-serif",
-            animationDelay: '0.5s',
+            animationDelay: '0.2s',
             opacity: 0,
             animationFillMode: 'forwards'
           }}
@@ -86,7 +90,7 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
       {/* Main Selection Area */}
       <div className="flex-1 flex items-center justify-center px-8 relative z-10">
         <div className="w-full max-w-4xl">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 md:gap-12">
             
             {/* Card 1 - Client Consultation */}
             <div
@@ -97,7 +101,7 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
                 borderRadius: '16px',
                 padding: '2rem',
                 boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                animationDelay: '0.8s',
+                animationDelay: '0.3s',
                 opacity: 0,
                 animationFillMode: 'forwards',
                 minHeight: '200px'
@@ -139,7 +143,7 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
                 borderRadius: '16px',
                 padding: '2rem',
                 boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                animationDelay: '1.1s',
+                animationDelay: '0.4s',
                 opacity: 0,
                 animationFillMode: 'forwards',
                 minHeight: '200px'
@@ -181,7 +185,7 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
                 borderRadius: '16px',
                 padding: '2rem',
                 boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                animationDelay: '1.4s',
+                animationDelay: '0.5s',
                 opacity: 0,
                 animationFillMode: 'forwards',
                 minHeight: '200px'
@@ -213,6 +217,48 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
               {/* Hover overlay */}
               <div className="absolute inset-0 bg-white/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
             </div>
+
+            {/* Card 4 - Updated Client Consult */}
+            <div
+              onClick={onSelectUpdatedConsult}
+              className="staff-card group cursor-pointer transform transition-all duration-500 hover:scale-105 hover:-translate-y-2 animate-fade-in-up"
+              style={{
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                borderRadius: '16px',
+                padding: '2rem',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+                animationDelay: '0.6s',
+                opacity: 0,
+                animationFillMode: 'forwards',
+                minHeight: '200px'
+              }}
+            >
+              <div className="flex flex-col items-center text-center h-full justify-center space-y-4">
+                <div className="relative">
+                  <FileEdit 
+                    className="w-16 h-16 text-white drop-shadow-lg group-hover:scale-110 transition-transform duration-300" 
+                    style={{ filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.3))' }}
+                  />
+                  <div className="absolute inset-0 bg-white/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
+                
+                <div>
+                  <h3 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    Updated Client Consult
+                  </h3>
+                  <p className="text-white/90 text-lg font-light" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    Follow-up consultation form
+                  </p>
+                </div>
+                
+                <div className="text-white/70 text-sm font-medium">
+                  Press <kbd className="px-2 py-1 bg-white/20 rounded text-white">4</kbd>
+                </div>
+              </div>
+              
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-white/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -222,7 +268,7 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
         <div 
           className="animate-fade-in"
           style={{ 
-            animationDelay: '1.4s',
+            animationDelay: '0.7s',
             opacity: 0,
             animationFillMode: 'forwards'
           }}

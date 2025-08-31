@@ -8,6 +8,17 @@ import FeedbackForm from './components/FeedbackForm';
 import Breadcrumb from './components/Breadcrumb';
 import { FormData } from './types';
 import { ConsultationData } from './lib/supabase';
+
+// Add interface for consultation sessions (for feedback)
+interface ConsultationSession {
+  session_id: string;
+  customer_id: string;
+  customer_name: string;
+  customer_phone: string;
+  created_at: string;
+  location?: string;
+  answers?: any;
+}
 import ProgressBar from './components/ProgressBar';
 import BasicInfo from './components/steps/BasicInfo';
 import SkinType from './components/steps/SkinType';
@@ -38,8 +49,9 @@ import DataConsent from './components/steps/DataConsent';
 import CommunicationPreference from './components/steps/CommunicationPreference';
 import Summary from './components/steps/Summary';
 import ConsultantInputForm from './components/ConsultantInputForm';
+import UpdatedConsultForm from './components/UpdatedConsultForm';
 
-type AppFlow = 'staff-selection' | 'consultation' | 'feedback' | 'client-selection' | 'feedback-form' | 'consultant-input';
+type AppFlow = 'staff-selection' | 'consultation' | 'feedback' | 'client-selection' | 'feedback-form' | 'consultant-input' | 'updated-consult';
 
 const initialFormData: FormData = {
   // Basic Information
@@ -109,7 +121,7 @@ function App() {
   const [currentFlow, setCurrentFlow] = useState<AppFlow>('staff-selection');
   const [showWelcome, setShowWelcome] = useState(false);
   const [showFeedbackWelcome, setShowFeedbackWelcome] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<ConsultationData | null>(null);
+  const [selectedClient, setSelectedClient] = useState<ConsultationSession | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -255,7 +267,47 @@ function App() {
     }, 600);
   };
 
-  const handleSelectClient = (consultation: ConsultationData) => {
+  const handleSelectUpdatedConsult = () => {
+    setIsTransitioning(true);
+    
+    // Create transition overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'transition-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.6s ease-in-out;
+      pointer-events: none;
+    `;
+    document.body.appendChild(overlay);
+    
+    // Trigger fade in
+    requestAnimationFrame(() => {
+      overlay.style.opacity = '1';
+    });
+    
+    // Switch to updated consult flow
+    setTimeout(() => {
+      setCurrentFlow('updated-consult');
+      setIsTransitioning(false);
+      
+      // Fade out overlay
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        if (document.body.contains(overlay)) {
+          document.body.removeChild(overlay);
+        }
+      }, 600);
+    }, 600);
+  };
+
+  const handleSelectClient = (consultation: ConsultationSession) => {
     setSelectedClient(consultation);
     setCurrentFlow('feedback-form');
     setShowFeedbackWelcome(false);
@@ -273,6 +325,10 @@ function App() {
   };
 
   const handleConsultantInputComplete = () => {
+    handleGoHome();
+  };
+
+  const handleUpdatedConsultComplete = () => {
     handleGoHome();
   };
 
@@ -393,8 +449,6 @@ function App() {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (!emailRegex.test(formData.email)) {
             newErrors.email = 'Please enter a valid email address';
-          } else if (!formData.email.includes('@gmail.com') && !formData.email.includes('@yahoo.com') && !formData.email.includes('@outlook.com') && !formData.email.includes('@hotmail.com')) {
-            newErrors.email = 'Please use a common email provider (Gmail, Yahoo, Outlook, Hotmail)';
           }
         }
         break;
@@ -668,6 +722,7 @@ function App() {
         onSelectConsultation={handleSelectConsultation}
         onSelectFeedback={handleSelectFeedback}
         onSelectConsultantInput={handleSelectConsultantInput}
+        onSelectUpdatedConsult={handleSelectUpdatedConsult}
       />
     );
   }
@@ -678,6 +733,16 @@ function App() {
       <ConsultantInputForm
         onBack={handleGoHome}
         onComplete={handleConsultantInputComplete}
+      />
+    );
+  }
+
+  // Updated Consult Flow
+  if (currentFlow === 'updated-consult') {
+    return (
+      <UpdatedConsultForm
+        onBack={handleGoHome}
+        onComplete={handleUpdatedConsultComplete}
       />
     );
   }

@@ -1,6 +1,208 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap');
 /* Import Poppins font */
+@import '@coreui/coreui/dist/css/coreui.min.css';
+
+/* Custom calendar styling */
+.calendar-wrapper {
+  font-family: inherit;
+  max-width: 100%;
+  min-width: 320px;
+  /* Scale factor to enlarge/shrink the entire calendar proportionally */
+  --calendar-scale: 1;
+  /* Drive CoreUI sizing vars from our scale */
+  --cui-calendar-table-cell-size: calc(2.6rem * var(--calendar-scale));
+  --cui-calendar-table-margin: calc(0.4rem * var(--calendar-scale));
+  --cui-calendar-nav-padding: calc(0.35rem * var(--calendar-scale));
+  --cui-calendar-nav-icon-width: calc(1rem * var(--calendar-scale));
+  --cui-calendar-nav-icon-height: calc(1rem * var(--calendar-scale));
+}
+
+.calendar-wrapper .calendar {
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  /* Ensure the calendar card itself is centered and only as wide as needed */
+  display: inline-block;
+  margin-left: auto;
+  margin-right: auto;
+  width: fit-content;
+  overflow: visible; /* allow month/year dropdown to overflow */
+  position: relative; /* anchor dropdown positioning */
+}
+
+/* Month/Year popup (CoreUI uses Bootstrap-like dropdown) */
+.calendar-wrapper .calendar .dropdown-menu {
+  z-index: 50; /* above surrounding shadows */
+  position: absolute !important; /* override popper when present */
+  left: 50% !important;
+  right: auto !important;
+  top: calc(100% + 0.25rem) !important; /* place under nav */
+  transform: translateX(-50%) !important;
+  margin-top: 0 !important;
+  border-radius: 0.75rem;
+  padding: 0.75rem; /* roomy interior */
+  display: grid; /* show months/years in a tidy grid */
+  grid-template-columns: repeat(4, minmax(3.5rem, 1fr));
+  gap: 0.5rem;
+  min-width: 18rem;
+  max-width: min(22rem, 90vw);
+  max-height: 16rem;
+  overflow-y: auto; /* scroll if too tall */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.calendar-wrapper .calendar .dropdown-menu .dropdown-item,
+.calendar-wrapper .calendar .dropdown-menu button.dropdown-item,
+.calendar-wrapper .calendar .dropdown-menu a.dropdown-item {
+  display: grid;
+  place-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: calc(0.9rem * var(--calendar-scale));
+  line-height: 1.25rem;
+  color: #374151; /* gray-700 */
+}
+
+.calendar-wrapper .calendar .dropdown-menu .dropdown-item:hover,
+.calendar-wrapper .calendar .dropdown-menu .dropdown-item:focus {
+  background-color: #fef3c7; /* amber-100 */
+  color: #92400e; /* amber-800 */
+}
+
+.calendar-wrapper .calendar table {
+  /* Center the grid inside the calendar */
+  margin: var(--cui-calendar-table-margin, 0.4rem) auto;
+}
+
+.calendar-wrapper .calendar .calendar-nav {
+  /* Tighter header so the divider line sits a bit higher */
+  padding: var(--cui-calendar-nav-padding, 0.375rem) 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  position: relative; /* anchor dropdown centering to the nav */
+}
+
+.calendar-wrapper .calendar .calendar-nav button {
+  transition: all 0.15s ease-in-out;
+}
+
+.calendar-wrapper .calendar .calendar-nav button:hover {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+/* Add visible nav chevrons like CoreUI example */
+.calendar-wrapper .calendar .calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.calendar-wrapper .calendar .calendar-nav [aria-label="Previous year"],
+.calendar-wrapper .calendar .calendar-nav [aria-label="Previous month"],
+.calendar-wrapper .calendar .calendar-nav [aria-label="Next month"],
+.calendar-wrapper .calendar .calendar-nav [aria-label="Next year"] {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  color: #6b7280; /* gray-500 */
+}
+
+.calendar-wrapper .calendar .calendar-nav [aria-label="Previous year"]::before {
+  content: "«";
+  font-size: 1rem;
+}
+.calendar-wrapper .calendar .calendar-nav [aria-label="Previous month"]::before {
+  content: "‹";
+  font-size: 1rem;
+}
+.calendar-wrapper .calendar .calendar-nav [aria-label="Next month"]::before {
+  content: "›";
+  font-size: 1rem;
+}
+.calendar-wrapper .calendar .calendar-nav [aria-label="Next year"]::before {
+  content: "»";
+  font-size: 1rem;
+}
+
+.calendar-wrapper .calendar .calendar-nav [aria-label] {
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+.calendar-wrapper .calendar .calendar-nav [aria-label]:hover {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+/* Center the month/year label between nav buttons */
+.calendar-wrapper .calendar .calendar-nav .calendar-nav-date {
+  margin: 0 auto;
+  font-weight: 600;
+  font-size: calc(0.95rem * var(--calendar-scale));
+  cursor: pointer;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+}
+
+.calendar-wrapper .calendar td {
+  position: relative;
+  text-align: center;
+  vertical-align: middle;
+  width: var(--cui-calendar-table-cell-size, 2.5rem);
+  height: var(--cui-calendar-table-cell-size, 2.5rem);
+  font-size: calc(1rem * var(--calendar-scale));
+  border: none;
+  cursor: pointer; /* make cells feel clickable */
+}
+
+/* Center weekday names */
+.calendar-wrapper .calendar thead th.calendar-cell {
+  text-align: center;
+  vertical-align: middle;
+}
+.calendar-wrapper .calendar thead th .calendar-header-cell-inner {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-weight: 500; /* lighter than before */
+  font-size: calc(0.75rem * var(--calendar-scale)); /* a bit smaller than day numbers */
+  color: #6b7280; /* gray-500 */
+}
+
+/* Some CoreUI builds render div.calendar-cell-inner instead of <button> */
+.calendar-wrapper .calendar td .calendar-cell-inner {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border-radius: 0.375rem;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.calendar-wrapper .calendar td:not(.disabled) .calendar-cell-inner:hover {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.calendar-wrapper .calendar .selected .calendar-cell-inner,
+.calendar-wrapper .calendar .selected .calendar-cell-inner:hover {
+  background-color: #f59e0b !important;
+  color: white !important;
+}
+
+.calendar-wrapper .calendar .today .calendar-cell-inner {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+/* Disabled cells */
+.calendar-wrapper .calendar td.disabled,
+.calendar-wrapper .calendar tr.disabled td {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -45,6 +247,16 @@
   50% { transform: translateY(-15px) rotate(180deg); }
 }
 
+/* Calendar UX tweaks and fixes */
+/* Remove pseudo-element arrows if any earlier rules inject them (encoding-safe override) */
+.calendar-wrapper .calendar .calendar-nav [aria-label="Previous year"]::before,
+.calendar-wrapper .calendar .calendar-nav [aria-label="Previous month"]::before,
+.calendar-wrapper .calendar .calendar-nav [aria-label="Next month"]::before,
+.calendar-wrapper .calendar .calendar-nav [aria-label="Next year"]::before {
+  content: none !important;
+}
+
+
 @keyframes floatMedium {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
   50% { transform: translateY(-25px) rotate(90deg); }
@@ -60,12 +272,14 @@
   to { transform: rotate(360deg); }
 }
 
+
+/* Faster initial entrance */
 .animate-fade-in-up {
-  animation: fadeInUp 0.8s ease-out;
+  animation: fadeInUp 0.25s ease-out both;
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.8s ease-out;
+  animation: fadeIn 0.25s ease-out both;
 }
 
 .animate-float {
@@ -73,19 +287,19 @@
 }
 
 .animate-float-slow {
-  animation: floatSlow 6s ease-in-out infinite;
+  animation: floatSlow 3s ease-in-out infinite;
 }
 
 .animate-float-medium {
-  animation: floatMedium 4s ease-in-out infinite;
+  animation: floatMedium 2s ease-in-out infinite;
 }
 
 .animate-float-fast {
-  animation: floatFast 3s ease-in-out infinite;
+  animation: floatFast 1.5s ease-in-out infinite;
 }
 
 .animate-spin-slow {
-  animation: spinSlow 20s linear infinite;
+  animation: spinSlow 10s linear infinite;
 }
 
 /* Transition overlay styles */
@@ -123,7 +337,7 @@
 }
 
 .animate-fade-in-up-enhanced {
-  animation: fadeInUpEnhanced 0.8s ease-out;
+  animation: fadeInUpEnhanced 0.6s ease-out both;
 }
 
 /* Keyboard hint styling */
