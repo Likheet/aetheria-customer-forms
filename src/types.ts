@@ -96,6 +96,8 @@ export interface FormData {
   };
   activeIngredients: string[];
   productReactions: string;
+  // New: list-style field for products that caused reactions (chips)
+  productReactionsList?: string[];
   facialFrequency: string;
   facialReactions: string;
   facialReactionDetails: string;

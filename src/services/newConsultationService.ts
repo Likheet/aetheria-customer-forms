@@ -139,6 +139,12 @@ function transformFormData(formData: UpdatedConsultData) {
       current_products_list: normalizeValue(formData.currentProductsList),
       product_duration: normalizeValue(formData.productDuration),
       irritating_products: normalizeValue(formData.irritatingProducts),
+      // New: structured list for products that caused reactions
+      product_reactions_list: normalizeValue(
+        (formData as any).productReactionsList
+          ? (formData as any).productReactionsList
+          : (formData.irritatingProducts ? formData.irritatingProducts.split(',').map((s: string) => s.trim()).filter(Boolean) : null)
+      ),
       allergies: normalizeValue(formData.allergies),
       medications: normalizeValue(formData.medications),
       pregnancy_breastfeeding: normalizeValue(formData.pregnancyBreastfeeding),

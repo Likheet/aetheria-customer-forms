@@ -198,6 +198,84 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     });
   };
 
+  // Small tag/chip input component used for irritating products
+  const TagInput: React.FC<{
+    value: string[];
+    onChange: (v: string[]) => void;
+    placeholder?: string;
+    className?: string;
+  }> = ({ value, onChange, placeholder }) => {
+    const [input, setInput] = useState('');
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const addTag = (raw: string) => {
+      const parts = raw.split(',').map(p => p.trim()).filter(Boolean);
+      if (parts.length === 0) return;
+      const next = Array.from(new Set([...(value || []), ...parts]));
+      onChange(next);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' || e.key === ',' || e.key === 'Tab') {
+        if (input.trim()) {
+          e.preventDefault();
+          addTag(input);
+          setInput('');
+          // keep focus
+          requestAnimationFrame(() => inputRef.current?.focus());
+        } else if (e.key === 'Tab') {
+          // allow tab to move focus when input empty
+        } else {
+          e.preventDefault();
+        }
+      }
+      // Backspace to remove last tag when input empty
+      if (e.key === 'Backspace' && input === '' && value && value.length > 0) {
+        e.preventDefault();
+        const next = value.slice(0, -1);
+        onChange(next);
+      }
+    };
+
+    const handleBlur = () => {
+      if (input.trim()) {
+        addTag(input);
+        setInput('');
+      }
+    };
+
+    return (
+      <div className="w-full">
+        <div className="flex flex-wrap gap-2 items-center p-2 border border-gray-200 rounded-md bg-white">
+          {(value || []).map((tag, i) => (
+            <div key={tag + i} className="inline-flex items-center space-x-2 bg-gray-100 text-sm text-gray-700 px-3 py-1 rounded-full">
+              <span>{tag}</span>
+              <button
+                type="button"
+                onClick={() => onChange((value || []).filter((t, idx) => idx !== i))}
+                className="text-gray-500 hover:text-gray-700"
+                aria-label={`Remove ${tag}`}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
+            placeholder={placeholder}
+            className="flex-1 min-w-[160px] p-2 text-sm outline-none"
+          />
+        </div>
+        <p className="text-xs text-gray-400 mt-2">Press Enter, comma or Tab to add a product.</p>
+      </div>
+    );
+  };
+
   const getTotalSteps = (concerns: string[] = formData.mainConcerns) => {
     // Base steps: 4 (personal info) + 4 (skin basics) + 3 (history) + 3 (routine) = 14  
     let totalSteps = 14;
@@ -496,6 +574,25 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     }
   };
 
+  // Make Escape act as Back for this form: capture phase to stop App's global Escape handler
+  useEffect(() => {
+    const escapeHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        // If possible, go back within the form, otherwise call external onBack
+        if (currentStep > 1) {
+          setCurrentStep(prev => Math.max(prev - 1, 1));
+        } else {
+          onBack();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', escapeHandler, true); // use capture
+    return () => document.removeEventListener('keydown', escapeHandler, true);
+  }, [currentStep, onBack]);
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     
@@ -514,7 +611,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
   // Allow pressing Enter to trigger Next (except in textareas)
   const handleEnterAdvance = (e: React.KeyboardEvent) => {
-    if (e.key !== 'Enter') return;
+  if (e.key !== 'Enter') return;
+  // If we're on the irritating products step, let the local TagInput handle Enter
+  if (currentStep === 13) return;
     const target = e.target as HTMLElement | null;
     const tag = target?.tagName?.toLowerCase();
     if (tag === 'textarea') return; // keep newline behavior in textareas
@@ -1571,12 +1670,10 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             </div>
 
             <div className="max-w-2xl mx-auto w-full">
-              <textarea
-                value={formData.irritatingProducts}
-                onChange={(e) => updateFormData({ irritatingProducts: e.target.value })}
-                placeholder="Please describe any products or ingredients that caused reactions, or type 'None' if not applicable..."
-                rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              <TagInput
+                value={(formData as any).productReactionsList || (formData.irritatingProducts ? formData.irritatingProducts.split(',').map(s=>s.trim()).filter(Boolean) : [])}
+                onChange={(list) => updateFormData({ irritatingProducts: list.join(', '), productReactionsList: list } as any)}
+                placeholder="Type a product and press Enter, comma or Tab"
               />
               {errors.irritatingProducts && <p className="text-red-500 text-sm mt-2">{errors.irritatingProducts}</p>}
             </div>
