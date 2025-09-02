@@ -207,6 +207,23 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   }> = ({ value, onChange, placeholder }) => {
     const [input, setInput] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
+    const [focused, setFocused] = useState(false);
+    const [highlight, setHighlight] = useState<number>(-1);
+
+    // Suggestions list (provided by user) - sorted alphabetically
+    const SUGGESTIONS = [
+      'Azelaic Acid',
+      'Benzoyl Peroxide',
+      'Glycolic Acid (AHA)',
+      'Hydroquinone',
+      'Kojic Acid',
+      'Lactic Acid (AHA)',
+      'Mandelic Acid (AHA)',
+      'Niacinamide',
+      'Retinol / Retinoids (Adapalene, Tretinoin, etc.)',
+      'Salicylic Acid (BHA)',
+      'Vitamin C (Ascorbic Acid, Derivatives)'
+    ].sort((a,b) => a.localeCompare(b));
 
     const addTag = (raw: string) => {
       const parts = raw.split(',').map(p => p.trim()).filter(Boolean);
@@ -216,11 +233,55 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      // Handle Escape: prefer local behavior (close suggestions / clear input)
+      if (e.key === 'Escape') {
+        // If user is typing, clear the input instead of deleting tags
+        if (input.trim()) {
+          e.preventDefault();
+          e.stopPropagation();
+          setInput('');
+          setHighlight(-1);
+          return;
+        }
+        // If suggestions are open, just close them
+        if (focused && filteredSuggestions.length > 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          setFocused(false);
+          setHighlight(-1);
+          return;
+        }
+        // Otherwise allow the event to bubble so the form's Escape handler can act as Back
+      }
+      // Arrow navigation for suggestions
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setHighlight(prev => Math.min(prev + 1, filteredSuggestions.length - 1));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setHighlight(prev => Math.max(prev - 1, 0));
+        return;
+      }
+
+      // If suggestion highlighted, Enter selects it
+      if ((e.key === 'Enter' || e.key === 'Tab') && highlight >= 0 && filteredSuggestions[highlight]) {
+        e.preventDefault();
+        const sel = filteredSuggestions[highlight];
+        addTag(sel);
+        setInput('');
+        setHighlight(-1);
+        requestAnimationFrame(() => inputRef.current?.focus());
+        return;
+      }
+
       if (e.key === 'Enter' || e.key === ',' || e.key === 'Tab') {
         if (input.trim()) {
           e.preventDefault();
           addTag(input);
           setInput('');
+          setHighlight(-1);
           // keep focus
           requestAnimationFrame(() => inputRef.current?.focus());
         } else if (e.key === 'Tab') {
@@ -238,15 +299,30 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     };
 
     const handleBlur = () => {
-      if (input.trim()) {
-        addTag(input);
-        setInput('');
-      }
+      // delay hiding suggestions to allow click to register
+      setTimeout(() => {
+        setFocused(false);
+        if (input.trim()) {
+          addTag(input);
+          setInput('');
+        }
+        setHighlight(-1);
+      }, 150);
     };
+
+    const handleFocus = () => {
+      setFocused(true);
+      setHighlight(-1);
+    };
+
+    const filteredSuggestions = (input.trim()
+      ? SUGGESTIONS.filter(s => s.toLowerCase().includes(input.toLowerCase()))
+      : SUGGESTIONS
+    );
 
     return (
       <div className="w-full">
-        <div className="flex flex-wrap gap-2 items-center p-2 border border-gray-200 rounded-md bg-white">
+  <div className="flex flex-wrap gap-2 items-center p-2 border border-gray-200 rounded-md bg-white relative">
           {(value || []).map((tag, i) => (
             <div key={tag + i} className="inline-flex items-center space-x-2 bg-gray-100 text-sm text-gray-700 px-3 py-1 rounded-full">
               <span>{tag}</span>
@@ -267,9 +343,35 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={handleBlur}
+            onFocus={handleFocus}
             placeholder={placeholder}
             className="flex-1 min-w-[160px] p-2 text-sm outline-none"
+            aria-autocomplete="list"
+            aria-expanded={focused}
           />
+
+          {/* Suggestions dropdown */}
+          {focused && filteredSuggestions.length > 0 && (
+            <div className="absolute left-2 right-2 top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-auto">
+              {filteredSuggestions.map((s, idx) => (
+                <div
+                  key={s}
+                  onMouseDown={(ev) => {
+                    // onMouseDown to prevent blur before click
+                    ev.preventDefault();
+                    addTag(s);
+                    setInput('');
+                    setHighlight(-1);
+                    requestAnimationFrame(() => inputRef.current?.focus());
+                  }}
+                  onMouseEnter={() => setHighlight(idx)}
+                  className={`px-4 py-2 cursor-pointer text-sm ${highlight === idx ? 'bg-amber-100' : 'hover:bg-gray-50'}`}
+                >
+                  {s}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <p className="text-xs text-gray-400 mt-2">Press Enter, comma or Tab to add a product.</p>
       </div>

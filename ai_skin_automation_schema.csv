@@ -1,0 +1,24 @@
+sheet,column,non_null,dtype,example
+Discrepancies,Category,27,object,Moisture
+Discrepancies,Machine says →,27,object,Low / Dehydrated
+Discrepancies,Customer says →,27,object,Oily or Normal
+Discrepancies,Probe (ask),27,object,1) Tight after washing? 2) Skips moisturizer? 3) Midday shine? 4) Recent harsh/foaming cleanser or acne actives?
+Discrepancies,Interpretation logic,27,object,"Likely oily-dehydrated (stripped barrier, compensatory oil)"
+Discrepancies,Decision rule,27,object,Trust machine for hydration; keep customer oil perception
+Discrepancies,Flags / Updates,27,object,"hydration=low, sebum=as_measured, dehydrated_oily=true"
+Discrepancies,Safety / Next step,27,object,Start/extend Phase 0 (hydration focus) 7–14 days; gentle cleanser; humectant; ceramide moisturiser
+Concern based skincare,Verdict / Concern,12,object,Mild Acne
+Concern based skincare,Skin Type,31,object,Oily / Combo
+Concern based skincare,Sensitivity,31,object,Normal
+Concern based skincare,Serum Recommendation (Core),31,object,Niacinamide 5–10%
+Concern based skincare,Optional Serum (Secondary),31,object,Azelaic Acid 10% (alt nights)
+Concern based skincare,Cleanser Logic,31,object,Gentle foaming cleanser (salicylic 0.5–1%)
+Concern based skincare,Moisturizer Logic,31,object,Lightweight gel moisturizer
+Concern based skincare,Notes,31,object,Retinoid can be added later
+Concern combinations,Combination (concerns),34,object,"1. Acne — Mild (comedonal, occasional papules)"
+Concern combinations,Core serum (1-only),33,object,Niacinamide 5–10%
+Concern combinations,Secondary serum (if 2),33,object,"Salicylic acid 1–2% (PM, alt)"
+Concern combinations,Cleanser (Oily / Combo / Dry),33,object,Oily: salicylic gel; Combo: gel; Dry: gentle low-foam
+Concern combinations,Moisturizer (Oily / Combo / Dry),33,object,Oily: gel lotion; Combo: light emulsion; Dry: richer cream
+Concern combinations,Sequence / Scheduling,33,object,Niacinamide AM/PM; BHA PM 2–3×/wk; introduce gradually
+Concern combinations,Sensitivity / Pregnancy / Referral,33,object,Sens ≥2 → prefer azelaic instead of BHA; pregnancy: avoid retinoid later; safe overall
