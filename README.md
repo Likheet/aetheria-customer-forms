@@ -1,34 +1,3 @@
-# Form Template
-
-*Automatically synced with your [v0.app](https://v0.app) deployments*
-
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/likheet-shettys-projects/v0-form-template)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/8tuTdTJ90yJ)
-
-## Overview
-
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
-
-## Deployment
-
-Your project is live at:
-
-**[https://vercel.com/likheet-shettys-projects/v0-form-template](https://vercel.com/likheet-shettys-projects/v0-form-template)**
-
-## Build your app
-
-Continue building your app on:
-
-**[https://v0.app/chat/projects/8tuTdTJ90yJ](https://v0.app/chat/projects/8tuTdTJ90yJ)**
-
-## How It Works
-
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
-
 ## Questions in the "Updated Client Consult" form
 
 Below is a reference of every question asked by the Updated Client Consult form (the UI implemented in `src/components/UpdatedConsultForm.tsx`). Dynamic follow-up questions are listed under the option that triggers them.
@@ -41,10 +10,18 @@ Below is a reference of every question asked by the Updated Client Consult form 
 
 ### Section A — Skin Basics
 - What do you think your skin type is? (Normal / Oily / Dry / Combination / Sensitive)
-- How would you describe your skin's oil levels? (several descriptive options)
-- How would you describe your skin's hydration levels? (several descriptive options)
+- How would you describe your skin's oil levels?
+  - Comfortable, no shine or greasiness → Green
+  - Slight shine only in T-zone, not bothersome → Blue
+  - Noticeable shine in multiple areas → Yellow
+  - Very greasy/heavy shine across face, frequent blotting/wash needed → Red
+- How would you describe your skin's hydration levels?
+  - Comfortable, no tightness → Green
+  - Slight tightness or occasional dryness → Blue
+  - Often feels tight, rough, or flaky → Yellow
+  - Always feels very tight, itchy, or cracks/peels → Red
 - Do you experience sensitivity? (Yes / No / Sometimes)
-	- If "Sometimes": "Specify triggers (sun, actives, fragrance, pollution):" (text input)
+  - If "Sometimes": "Specify triggers (sun, actives, fragrance, pollution):" (text input)
 
 ### Section B — Current Skin History
 - Do you have any diagnosed skin conditions? (textarea)
