@@ -849,13 +849,13 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           'sensitivitySeasonal'
         ];
         const sensitivityTitles = [
-          'Does your skin feel red, hot, and flushed?',
-          'Have you been diagnosed with any skin conditions?',
-          'How does your skin feel after cleansing?',
-          'How does your skin react to new products?',
-          'How does your skin react to sun exposure?',
-          'Do you have visible broken capillaries?',
-          'Do you experience seasonal skin changes?'
+          'Do you often experience redness, burning, or stinging when using skincare products?',
+          'Have you ever been diagnosed with sensitive skin, rosacea, or eczema?',
+          'Does your skin get easily irritated by sun, heat, wind, or pollution?',
+          'Have you noticed breakouts or irritation when using active ingredients (Vitamin C, AHAs, Niacinamide, Retinoids, etc.)?',
+          'Do you have visible broken capillaries or flushing on your skin (cheeks, nose, etc.)?',
+          'Are you under 20 years of age?',
+          'Would you describe your skin baseline as very dry (tight, flaky, rough)?'
         ];
         return {
           fieldKey: sensitivityFields[questionIndex],
