@@ -9,13 +9,13 @@ Below is a reference of every question asked by the Updated Client Consult form 
 - Gender — "What is your gender?" (Male / Female / Other)
 
 ### Section A — Skin Basics
-- What do you think your skin type is? (Normal / Oily / Dry / Combination / Sensitive)
-- How would you describe your skin's oil levels?
+- What do you think your skin type is? (Normal / Oily / Dry / Combination / Sensitive) REMOVE Sensitive
+- How would you describe your skin's oil levels? SEBUM (aka oiliness)
   - Comfortable, no shine or greasiness → Green
   - Slight shine only in T-zone, not bothersome → Blue
   - Noticeable shine in multiple areas → Yellow
   - Very greasy/heavy shine across face, frequent blotting/wash needed → Red
-- How would you describe your skin's hydration levels?
+- How would you describe your skin's hydration levels? MOISTURE (aka dryness)
   - Comfortable, no tightness → Green
   - Slight tightness or occasional dryness → Blue
   - Often feels tight, rough, or flaky → Yellow
@@ -35,14 +35,15 @@ Below is a reference of every question asked by the Updated Client Consult form 
 
 ### Section D — Main Concerns (customer picks 1–3)
 - Main concerns list (choose up to 3):
-	- Acne
-	- Pigmentation
-	- Redness/Sensitivity
-	- Dullness
-	- Fine lines & wrinkles
-	- Large pores
-	- Oiliness
-	- Dryness
+	- Acne ACNE
+	- Pigmentation PIGMENTATION_UV
+	- Sensitivity SENSITIVITY
+	- Dullness TREAT AS BROWN PIGMENTATION IF MARKED AS PRIORITY
+	- Fine lines & wrinkles (aging) TEXTURE
+	- Bumpy TEXTURE ADD 
+	- Large pores PORES
+	- Oiliness REMOVE
+	- Dryness REMOVE
 
 When a concern is selected the form shows follow-up questions specific to that concern:
 
@@ -73,10 +74,10 @@ When a concern is selected the form shows follow-up questions specific to that c
 	- What type do you experience? (Always present, Only in T-zone, Occasional)
 
 - Oiliness
-	- What type do you experience? (T-zone only, Cheeks + T-zone, All over)
+	- What type do you experience? (T-zone only, Cheeks + T-zone, All over) REMOVE AS IT IS ASKED IN THE BEGINNING
 
 - Dryness
-	- What type do you experience? (Tight/rough, Flaky, Cracks/peels)
+	- What type do you experience? (Tight/rough, Flaky, Cracks/peels) REMOVE AS IT IS ASKED IN THE BEGINNING
 
 ### Section E — Lifestyle Inputs
 - What type of diet do you follow? (Balanced, Oily/Spicy, Vegetarian, High Sugar)

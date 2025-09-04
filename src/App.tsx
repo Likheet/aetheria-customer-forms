@@ -50,6 +50,7 @@ import CommunicationPreference from './components/steps/CommunicationPreference'
 import Summary from './components/steps/Summary';
 import ConsultantInputForm from './components/ConsultantInputForm';
 import UpdatedConsultForm from './components/UpdatedConsultForm';
+import ChooseProfile from './components/ChooseProfile';
 
 type AppFlow = 'staff-selection' | 'consultation' | 'feedback' | 'client-selection' | 'feedback-form' | 'consultant-input' | 'updated-consult';
 
@@ -740,10 +741,7 @@ function App() {
   // Updated Consult Flow
   if (currentFlow === 'updated-consult') {
     return (
-      <UpdatedConsultForm
-        onBack={handleGoHome}
-        onComplete={handleUpdatedConsultComplete}
-      />
+      <ChooseProfile />
     );
   }
 

@@ -69,6 +69,8 @@ export interface UpdatedConsultData {
   allergies: string;
   pregnancyBreastfeeding: string;
   medications: string;
+  // Decision engine outcomes
+  triageOutcomes?: any[];
 }
 
 export interface FormData {

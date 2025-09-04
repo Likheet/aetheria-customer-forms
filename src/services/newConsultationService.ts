@@ -87,7 +87,7 @@ function normalizeObject(obj: any): any {
 }
 
 // Transform form data into normalized structure
-function transformFormData(formData: UpdatedConsultData) {
+function transformFormData(formData: UpdatedConsultData & { triageOutcomes?: any[] }) {
   return {
     skin_profile: {
       skin_type: normalizeValue(formData.skinType),
@@ -155,59 +155,88 @@ function transformFormData(formData: UpdatedConsultData) {
       moisturizer_texture: normalizeValue(formData.moisturizerTexture),
       brand_preference: normalizeValue(formData.brandPreference),
       budget: normalizeValue(formData.budget),
+    },
+    evaluation: {
+      triage: (formData as any).triageOutcomes ?? null
     }
   }
 }
 
 // Save consultation data to the database
-export async function saveConsultationData(formData: UpdatedConsultData): Promise<string> {
+export async function saveConsultationData(
+  formData: UpdatedConsultData & { triageOutcomes?: any[] },
+  opts?: { sessionId?: string }
+): Promise<string> {
   try {
-    // Format phone number
-    const phoneE164 = formatPhoneToE164(formData.phoneNumber)
-    
-    // 1. Upsert customer data
-    const { data: customer, error: customerError } = await supabase
-      .from('customer')
-      .upsert({
-        full_name: normalizeValue(formData.name),
-        phone_e164: phoneE164,
-        dob: normalizeValue(formData.dateOfBirth),
-        gender: normalizeValue(formData.gender),
-      }, { 
-        onConflict: 'phone_e164',
-        ignoreDuplicates: false 
-      })
-      .select('id')
-      .single()
+    const passedSessionId = opts?.sessionId
+    let sessionIdToUse: string | null = null
+    let customerIdToUse: string | null = null
 
-    if (customerError) {
-      console.error('Customer upsert error:', customerError)
-      throw new Error('Failed to save customer data')
-    }
+    if (passedSessionId) {
+      // Reuse existing session; fetch to validate and get customer_id
+      const { data: existingSession, error: sessErr } = await supabase
+        .from('assessment_session')
+        .select('id, customer_id')
+        .eq('id', passedSessionId)
+        .maybeSingle()
+      if (sessErr) {
+        console.error('Session fetch error:', sessErr)
+        throw new Error('Failed to fetch existing session')
+      }
+      if (!existingSession) {
+        throw new Error('Provided session not found')
+      }
+      sessionIdToUse = existingSession.id as string
+      customerIdToUse = (existingSession as any).customer_id as string
+    } else {
+      // Format phone number
+      const phoneE164 = formatPhoneToE164(formData.phoneNumber)
+      // 1. Upsert customer data
+      const { data: customer, error: customerError } = await supabase
+        .from('customer')
+        .upsert({
+          full_name: normalizeValue(formData.name),
+          phone_e164: phoneE164,
+          dob: normalizeValue(formData.dateOfBirth),
+          gender: normalizeValue(formData.gender),
+        }, { 
+          onConflict: 'phone_e164',
+          ignoreDuplicates: false 
+        })
+        .select('id')
+        .single()
 
-    if (!customer?.id) {
-      throw new Error('Customer ID not returned')
-    }
+      if (customerError) {
+        console.error('Customer upsert error:', customerError)
+        throw new Error('Failed to save customer data')
+      }
 
-    // 2. Create new assessment session
-    const { data: session, error: sessionError } = await supabase
-      .from('assessment_session')
-      .insert({
-        customer_id: customer.id,
-        tz: 'Asia/Kolkata', // You can make this dynamic later
-        location: null, // Add location field to form if needed
-        staff_id: null, // Add staff tracking if needed
-      })
-      .select('id')
-      .single()
+      if (!customer?.id) {
+        throw new Error('Customer ID not returned')
+      }
+      customerIdToUse = customer.id
 
-    if (sessionError) {
-      console.error('Session creation error:', sessionError)
-      throw new Error('Failed to create assessment session')
-    }
+      // 2. Create new assessment session
+      const { data: session, error: sessionError } = await supabase
+        .from('assessment_session')
+        .insert({
+          customer_id: customer.id,
+          tz: 'Asia/Kolkata', // You can make this dynamic later
+          location: null, // Add location field to form if needed
+          staff_id: null, // Add staff tracking if needed
+        })
+        .select('id')
+        .single()
 
-    if (!session?.id) {
-      throw new Error('Session ID not returned')
+      if (sessionError) {
+        console.error('Session creation error:', sessionError)
+        throw new Error('Failed to create assessment session')
+      }
+
+      if (!session?.id) {
+        throw new Error('Session ID not returned')
+      }
+      sessionIdToUse = session.id as string
     }
 
     // 3. Transform and save intake form data
@@ -216,7 +245,7 @@ export async function saveConsultationData(formData: UpdatedConsultData): Promis
     const { data: intakeForm, error: intakeError } = await supabase
       .from('intake_form')
       .insert({
-        session_id: session.id,
+        session_id: sessionIdToUse!,
         form_version: '1.0',
         answers: transformedAnswers,
         raw: normalizeObject(formData), // Store normalized form data as backup
@@ -230,12 +259,12 @@ export async function saveConsultationData(formData: UpdatedConsultData): Promis
     }
 
     console.log('Consultation data saved successfully:', {
-      customer_id: customer.id,
-      session_id: session.id,
+      customer_id: customerIdToUse,
+      session_id: sessionIdToUse,
       intake_form_id: intakeForm?.id
     })
 
-    return session.id
+    return sessionIdToUse!
     
   } catch (error) {
     console.error('Error saving consultation data:', error)
@@ -342,5 +371,85 @@ export async function getRecentConsultationSessions(): Promise<{ success: boolea
       success: false, 
       error: error instanceof Error ? error.message : 'An unexpected error occurred' 
     }
+  }
+}
+
+// Sessions ready to fill: machine scan exists, no intake form yet
+export async function getFillingQueue() {
+  const { data: sessions, error } = await supabase
+    .from('assessment_session')
+    .select('id, created_at, location, customer:customer_id ( id, full_name, phone_e164 )')
+    .order('created_at', { ascending: false })
+    .limit(100)
+
+  if (error) throw error
+
+  const sessionIds = (sessions || []).map((s: any) => s.id)
+  if (!sessionIds.length) return []
+
+  const { data: scans } = await supabase
+    .from('machine_scan')
+    .select('id, session_id')
+    .in('session_id', sessionIds)
+
+  const scanSessionIds = new Set((scans || []).map((s: any) => s.session_id))
+
+  const { data: intake } = await supabase
+    .from('intake_form')
+    .select('session_id')
+    .in('session_id', sessionIds)
+
+  const filledSessionIds = new Set((intake || []).map((i: any) => i.session_id))
+
+  return (sessions || [])
+    .filter((s: any) => scanSessionIds.has(s.id) && !filledSessionIds.has(s.id))
+    .map((s: any) => ({
+      session_id: s.id,
+      created_at: s.created_at,
+      location: s.location || '',
+      customer_id: s.customer?.id,
+      customer_name: s.customer?.full_name || 'Unknown',
+      customer_phone: s.customer?.phone_e164 || '',
+    }))
+}
+
+// Load one session “profile” with flattened machine metrics
+export async function getSessionProfile(sessionId: string) {
+  const { data: session, error: sesErr } = await supabase
+    .from('assessment_session')
+    .select('id, customer:customer_id(id, full_name, phone_e164), machine_scan:machine_scan(id)')
+    .eq('id', sessionId)
+    .single()
+  if (sesErr) throw sesErr
+  if (!(session as any)?.machine_scan?.id) throw new Error('No machine_scan for this session')
+
+  const scanId = (session as any).machine_scan.id as string
+
+  const { data: ma, error: maErr } = await supabase
+    .from('machine_analysis')
+    .select(`
+      scan_id, skin_age,
+      moisture, moisture_band,
+      sebum, sebum_band,
+      texture, texture_band,
+      pigmentation_uv, pigmentation_uv_band,
+      redness, redness_band,
+      pores, pores_band,
+      acne, acne_band,
+      uv_spots, uv_spots_band,
+      brown_areas, brown_areas_band,
+      sensitivity, sensitivity_band
+    `)
+    .eq('scan_id', scanId)
+    .maybeSingle()
+  if (maErr) throw maErr
+
+  return {
+    session_id: sessionId,
+    customer_id: (session as any).customer?.id,
+    customer_name: (session as any).customer?.full_name,
+    customer_phone: (session as any).customer?.phone_e164,
+    scan_id: scanId,
+    metrics: ma || null,
   }
 }

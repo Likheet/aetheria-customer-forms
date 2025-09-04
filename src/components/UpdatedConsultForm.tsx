@@ -2,12 +2,24 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle, ArrowLeft, ArrowRight, FileText, Droplets, Shield, Heart, Sparkles, Sun, Clock } from 'lucide-react';
 import { DatePicker } from '@mantine/dates';
 import { saveConsultationData } from '../services/newConsultationService';
+import { deriveSelfBandsFromForm, startSession } from '../lib/decisionEngine';
 import { UpdatedConsultData } from '../types';
 import ProductAutocomplete from './ProductAutocomplete';
 
 interface UpdatedConsultFormProps {
   onBack: () => void;
   onComplete: () => void;
+  machine?: {
+    moisture?: 'green'|'blue'|'yellow'|'red';
+    sebum?: 'green'|'blue'|'yellow'|'red';
+    texture?: 'green'|'blue'|'yellow'|'red';
+    pores?: 'green'|'blue'|'yellow'|'red';
+    acne?: 'green'|'blue'|'yellow'|'red';
+    pigmentation_brown?: 'green'|'blue'|'yellow'|'red';
+    pigmentation_red?: 'green'|'blue'|'yellow'|'red';
+  };
+  sessionId?: string;
+  prefill?: Partial<UpdatedConsultData>;
 }
 
 const initialFormData: UpdatedConsultData = {
@@ -161,9 +173,9 @@ const dummyFormData: UpdatedConsultData = {
   medications: 'None',
 };
 
-const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onComplete }) => {
+const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onComplete, machine, sessionId, prefill }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState(initialFormData);
+  const [formData, setFormData] = useState<UpdatedConsultData>({ ...initialFormData, ...(prefill || {}) });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -699,9 +711,36 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     setIsSubmitting(true);
     
     try {
-      console.log('Submitting consultation data:', formData);
-      const sessionId = await saveConsultationData(formData);
-      console.log('Consultation saved successfully with session ID:', sessionId);
+      // Run decision engine (non-interactive subset) using provided machine bands + user answers
+      let triageOutcomes: any[] = [];
+      try {
+        const selfBands = deriveSelfBandsFromForm({
+          oilLevels: formData.oilLevels,
+          hydrationLevels: formData.hydrationLevels,
+          mainConcerns: formData.mainConcerns,
+          acneType: formData.acneType,
+          poresType: formData.poresType,
+          pigmentationType: formData.pigmentationType,
+        });
+        const ctx = { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any;
+        const m = machine || {};
+        const session = startSession(m as any, selfBands as any, ctx);
+        // Auto-decide only rules that have no follow-up questions
+        for (const rule of (session.pending || [])) {
+          const hasQs = Array.isArray((rule as any).questions) && (rule as any).questions.length > 0;
+          if (!hasQs) {
+            const outcome = (rule as any).decide({}, (session as any).ctx);
+            if (outcome) triageOutcomes.push(outcome);
+          }
+        }
+      } catch (e) {
+        console.warn('Decision engine run skipped/failed:', e);
+      }
+
+      const payload = { ...(formData as any), triageOutcomes };
+      console.log('Submitting consultation data:', payload);
+      const createdSessionId = await saveConsultationData(payload, { sessionId });
+      console.log('Consultation saved successfully with session ID:', createdSessionId);
       setIsSubmitted(true);
     } catch (error) {
       console.error('Failed to submit consultation:', error);
