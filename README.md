@@ -99,3 +99,7 @@ When a concern is selected the form shows follow-up questions specific to that c
 Notes
 - The "Irritating Products" field is implemented as a tag/chip input with autocomplete suggestions. Enter, comma, or Tab will create tags; tags can be removed by the × button.
 - The Main Concerns selection dynamically injects follow-up steps. Pigmentation adds a "type" and "duration" step. Redness/Sensitivity injects the seven sensitivity questions. Other concerns add a single "type" step.
+
+
+# Rule Based Questions:
+
