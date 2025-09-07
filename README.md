@@ -9,7 +9,7 @@ Below is a reference of every question asked by the Updated Client Consult form 
 - Gender — "What is your gender?" (Male / Female / Other)
 
 ### Section A — Skin Basics
-- What do you think your skin type is? (Normal / Oily / Dry / Combination / Sensitive) REMOVE Sensitive
+ - What do you think your skin type is? (Normal / Oily / Dry / Combination)
 - How would you describe your skin's oil levels? SEBUM (aka oiliness)
   - Comfortable, no shine or greasiness → Green
   - Slight shine only in T-zone, not bothersome → Blue
@@ -35,7 +35,7 @@ Below is a reference of every question asked by the Updated Client Consult form 
 
 ### Section D — Main Concerns (customer picks 1–3)
 - Main concerns list (choose up to 3):
-	- Acne ACNE
+	- Acne ACNE (mark green if acne not chosen)
 	- Pigmentation PIGMENTATION_UV
 	- Sensitivity SENSITIVITY
 	- Dullness TREAT AS BROWN PIGMENTATION IF MARKED AS PRIORITY
@@ -48,11 +48,29 @@ Below is a reference of every question asked by the Updated Client Consult form 
 When a concern is selected the form shows follow-up questions specific to that concern:
 
 - Acne
-	- What type do you experience? (Whiteheads, Blackheads, Inflamed pimples, Cystic, Hormonal flare-ups)
+	- What kind of breakouts do you usually notice? (Blackheads (tiny dark dots in pores), Whiteheads (small white bumps under the skin), Red pimples (inflamed, sometimes pus-filled), Large painful bumps (deep cystic acne), Mostly around jawline/chin, often before periods (hormonal))
+	- Follow-up severity questions based on selected type:
+		- Blackheads: A few, mostly on the nose (≤10) → Blue, Many in the T-zone (11–30) → Yellow, Widespread across face (30+) → Red
+		- Whiteheads: A few, small area (≤10) → Blue, Many in several areas (11–20) → Yellow, Widespread across face (20+) → Red
+		- Red Pimples: A few (1–3), mild → Blue, Several (4–10), some painful → Yellow, Many (10+), inflamed/widespread → Red
+		- Cystic Acne: Rare (1 in last 2 weeks) → Blue, Frequent (1–3 per week) → Yellow, Persistent (4+ per week or multiple at once) → Red
+		- Hormonal Acne: Mild monthly flare (1–3 pimples) → Blue, Clear monthly flare (several pimples/cyst lasting a week) → Yellow, Strong monthly flare (multiple cysts lasting >1 week) → Red
 
 - Pigmentation
-	- What type do you experience? (PIH brown, PIE red, Melasma)
-	- How long have you had this? (Recent, >1 year)
+	- What type do you experience? (Red, Brown)
+	- If red pigmentation: 
+	   - Light red, only in a small area → Blue 
+
+	   - Moderate red, noticeable in several zones → Yellow 
+
+	   - Bright or deep red, widespread across the face → Red  
+
+	- If brown pigmentation 
+		- Light brown patches, visible up close but small in size → Blue 
+
+		- Moderate brown spots/patches, noticeable in several areas → Yellow 
+
+		- Dark brown patches, large or widespread across the face → Red 
 
 - Redness / Sensitivity
 	- Follow-up: Seven sensitivity questions (each is a choice, typically Yes/No):
@@ -64,14 +82,20 @@ When a concern is selected the form shows follow-up questions specific to that c
 	6. Are you under 20 years of age?
 	7. Would you describe your skin baseline as very dry (tight, flaky, rough)?
 
-- Dullness
-	- What type do you experience? (Occasional, Frequent, Persistent)
 
 - Fine lines & wrinkles
-	- What type do you experience? (Forehead lines, Crow's feet, Smile lines)
+	- A few fine lines or slight looseness in some spots → Blue 
+
+    - Wrinkles or sagging you can see in several areas → Yellow 
+
+    - Deep wrinkles or sagging that’s easy to notice → Red 
 
 - Large pores
-	- What type do you experience? (Always present, Only in T-zone, Occasional)
+	- Noticeable near the nose or small areas on close inspection → Blue 
+
+    - Clearly visible on multiple zones (nose, cheeks, forehead) → Yellow 
+
+    - Large, obvious pores across much of the face, visible from a distance → Red 
 
 - Oiliness
 	- What type do you experience? (T-zone only, Cheeks + T-zone, All over) REMOVE AS IT IS ASKED IN THE BEGINNING

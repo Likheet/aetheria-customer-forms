@@ -50,8 +50,10 @@ const initialFormData: UpdatedConsultData = {
   // Section D – Main Concerns
   mainConcerns: [],
   acneType: '',
+  acneSeverity: '',
   acneDuration: '',
   pigmentationType: '',
+  pigmentationSeverity: '',
   pigmentationDuration: '',
   rednessType: '',
   rednessDuration: '',
@@ -67,13 +69,13 @@ const initialFormData: UpdatedConsultData = {
   drynessDuration: '',
   
   // Sensitivity questions
-  sensitivityRedness: 'No',
-  sensitivityDiagnosis: 'No',
-  sensitivityCleansing: 'No',
-  sensitivityProducts: 'No',
-  sensitivitySun: 'No',
-  sensitivityCapillaries: 'No',
-  sensitivitySeasonal: 'No',
+  sensitivityRedness: '',
+  sensitivityDiagnosis: '',
+  sensitivityCleansing: '',
+  sensitivityProducts: '',
+  sensitivitySun: '',
+  sensitivityCapillaries: '',
+  sensitivitySeasonal: '',
   
   // Section E - Lifestyle Inputs
   diet: '',
@@ -127,18 +129,20 @@ const dummyFormData: UpdatedConsultData = {
   
   // Section D – Main Concerns
   mainConcerns: ['Acne', 'Pigmentation', 'Large pores'],
-  acneType: 'Inflamed pimples',
-  acneDuration: '6 months - 1 year',
-  pigmentationType: 'PIH brown',
-  pigmentationDuration: 'Recent',
+  acneType: 'Red pimples (inflamed, sometimes pus-filled)',
+  acneSeverity: '',
+  acneDuration: '',
+  pigmentationType: 'Moderate brown spots/patches, noticeable in several areas → Yellow',
+  pigmentationSeverity: '',
+  pigmentationDuration: '',
   rednessType: '',
   rednessDuration: '',
   dullnessType: '',
   dullnessDuration: '',
   wrinklesType: '',
   wrinklesDuration: '',
-  poresType: 'Always present',
-  poresDuration: '2+ years',
+  poresType: 'Clearly visible on multiple zones (nose, cheeks, forehead) → Yellow',
+  poresDuration: '',
   oilinessType: '',
   oilinessDuration: '',
   drynessType: '',
@@ -165,7 +169,7 @@ const dummyFormData: UpdatedConsultData = {
   serumComfort: '2',
   moisturizerTexture: 'Gel',
   brandPreference: 'Tech-driven',
-  budget: '₹2,000-5,000',
+  budget: '',
   
   // Additional fields
   allergies: 'No known allergies',
@@ -340,7 +344,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               <span>{tag}</span>
               <button
                 type="button"
-                onClick={() => onChange((value || []).filter((t, idx) => idx !== i))}
+                onClick={() => onChange((value || []).filter((_, idx) => idx !== i))}
                 className="text-gray-500 hover:text-gray-700"
                 aria-label={`Remove ${tag}`}
               >
@@ -397,11 +401,13 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     // Add dynamic steps for each selected concern
     concerns.forEach(concern => {
       if (concern === 'Pigmentation') {
-        totalSteps += 2; // Type + Duration
+        totalSteps += 2; // Type + Severity
+      } else if (concern === 'Acne') {
+        totalSteps += 2; // Type + Severity
       } else if (concern === 'Redness/Sensitivity') {
         totalSteps += 7; // 7 sensitivity questions
       } else {
-        totalSteps += 1; // Just type/details
+        totalSteps += 1; // Just severity
       }
     });
     
@@ -438,18 +444,21 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       prescriptionTreatments: prevData.prescriptionTreatments !== '' ? prevData.prescriptionTreatments : dummyFormData.prescriptionTreatments,
       professionalTreatments: prevData.professionalTreatments !== '' ? prevData.professionalTreatments : dummyFormData.professionalTreatments,
       
-      // Section C - Current Routine
-      currentProductsList: prevData.currentProductsList.length > 0 ? prevData.currentProductsList : dummyFormData.currentProductsList,
-      irritatingProducts: prevData.irritatingProducts !== '' ? prevData.irritatingProducts : dummyFormData.irritatingProducts,
-      
-        // Section D - Main Concerns
+        // Section C - Current Routine
+        currentProducts: prevData.currentProducts,
+        currentProductsList: prevData.currentProductsList.length > 0 ? prevData.currentProductsList : dummyFormData.currentProductsList,
+        productDuration: prevData.productDuration,
+        irritatingProducts: prevData.irritatingProducts !== '' ? prevData.irritatingProducts : dummyFormData.irritatingProducts,        // Section D - Main Concerns
         mainConcerns: nextMainConcerns,
         // For dynamic concerns: only fill fields relevant to selected concerns
-        acneType: nextMainConcerns.includes('Acne') && !prevData.acneType ? (dummyFormData.acneType || 'Inflamed pimples') : prevData.acneType,
+        acneType: nextMainConcerns.includes('Acne') && !prevData.acneType ? (dummyFormData.acneType || 'Red pimples (inflamed, sometimes pus-filled)') : prevData.acneType,
+        acneSeverity: prevData.acneSeverity,
         acneDuration: prevData.acneDuration, // not asked; do not fabricate
         pigmentationType: nextMainConcerns.includes('Pigmentation') && !prevData.pigmentationType ? (dummyFormData.pigmentationType || 'PIH brown') : prevData.pigmentationType,
+        pigmentationSeverity: prevData.pigmentationSeverity,
         pigmentationDuration: nextMainConcerns.includes('Pigmentation') && !prevData.pigmentationDuration ? (dummyFormData.pigmentationDuration || 'Recent') : prevData.pigmentationDuration,
-        // No generic type/duration for Redness/Sensitivity; handled by 7 specific sensitivity questions
+        rednessType: prevData.rednessType,
+        rednessDuration: prevData.rednessDuration,
         dullnessType: nextMainConcerns.includes('Dullness') && !prevData.dullnessType ? (dummyFormData.dullnessType || 'Occasional') : prevData.dullnessType,
         dullnessDuration: prevData.dullnessDuration, // not asked; do not fabricate
         wrinklesType: nextMainConcerns.includes('Fine lines & wrinkles') && !prevData.wrinklesType ? (dummyFormData.wrinklesType || 'Forehead lines') : prevData.wrinklesType,
@@ -470,7 +479,15 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           sensitivitySun: prevData.sensitivitySun || dummyFormData.sensitivitySun,
           sensitivityCapillaries: prevData.sensitivityCapillaries || dummyFormData.sensitivityCapillaries,
           sensitivitySeasonal: prevData.sensitivitySeasonal || dummyFormData.sensitivitySeasonal,
-        } : {}),
+        } : {
+          sensitivityRedness: prevData.sensitivityRedness || '',
+          sensitivityDiagnosis: prevData.sensitivityDiagnosis || '',
+          sensitivityCleansing: prevData.sensitivityCleansing || '',
+          sensitivityProducts: prevData.sensitivityProducts || '',
+          sensitivitySun: prevData.sensitivitySun || '',
+          sensitivityCapillaries: prevData.sensitivityCapillaries || '',
+          sensitivitySeasonal: prevData.sensitivitySeasonal || '',
+        }),
       
       // Section E - Lifestyle Inputs
       diet: prevData.diet !== '' ? prevData.diet : dummyFormData.diet,
@@ -483,9 +500,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       routineSteps: prevData.routineSteps !== '' ? prevData.routineSteps : dummyFormData.routineSteps,
       serumComfort: prevData.serumComfort !== '' ? prevData.serumComfort : dummyFormData.serumComfort,
       moisturizerTexture: prevData.moisturizerTexture !== '' ? prevData.moisturizerTexture : dummyFormData.moisturizerTexture,
-      brandPreference: prevData.brandPreference !== '' ? prevData.brandPreference : dummyFormData.brandPreference,
-      
-      // Additional fields
+        brandPreference: prevData.brandPreference !== '' ? prevData.brandPreference : dummyFormData.brandPreference,
+        budget: prevData.budget,      // Additional fields
       // Only fill these when the corresponding UI steps exist; keeping them as-is otherwise
       allergies: prevData.allergies, 
       pregnancyBreastfeeding: prevData.pregnancyBreastfeeding, 
@@ -502,19 +518,22 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   };
 
   const getConcernSteps = () => {
-    const concernSteps: Array<{concern: string, step: 'type' | 'duration' | 'sensitivity-question', questionIndex?: number}> = [];
+    const concernSteps: Array<{concern: string, step: 'type' | 'severity' | 'sensitivity-question', questionIndex?: number}> = [];
     
     formData.mainConcerns.forEach(concern => {
       if (concern === 'Pigmentation') {
         concernSteps.push({concern, step: 'type'});
-        concernSteps.push({concern, step: 'duration'});
+        concernSteps.push({concern, step: 'severity'});
+      } else if (concern === 'Acne') {
+        concernSteps.push({concern, step: 'type'});
+        concernSteps.push({concern, step: 'severity'});
       } else if (concern === 'Redness/Sensitivity') {
         // Add 7 sensitivity questions
         for (let i = 0; i < 7; i++) {
           concernSteps.push({concern, step: 'sensitivity-question', questionIndex: i});
         }
       } else {
-        concernSteps.push({concern, step: 'type'});
+        concernSteps.push({concern, step: 'severity'});
       }
     });
     
@@ -656,13 +675,21 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               'Dullness': 'dullness',
               'Fine lines & wrinkles': 'wrinkles',
               'Large pores': 'pores',
-              'Oiliness': 'oiliness',
-              'Dryness': 'dryness',
             };
             const base = baseMap[concern] || concern.toLowerCase().replace(/[^a-z]/g, '');
-            const key = (base + (stepType === 'duration' ? 'Duration' : 'Type')) as keyof UpdatedConsultData;
-            const val = (formData[key] as string) || '';
-            if (!val.trim()) newErrors[key as string] = `${concern} ${stepType === 'duration' ? 'duration' : 'type'} is required`;
+            const concernsWithType = ['Acne', 'Pigmentation'];
+            let key = '';
+            if (stepType === 'type') {
+              key = base + 'Type';
+            } else if (stepType === 'severity') {
+              if (concernsWithType.includes(concern)) {
+                key = base + 'Severity';
+              } else {
+                key = base + 'Type';
+              }
+            }
+            const val = (formData[key as keyof UpdatedConsultData] as string) || '';
+            if (!val.trim()) newErrors[key as string] = `${concern} ${stepType === 'severity' ? 'severity' : 'type'} is required`;
           }
         }
         break;
@@ -810,7 +837,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     );
   }
 
-  const renderConcernFollowUp = (concern: string, stepType: 'type' | 'duration' | 'sensitivity-question', questionIndex?: number) => {
+  const renderConcernFollowUp = (concern: string, stepType: 'type' | 'severity' | 'sensitivity-question', questionIndex?: number) => {
     const concernBaseKey = (c: string): string | null => {
       switch (c) {
         case 'Acne': return 'acne';
@@ -824,6 +851,18 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         default: return c.toLowerCase().replace(/[^a-z]/g, '') || null;
       }
     };
+    const getAcneTypeBadge = (acneType: string) => {
+      if (!acneType) return null;
+      
+      if (acneType.includes('Blackheads')) return 'Blackheads';
+      if (acneType.includes('Whiteheads')) return 'Whiteheads';
+      if (acneType.includes('Red pimples')) return 'Inflamed';
+      if (acneType.includes('Large painful bumps') || acneType.includes('cystic')) return 'Cystic';
+      if (acneType.includes('jawline') || acneType.includes('hormonal')) return 'Hormonal';
+      
+      return 'Acne';
+    };
+
     const getConcernIcon = (concern: string) => {
       switch (concern) {
         case 'Acne': return <Shield className="w-8 h-8 text-amber-600" />;
@@ -838,11 +877,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       }
     };
 
-    const getConcernOptions = (concern: string, stepType: 'type' | 'duration' | 'sensitivity-question', questionIndex?: number) => {
-      if (stepType === 'duration' && concern === 'Pigmentation') {
-        return ['Recent', '>1 year'];
-      }
-
+    const getConcernOptions = (concern: string, stepType: 'type' | 'severity' | 'sensitivity-question', questionIndex?: number) => {
       if (stepType === 'sensitivity-question' && questionIndex !== undefined) {
         const sensitivityQuestions = [
           ['Yes', 'No'],
@@ -858,25 +893,115 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
       switch (concern) {
         case 'Acne':
-          return ['Whiteheads', 'Blackheads', 'Inflamed pimples', 'Cystic', 'Hormonal flare-ups'];
+          if (stepType === 'type') {
+            return [
+              'Blackheads (tiny dark dots in pores)',
+              'Whiteheads (small white bumps under the skin)',
+              'Red pimples (inflamed, sometimes pus-filled)',
+              'Large painful bumps (deep cystic acne)',
+              'Mostly around jawline/chin, often before periods (hormonal)'
+            ];
+          } else if (stepType === 'severity') {
+            const acneType = formData.acneType;
+            if (acneType.includes('Blackheads')) {
+              return [
+                'A few, mostly on the nose (≤10) → Blue',
+                'Many in the T-zone (11–30) → Yellow',
+                'Widespread across face (30+) → Red'
+              ];
+            } else if (acneType.includes('Whiteheads')) {
+              return [
+                'A few, small area (≤10) → Blue',
+                'Many in several areas (11–20) → Yellow',
+                'Widespread across face (20+) → Red'
+              ];
+            } else if (acneType.includes('Red pimples')) {
+              return [
+                'A few (1–3), mild → Blue',
+                'Several (4–10), some painful → Yellow',
+                'Many (10+), inflamed/widespread → Red'
+              ];
+            } else if (acneType.includes('Large painful bumps') || acneType.includes('cystic')) {
+              return [
+                'Rare (1 in last 2 weeks) → Blue',
+                'Frequent (1–3 per week) → Yellow',
+                'Persistent (4+ per week or multiple at once) → Red'
+              ];
+            } else if (acneType.includes('jawline') || acneType.includes('hormonal')) {
+              return [
+                'Mild monthly flare (1–3 pimples) → Blue',
+                'Clear monthly flare (several pimples/cyst lasting a week) → Yellow',
+                'Strong monthly flare (multiple cysts lasting >1 week) → Red'
+              ];
+            }
+            // Default fallback
+            return [
+              'Mild (few breakouts) → Blue',
+              'Moderate (several breakouts) → Yellow',
+              'Severe (many breakouts) → Red'
+            ];
+          }
+          return [];
         case 'Pigmentation':
-          return ['PIH brown', 'PIE red', 'Melasma'];
-        case 'Dullness':
-          return ['Occasional', 'Frequent', 'Persistent'];
+          if (stepType === 'type') {
+            return ['Red', 'Brown'];
+          } else if (stepType === 'severity') {
+            // Check if pigmentationType contains "Red" or "Brown" to determine which severity options to show
+            const currentType = formData.pigmentationType;
+            if (currentType === 'Red' || currentType.includes('red') || currentType.includes('Red') || currentType.includes('redness')) {
+              return [
+                'Light red, only in a small area → Blue',
+                'Moderate red, noticeable in several zones → Yellow',
+                'Bright or deep red, widespread across the face → Red'
+              ];
+            } else if (currentType === 'Brown' || currentType.includes('brown') || currentType.includes('Brown') || currentType.includes('pigmentation')) {
+              return [
+                'Light brown patches, visible up close but small in size → Blue',
+                'Moderate brown spots/patches, noticeable in several areas → Yellow',
+                'Dark brown patches, large or widespread across the face → Red'
+              ];
+            }
+            // Default to brown options if type is not clearly determined
+            return [
+              'Light brown patches, visible up close but small in size → Blue',
+              'Moderate brown spots/patches, noticeable in several areas → Yellow',
+              'Dark brown patches, large or widespread across the face → Red'
+            ];
+          }
+          return [];
         case 'Fine lines & wrinkles':
-          return ['Forehead lines', 'Crow\'s feet', 'Smile lines'];
+          if (stepType === 'severity') {
+            return [
+              'A few fine lines or slight looseness in some spots → Blue',
+              'Wrinkles or sagging you can see in several areas → Yellow',
+              'Deep wrinkles or sagging that\'s easy to notice → Red'
+            ];
+          }
+          return [];
         case 'Large pores':
-          return ['Always present', 'Only in T-zone', 'Occasional'];
-        case 'Oiliness':
-          return ['T-zone only', 'Cheeks + T-zone', 'All over'];
-        case 'Dryness':
-          return ['Tight/rough', 'Flaky', 'Cracks/peels'];
+          if (stepType === 'severity') {
+            return [
+              'Noticeable near the nose or small areas on close inspection → Blue',
+              'Clearly visible on multiple zones (nose, cheeks, forehead) → Yellow',
+              'Large, obvious pores across much of the face, visible from a distance → Red'
+            ];
+          }
+          return [];
+        case 'Dullness':
+          if (stepType === 'severity') {
+            return [
+              'Occasional dullness that comes and goes → Blue',
+              'Frequently dull skin that needs regular brightening → Yellow',
+              'Persistent dullness across the face → Red'
+            ];
+          }
+          return [];
         default:
           return [];
       }
     };
 
-    const getFieldInfo = (concern: string, stepType: 'type' | 'duration' | 'sensitivity-question', questionIndex?: number) => {
+    const getFieldInfo = (concern: string, stepType: 'type' | 'severity' | 'sensitivity-question', questionIndex?: number) => {
       if (stepType === 'sensitivity-question' && questionIndex !== undefined) {
         const sensitivityFields = [
           'sensitivityRedness',
@@ -904,9 +1029,44 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       }
 
       const base = concernBaseKey(concern);
-      const fieldKey = base ? base + (stepType === 'duration' ? 'Duration' : 'Type') : '';
-      const title = stepType === 'duration' ? 'How long have you had this?' : 'What type do you experience?';
-      const subtitle = ''; // Remove subtitle since title now contains the full question
+      const concernsWithType = ['Acne', 'Pigmentation'];
+      let title = '';
+      let subtitle = '';
+
+      if (stepType === 'type') {
+        if (concern === 'Pigmentation') {
+          title = 'What type do you experience?';
+        } else if (concern === 'Acne') {
+          title = 'What kind of breakouts do you usually notice?';
+        } else {
+          title = 'What type do you experience?';
+        }
+      } else if (stepType === 'severity') {
+        if (concern === 'Pigmentation') {
+          title = 'How would you describe the severity?';
+        } else if (concern === 'Acne') {
+          title = 'How would you describe the severity?';
+        } else if (concern === 'Fine lines & wrinkles') {
+          title = 'How would you describe the severity?';
+        } else if (concern === 'Large pores') {
+          title = 'How would you describe the severity?';
+        } else if (concern === 'Dullness') {
+          title = 'How would you describe the severity?';
+        } else {
+          title = 'What type do you experience?';
+        }
+      }
+
+      let fieldKey = '';
+      if (stepType === 'type') {
+        fieldKey = base + 'Type';
+      } else if (stepType === 'severity') {
+        if (concernsWithType.includes(concern)) {
+          fieldKey = base + 'Severity';
+        } else {
+          fieldKey = base + 'Type';
+        }
+      }
       
       return { fieldKey, title, subtitle };
     };
@@ -916,7 +1076,23 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     const options = getConcernOptions(concern, stepType, questionIndex);
 
     return (
-      <div className="space-y-12 flex flex-col justify-center h-full py-8">
+      <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
+        {/* Concern Badge */}
+        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
+            <span className="mr-1">{React.cloneElement(getConcernIcon(concern), { className: "w-4 h-4 text-amber-600" })}</span>
+            {concern}
+          </div>
+          
+          {/* Acne Type Badge - only show for Acne severity step */}
+          {concern === 'Acne' && stepType === 'severity' && getAcneTypeBadge(formData.acneType) && (
+            <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium border border-blue-200">
+              <span className="mr-1">{React.cloneElement(getConcernIcon(concern), { className: "w-4 h-4 text-blue-600" })}</span>
+              {getAcneTypeBadge(formData.acneType)}
+            </div>
+          )}
+        </div>
+
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
             {getConcernIcon(concern)}
@@ -1362,7 +1538,6 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                   {/* Helper to format date consistently (local, no TZ shift) */}
                   
                   <DatePicker
-                    placeholder="Select your date of birth"
                     defaultDate={new Date(2005, 0, 1)}
                     value={formData.dateOfBirth ? new Date(formData.dateOfBirth + 'T00:00:00') : null}
                     onChange={(val) => {
@@ -1478,7 +1653,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
             <div className="max-w-2xl mx-auto w-full">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {['Normal', 'Oily', 'Dry', 'Combination', 'Sensitive'].map((option) => (
+                {['Normal', 'Oily', 'Dry', 'Combination'].map((option) => (
                   <button
                     key={option}
                     type="button"
@@ -1843,9 +2018,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                   'Redness/Sensitivity',
                   'Dullness',
                   'Fine lines & wrinkles',
-                  'Large pores',
-                  'Oiliness',
-                  'Dryness'
+                  'Large pores'
                 ].map((concern) => {
                   const isSelected = formData.mainConcerns.includes(concern);
                   const isDisabled = !isSelected && formData.mainConcerns.length >= 3;
@@ -1882,6 +2055,26 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
   const totalSteps = getTotalSteps();
 
+  if (isSubmitted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-6">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
+            <CheckCircle className="w-8 h-8 text-green-600" />
+          </div>
+          <h1 className="text-2xl font-semibold text-gray-900 mb-4">Consultation Complete!</h1>
+          <p className="text-gray-600 mb-6">The consultation has been submitted successfully.</p>
+          <button
+            onClick={onComplete}
+            className="mt-6 px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold transition-all duration-300 shadow-lg hover:from-green-700 hover:to-emerald-700"
+          >
+            Back to Profile Selection
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
       <div className="container mx-auto px-4 py-8">
@@ -1892,7 +2085,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             className="flex items-center space-x-2 px-4 py-2 text-amber-700 hover:text-amber-800 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>Back to Staff Portal</span>
+            <span>Back to Profile Selection</span>
           </button>
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-800">Updated Client Consult</h1>

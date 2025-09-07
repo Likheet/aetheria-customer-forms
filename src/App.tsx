@@ -741,7 +741,7 @@ function App() {
   // Updated Consult Flow
   if (currentFlow === 'updated-consult') {
     return (
-      <ChooseProfile />
+      <ChooseProfile onBack={handleGoHome} />
     );
   }
 
