@@ -210,7 +210,7 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
     outcomes: [
       { when: 'Q1=Pimples / breakouts', updates: [], verdict: 'Route to ACNE questions.', flags: ['route:acne'] },
       { when: 'Q1=Tiny uneven dots (not pimples) AND Q2=Forehead AND Q3=Yes', updates: [], verdict: 'Recommend scalp analysis.', flags: ['suggest:scalp-analysis'] },
-      { when: 'Q1=Tiny uneven dots (not pimples) AND Q2 in {Chin, Cheeks, All over}', updates: ['Pores: Yellow'], verdict: 'Clogged pores' },
+      { when: 'Q1=Tiny uneven dots (not pimples) AND Q2 in {Chin, Cheeks, All over}', updates: ['Pores: Yellow'], verdict: 'Oil-related bumps (comedonal)' },
     ],
   },
   {
@@ -225,10 +225,10 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
       { id: 'Q4', prompt: 'Do you have dandruff or an oily scalp?', options: ['Yes', 'No'] },
     ],
     outcomes: [
-      { when: 'Q1 in {Chin, Cheeks, Other}', updates: ['Pores: Yellow'], verdict: 'Clogged pores' },
+      { when: 'Q1 in {Chin, Cheeks, Other}', updates: ['Pores: Yellow'], verdict: 'Oil-related bumps (comedonal)' },
       { when: 'Q1=Forehead AND Q4=Yes', updates: [], verdict: 'Recommend scalp analysis.', flags: ['suggest:scalp-analysis'] },
-      { when: 'Q2=Yes', updates: [], verdict: 'Acne scars present - branch to scar type.' },
-      { when: 'Q1=No AND Q2=No AND Q3=Yes', updates: ['Texture: Yellow'], verdict: 'Aging care (age > 40).' },
+      { when: 'Q2=Yes', updates: [], verdict: 'Acne scars present - branch to scar type.', flags: ['followup:scar-type'] },
+      { when: 'Q1=No AND Q2=No AND Q3=Yes', updates: ['Texture: Yellow'], verdict: 'Anti-aging routine' },
     ],
   },
 

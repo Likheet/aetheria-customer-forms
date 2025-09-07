@@ -2336,8 +2336,21 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                       if (wt.includes('yellow') || wt.includes('red')) {
                         extra.push('Follow anti-aging routine.')
                       }
+                      // Add short acne type tag to Remarks (max 2 words)
+                      const acneType = String((formData as any).acneType || '')
+                      if (acneType) {
+                        const short = (() => {
+                          if (acneType.includes('Blackheads')) return 'Blackheads'
+                          if (acneType.includes('Whiteheads')) return 'Whiteheads'
+                          if (acneType.includes('Red pimples')) return 'Inflamed'
+                          if (acneType.includes('Large painful bumps') || acneType.toLowerCase().includes('cystic')) return 'Cystic'
+                          if (acneType.toLowerCase().includes('jawline') || acneType.toLowerCase().includes('hormonal')) return 'Hormonal'
+                          return ''
+                        })()
+                        if (short) extra.push(short)
+                      }
                       const all = Array.from(new Set([...fromDecisions, ...extra]))
-                      if (all.length === 0) return <span className="text-gray-400">—</span>
+                      if (all.length === 0) return <span className="text-gray-400">-</span>
                       return all.map(r => (
                         <div key={r} className="text-gray-700 text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1">{r}</div>
                       ))
