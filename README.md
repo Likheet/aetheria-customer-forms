@@ -117,7 +117,7 @@ Notes
 ## Decision Engine Rules (RULE_SPECS)
 
 The decision engine reads a static rules spec at `src/lib/decisionRules.ts` and uses it to drive follow-ups and band updates. Below is a human-readable listing of all rules, so you can review and request edits. Notes:
-- Category “Grease” in the spec is displayed as “Sebum” in the UI; updates map to the `sebum` metric.
+- Category is “Sebum” everywhere (UI, flags, updates, mapping). The spec historically used the word “Grease”, but all updates/flags target the `sebum` metric and are shown as “Sebum: …”.
 - “Dimension” only applies to Pigmentation (brown vs red).
 - Outcomes use a simple when-grammar (AND/OR, equality, in {…}, includes/excludes, and numeric comparisons). See file comments for details.
 
@@ -134,11 +134,12 @@ Moisture
     - Q3: Do you have visible flaking/rough patches? (Yes/No)
     - Q4: Current actives/meds in last 4 weeks? (Retinoids, BPO, AHA/BHA, Adapalene, Isotretinoin, None) [multi]
   - Outcomes:
-    - Q2=Yes AND Q3=Yes → Moisture: Red
-    - Q2=Yes OR Q3=Yes OR Q4 includes Retinoids/Isotretinoin → Moisture: Yellow
-    - Q2=No AND Q3=No AND Q4 excludes Retinoids/Isotretinoin → Moisture: Blue
+    - Q2=Yes AND Q3=Yes → Moisture: Red; Verdict: TRUE DRY / COMPROMISED BARRIER (override machine; barrier repair focus)
+    - Q2=Yes OR Q3=Yes OR Q4 includes Retinoids/Isotretinoin → Moisture: Yellow; Verdict: TRUE DRY / COMPROMISED BARRIER (override machine; barrier repair focus)
+    - Q2=No AND Q3=No AND Q4 excludes Retinoids/Isotretinoin → Moisture: Blue; Verdict: NORMAL HYDRATION (trust machine)
+    - Optional (only if we formalize a Q1 for product-film check): If Q1 indicates a film (e.g., heavy layers / cleansing residue) → Verdict: PRODUCT FILM AFFECTED; meanwhile still treat as DRY if Q2=Yes or Q3=Yes.
 
-Sebum (Grease in spec)
+Sebum
 - Rule: `sebum_machineNormal_customerOily`
   - Trigger: Machine in {green,blue} AND Customer in {red,yellow}
   - Questions:
@@ -150,6 +151,7 @@ Sebum (Grease in spec)
     - Q1≥3x/day AND Q2=All over → Sebum: Red
     - Q1≥3x/day OR Q2=All over → Sebum: Yellow
     - Q2=T‑zone AND Q1=1–2x/day → Sebum: Yellow (verdict: COMBINATION)
+    - If Q5=Yes (mattifying primer/powder used) OR Q3=Yes (recent mattifying/clay/sheets) → Verdict: PRODUCT FILM AFFECTED; still treat as Oily only if Q1≥3x/day OR Q2=All over
 - Rule: `sebum_machineOily_customerNormal`
   - Trigger: Machine in {yellow,red} AND Customer in {green,blue}
   - Questions:
@@ -159,8 +161,8 @@ Sebum (Grease in spec)
   - Outcomes:
     - (Q1=Yes OR Q2=Yes) AND Q3=No → Sebum: Red
     - (Q1=Yes OR Q2=Yes) AND Q3=Yes → Sebum: Yellow
-    - Q1=No AND Q2=No AND Q3=Yes → Sebum: Blue
-    - Q1=No AND Q2=No AND Q3=No → Sebum: Green
+    - Q1=No AND Q2=No AND Q3=Yes → Sebum: Blue (product-induced shine)
+    - Q1=No AND Q2=No AND Q3=No → Sebum: Green (possible lighting artifact)
 
 Acne – Presence
 - Rule: `acne_machinePresence_customerNone`
@@ -180,6 +182,8 @@ Acne – Presence
     - Q1≥15 AND Q2=No → Acne: Red (flags: moderate inflammatory – pustular/papular after follow‑up)
     - Q1<5 AND Q3>10 → Acne: Yellow (flags: comedonal acne)
     - Q1<5 AND Q3<10 AND Q4=Yes → Acne: Blue (flags: situational acne)
+    - Q5=Yes (Pregnancy/Breastfeeding) → Verdict: ACNE WITH PREGNANCY SAFETY FILTER (restrict high‑risk actives)
+    - None of the above (0 inflamed, 0 comedones, no triggers) → Verdict: CLEAR SKIN (machine false positive likely)
 
 Sensitivity
 - Rule: `sensitivity_placeholder`
@@ -213,6 +217,8 @@ Texture
     - Q1: When you say “bumpy,” do you mean: (Pimples/breakouts, Tiny uneven dots (not pimples), Just feels uneven to touch)
     - Q2: Where do you notice this most? (Forehead, Chin, Cheeks, All over)
   - Outcomes:
+    - Q1=Pimples / breakouts → Branch to Acne questions (route)
+    - Q1=Tiny uneven dots AND Q2=Forehead → Ask about dandruff/oily scalp; if yes, recommend scalp analysis (verdict: consider scalp analysis)
     - Q1=Tiny uneven dots AND Q2 in {Chin, Cheeks, All over} → Texture: Yellow (verdict: clogged pores)
 - Rule: `texture_machineBumpy_customerSmooth`
   - Trigger: Machine in {red,yellow} AND Customer in {green,blue}
@@ -220,7 +226,7 @@ Texture
   - Outcomes:
     - Q1 in {Chin, Cheeks, Other} → Texture: Yellow (verdict: clogged pores)
     - Q2=Yes → updates: [] (verdict: acne scars present – branch to scar type)
-    - Q1=No AND Q2=No AND Q3=Yes → Texture: Yellow (verdict: aging care)
+    - Q1=No AND Q2=No AND Q3=Yes (age > 40) → Texture: Yellow (verdict: aging care)
 
 Pigmentation
 - Rule: `pigmentation_machineHigh_customerNormal_brown` (dimension: brown)

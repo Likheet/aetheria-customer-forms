@@ -67,9 +67,9 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
       },
     ],
     outcomes: [
-      { when: 'Q2=Yes AND Q3=Yes', updates: ['Moisture: Red'] },
-      { when: 'Q2=Yes OR Q3=Yes OR Q4 includes Retinoids/Isotretinoin', updates: ['Moisture: Yellow'] },
-      { when: 'Q2=No AND Q3=No AND Q4 excludes Retinoids/Isotretinoin', updates: ['Moisture: Blue'] },
+      { when: 'Q2=Yes AND Q3=Yes', updates: ['Moisture: Red'], verdict: 'TRUE DRY / COMPROMISED BARRIER (override machine; barrier repair focus).' },
+      { when: 'Q2=Yes OR Q3=Yes OR Q4 includes Retinoids/Isotretinoin', updates: ['Moisture: Yellow'], verdict: 'TRUE DRY / COMPROMISED BARRIER (override machine; barrier repair focus).' },
+      { when: 'Q2=No AND Q3=No AND Q4 excludes Retinoids/Isotretinoin', updates: ['Moisture: Blue'], verdict: 'NORMAL HYDRATION (trust machine).' },
     ],
   },
 
@@ -80,15 +80,17 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
     machineInput: ['green', 'blue'],
     customerInput: ['red', 'yellow'],
     questions: [
-      { id: 'Q1', prompt: 'How often do you blot/wash face due to oil?', options: ['Never', '1–2x/day', '>=3x/day'] },
-      { id: 'Q2', prompt: 'Is shine localized to T‑zone?', options: ['T‑zone', 'All over', 'No shine'] },
-      { id: 'Q3', prompt: 'Used mattifying products, clay masks or oil‑absorbing sheets within last 24h?', options: ['Yes', 'No'] },
+      { id: 'Q1', prompt: 'How often do you blot/wash face due to oil?', options: ['Never', '1-2x/day', '>=3x/day'] },
+      { id: 'Q2', prompt: 'Is shine localized to T-zone?', options: ['T-zone', 'All over', 'No shine'] },
+      { id: 'Q3', prompt: 'Used mattifying products, clay masks or oil-absorbing sheets within last 24h?', options: ['Yes', 'No'] },
       { id: 'Q5', prompt: 'Any mattifying primer/powder used in last 8h?', options: ['Yes', 'No'] },
     ],
     outcomes: [
-      { when: 'Q1=>=3x/day AND Q2=All over', updates: ['Grease: Red'] },
-      { when: 'Q1=>=3x/day OR Q2=All over', updates: ['Grease: Yellow'] },
-      { when: 'Q2=T‑zone AND Q1=1–2x/day', updates: ['Grease: Yellow'], verdict: 'COMBINATION.' },
+      { when: 'Q1=>=3x/day AND Q2=All over AND (Q3=Yes OR Q5=Yes)', updates: ['Sebum: Red'], verdict: 'PRODUCT FILM AFFECTED; still treat as Oily only if frequent/all-over shine.' },
+      { when: '(Q1=>=3x/day OR Q2=All over) AND (Q3=Yes OR Q5=Yes)', updates: ['Sebum: Yellow'], verdict: 'PRODUCT FILM AFFECTED; still treat as Oily only if frequent/all-over shine.' },
+      { when: 'Q1=>=3x/day AND Q2=All over', updates: ['Sebum: Red'] },
+      { when: 'Q1=>=3x/day OR Q2=All over', updates: ['Sebum: Yellow'] },
+      { when: 'Q2=T-zone AND Q1=1-2x/day', updates: ['Sebum: Yellow'], verdict: 'COMBINATION.' },
     ],
   },
   {
@@ -97,15 +99,15 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
     machineInput: ['yellow', 'red'],
     customerInput: ['green', 'blue'],
     questions: [
-      { id: 'Q1', prompt: 'Do you see visible shine within 2–4h after cleansing?', options: ['Yes', 'No'] },
+      { id: 'Q1', prompt: 'Do you see visible shine within 2-4h after cleansing?', options: ['Yes', 'No'] },
       { id: 'Q2', prompt: 'Do you get frequent blackheads/whiteheads?', options: ['Yes', 'No'] },
       { id: 'Q3', prompt: 'Using heavy creams/oils/sunscreens?', options: ['Yes', 'No'] },
     ],
     outcomes: [
-      { when: '(Q1=Yes OR Q2=Yes) AND Q3=No', updates: ['Grease: Red'] },
-      { when: '(Q1=Yes OR Q2=Yes) AND Q3=Yes', updates: ['Grease: Yellow'] },
-      { when: 'Q1=No AND Q2=No AND Q3=Yes', updates: ['Grease: Blue'] },
-      { when: 'Q1=No AND Q2=No AND Q3=No', updates: ['Grease: Green'] },
+      { when: '(Q1=Yes OR Q2=Yes) AND Q3=No', updates: ['Sebum: Red'] },
+      { when: '(Q1=Yes OR Q2=Yes) AND Q3=Yes', updates: ['Sebum: Yellow'] },
+      { when: 'Q1=No AND Q2=No AND Q3=Yes', updates: ['Sebum: Blue'], verdict: 'PRODUCT-INDUCED SHINE.' },
+      { when: 'Q1=No AND Q2=No AND Q3=No', updates: ['Sebum: Green'], verdict: 'NORMAL (possible lighting artifact).' },
     ],
   },
 
@@ -133,19 +135,21 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
     machineInput: ['green', 'blue'],
     customerInput: ['yellow', 'red'],
     questions: [
-      { id: 'Q1', prompt: 'How many inflamed (red, swollen, painful) pimples do you currently see?', options: ['None', '1–5', '6–15', '>=15'] },
+      { id: 'Q1', prompt: 'How many inflamed (red, swollen, painful) pimples do you currently see?', options: ['None', '1-5', '6-15', '>=15'] },
       { id: 'Q2', prompt: 'Do you get deep, painful lumps or nodules under the skin?', options: ['Yes', 'No'] },
-      { id: 'Q3', prompt: 'Do you have visible blackheads/whiteheads (clogged pores, small bumps)?', options: ['None', '<10', '10–20', '>=20'] },
+      { id: 'Q3', prompt: 'Do you have visible blackheads/whiteheads (clogged pores, small bumps)?', options: ['None', '<10', '10-20', '>=20'] },
       { id: 'Q4', prompt: 'Do your breakouts usually flare with specific triggers (mask/sweat, periods, stress, products, etc.)?', options: ['Yes', 'No'] },
       { id: 'Q5', prompt: 'Are you currently pregnant or breastfeeding?', options: ['Yes', 'No', 'NA (male)'] },
     ],
     outcomes: [
       { when: 'Q2=Yes OR Q1=>=15', updates: ['Acne: Red'], flags: ['acne-category:Nodulocystic OR refer-derm'] },
-      { when: 'Q1=6–15 AND Q2=No', updates: ['Acne: Yellow'], flags: ['acne-category:Mild inflammatory'] },
-      { when: 'Q1=1–5 AND Q3=<10', updates: ['Acne: Blue'] },
-      { when: 'Q1>=15 AND Q2=No', updates: ['Acne: Red'], flags: ['acne-category:Moderate inflammatory (pustular/papular after follow‑up)'] },
+      { when: 'Q1=6-15 AND Q2=No', updates: ['Acne: Yellow'], flags: ['acne-category:Mild inflammatory'] },
+      { when: 'Q1=1-5 AND Q3=<10', updates: ['Acne: Blue'] },
+      { when: 'Q1>=15 AND Q2=No', updates: ['Acne: Red'], flags: ['acne-category:Moderate inflammatory (pustular/papular after follow-up)'] },
       { when: 'Q1<5 AND Q3=>10', updates: ['Acne: Yellow'], flags: ['acne-category:Comedonal acne'] },
       { when: 'Q1<5 AND Q3<10 AND Q4=Yes', updates: ['Acne: Blue'], flags: ['acne-category:Situational acne'] },
+      { when: 'Q5=Yes', updates: [], flags: ['pregnancy-filter'], verdict: 'ACNE WITH PREGNANCY SAFETY FILTER (restrict high-risk actives).' },
+      { when: 'Q1=None AND Q3=<10 AND Q4=No', updates: ['Acne: Green'], verdict: 'CLEAR SKIN (machine false positive likely).' },
     ],
   },
 
@@ -207,10 +211,12 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
     machineInput: ['green', 'blue'],
     customerInput: ['red', 'yellow'],
     questions: [
-      { id: 'Q1', prompt: 'When you say “bumpy,” do you mean:', options: ['Pimples / breakouts', 'Tiny uneven dots (not pimples)', 'Just feels uneven to touch'] },
+      { id: 'Q1', prompt: 'When you say "bumpy," do you mean:', options: ['Pimples / breakouts', 'Tiny uneven dots (not pimples)', 'Just feels uneven to touch'] },
       { id: 'Q2', prompt: 'Where do you notice this most?', options: ['Forehead', 'Chin', 'Cheeks', 'All over'] },
     ],
     outcomes: [
+      { when: 'Q1=Pimples / breakouts', updates: [], verdict: 'Route to ACNE questions.', flags: ['route:acne'] },
+      { when: 'Q1=Tiny uneven dots (not pimples) AND Q2=Forehead', updates: [], verdict: 'Possible scalp-origin bumps – consider scalp analysis.', flags: ['suggest:scalp-analysis'] },
       { when: 'Q1=Tiny uneven dots AND Q2 in {Chin, Cheeks, All over}', updates: ['Texture: Yellow'], verdict: 'Clogged pores' },
     ],
   },
@@ -226,8 +232,8 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
     ],
     outcomes: [
       { when: 'Q1 in {Chin, Cheeks, Other}', updates: ['Texture: Yellow'], verdict: 'Clogged pores' },
-      { when: 'Q2=Yes', updates: [], verdict: 'Acne scars present – branch to scar type.' },
-      { when: 'Q1=No AND Q2=No AND Q3=Yes', updates: ['Texture: Yellow'], verdict: 'Aging care' },
+      { when: 'Q2=Yes', updates: [], verdict: 'Acne scars present - branch to scar type.' },
+      { when: 'Q1=No AND Q2=No AND Q3=Yes', updates: ['Texture: Yellow'], verdict: 'Aging care (age > 40).' },
     ],
   },
 
@@ -265,4 +271,3 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
 ]
 
 export default RULE_SPECS
-
