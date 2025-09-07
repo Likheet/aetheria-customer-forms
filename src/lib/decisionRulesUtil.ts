@@ -63,6 +63,8 @@ function getCategorySelfBand(cat: Category, self: SelfBands, dim?: 'brown' | 're
 }
 
 export function getFollowUpQuestions(machine: MachineBands, self: SelfBands): RuleQuestionSet[] {
+  // Return all matching rules (with or without questions). The caller/UI can decide
+  // to render only those having questions, while the engine may auto-apply no-question ones.
   const results: RuleQuestionSet[] = []
   for (const rule of RULE_SPECS) {
     const mBand = getCategoryMachineBand(rule.category, machine, rule.dimension)
@@ -70,14 +72,12 @@ export function getFollowUpQuestions(machine: MachineBands, self: SelfBands): Ru
     if (!mBand || !cBand) continue
     if (!rule.machineInput.includes(mBand)) continue
     if (!rule.customerInput.includes(cBand)) continue
-    if (rule.questions && rule.questions.length) {
-      results.push({
-        ruleId: rule.id,
-        category: rule.category,
-        dimension: rule.dimension,
-        questions: rule.questions,
-      })
-    }
+    results.push({
+      ruleId: rule.id,
+      category: rule.category,
+      dimension: rule.dimension,
+      questions: rule.questions || [],
+    })
   }
   return results
 }
@@ -280,4 +280,3 @@ export function decideAllBandUpdates(
   }
   return { updates, perRule }
 }
-

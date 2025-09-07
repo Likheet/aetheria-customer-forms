@@ -196,7 +196,10 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const [errors, setErrors] = useState<Record<string, string>>({});
   // RULE_SPECS runtime state
   const [runtimeSelf, setRuntimeSelf] = useState<any>({});
+  // queued follow-up (next to show when user clicks Next)
   const [followUp, setFollowUp] = useState<null | { ruleId: string; category: string; dimension?: 'brown'|'red'; questions: Array<{ id: string; prompt: string; options: string[]; multi?: boolean }> }>(null);
+  // active follow-up currently being displayed
+  const [activeFollowUp, setActiveFollowUp] = useState<null | { ruleId: string; category: string; dimension?: 'brown'|'red'; questions: Array<{ id: string; prompt: string; options: string[]; multi?: boolean }> }>(null);
   const [followUpAnswers, setFollowUpAnswers] = useState<Record<string, Record<string, string | string[]>>>({});
   const [followUpLocal, setFollowUpLocal] = useState<Record<string, string | string[]>>({});
   const [effectiveBands, setEffectiveBands] = useState<any>(machine || {});
@@ -232,40 +235,51 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     });
   };
 
-  // ---- Runtime: compute self bands and immediate mandatory follow-ups on base-answer edits
-  useEffect(() => {
-    // Derive self bands from current answers
-    const self = deriveSelfBandsRt(formData as any, { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding });
-    setRuntimeSelf(self);
-    const m = (machine || {}) as any;
-    const qsets = getFollowUpsRt(m, self);
-    // Process rules in order: auto-apply rules with no questions; present the first with questions as REQUIRED follow-up
-    const process = () => {
-      let idx = 0;
-      while (idx < qsets.length) {
-        const r = qsets[idx];
-        // skip if already answered
-        if (followUpAnswers[r.ruleId]) { idx++; continue; }
-        if (!r.questions || r.questions.length === 0) {
-          // auto-apply decision for no-question rules
-          const decision = decideBandRt(r.ruleId, {}, { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any) || { updates: {} };
-          setDecisions(prev => [...prev, { ruleId: r.ruleId, ...decision, decidedAt: new Date().toISOString(), specVersion: 'live' }]);
-          setEffectiveBands((prev: any) => ({ ...prev, ...(decision.updates || {}) }));
-          setFollowUpAnswers(prev => ({ ...prev, [r.ruleId]: {} }));
-          idx++;
-          continue;
-        }
-        // present this rule's questions as mandatory follow-up
-        setFollowUp({ ruleId: r.ruleId, category: r.category as any, dimension: r.dimension as any, questions: r.questions });
-        setFollowUpLocal({});
-        return;
+  // Recompute engine outputs from base answers + stored follow-up answers
+  const recomputeEngine = (answersByRuleId: Record<string, Record<string, string | string[]>>) => {
+    const ctx = { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any
+    const m = (machine || {}) as any
+    const self = deriveSelfBandsRt(formData as any, ctx)
+    setRuntimeSelf(self)
+    const qsets = getFollowUpsRt(m, self)
+    const applicable = new Set(qsets.map(q => q.ruleId))
+    // Filter stale answered rules
+    const filteredAnswers: Record<string, Record<string, string | string[]>> = {}
+    for (const [rid, ans] of Object.entries(answersByRuleId || {})) {
+      if (applicable.has(rid)) filteredAnswers[rid] = ans
+    }
+    const newDecisions: any[] = []
+    let updates: any = {}
+    // Auto-apply no-question rules
+    for (const r of qsets) {
+      if (!r.questions || r.questions.length === 0) {
+        const d = decideBandRt(r.ruleId, {}, ctx) || { updates: {} }
+        newDecisions.push({ ruleId: r.ruleId, ...d, decidedAt: new Date().toISOString(), specVersion: 'live' })
+        updates = mergeBandsRt(updates, d.updates || {}) as any
       }
-      // none left
-      setFollowUp(null);
-    };
-    process();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.oilLevels, formData.hydrationLevels, formData.acneType, formData.acneSeverity, formData.pigmentationType, formData.pigmentationSeverity, formData.poresType, formData.wrinklesType, formData.mainConcerns, formData.dateOfBirth, formData.pregnancyBreastfeeding]);
+    }
+    // Apply answered rules with questions
+    for (const r of qsets) {
+      if (r.questions && r.questions.length && filteredAnswers[r.ruleId]) {
+        const d = decideBandRt(r.ruleId, filteredAnswers[r.ruleId], ctx) || { updates: {} }
+        newDecisions.push({ ruleId: r.ruleId, ...d, decidedAt: new Date().toISOString(), specVersion: 'live' })
+        updates = mergeBandsRt(updates, d.updates || {}) as any
+      }
+    }
+    // Determine next unanswered follow-up (first with questions and no stored answers)
+    const next = qsets.find(q => q.questions && q.questions.length && !filteredAnswers[q.ruleId]) || null
+    setFollowUp(next ? { ruleId: next.ruleId, category: next.category as any, dimension: next.dimension as any, questions: next.questions || [] } : null)
+    if (next) setFollowUpLocal(filteredAnswers[next.ruleId] || {})
+    setDecisions(newDecisions)
+    setEffectiveBands({ ...m, ...updates })
+    setFollowUpAnswers(filteredAnswers)
+  }
+
+  // Trigger recompute when base answers change
+  useEffect(() => {
+    recomputeEngine(followUpAnswers)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.oilLevels, formData.hydrationLevels, formData.acneType, formData.acneSeverity, formData.pigmentationType, formData.pigmentationSeverity, formData.poresType, formData.wrinklesType, formData.mainConcerns, formData.dateOfBirth, formData.pregnancyBreastfeeding])
 
   const toggleFollowUpOption = (qid: string, opt: string, multi?: boolean) => {
     setFollowUpLocal(prev => {
@@ -283,38 +297,18 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   }
 
   const handleSubmitFollowUp = () => {
-    if (!followUp) return;
+    if (!activeFollowUp) return;
     // Ensure all questions answered
-    const allAnswered = (followUp.questions || []).every(q => followUpLocal[q.id] !== undefined && (Array.isArray(followUpLocal[q.id]) ? (followUpLocal[q.id] as any[]).length > 0 : String(followUpLocal[q.id]).length > 0))
+    const allAnswered = (activeFollowUp.questions || []).every(q => followUpLocal[q.id] !== undefined && (Array.isArray(followUpLocal[q.id]) ? (followUpLocal[q.id] as any[]).length > 0 : String(followUpLocal[q.id]).length > 0))
     if (!allAnswered) return; // required
-    const ruleId = followUp.ruleId
+    const ruleId = activeFollowUp.ruleId
     const decision = decideBandRt(ruleId, followUpLocal, { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any) || { updates: {} };
     setDecisions(prev => [...prev, { ruleId, ...decision, decidedAt: new Date().toISOString(), specVersion: 'live' }]);
     setEffectiveBands((prev: any) => ({ ...prev, ...(decision.updates || {}) }));
     // Compute updated answers synchronously for next-step selection
     const updatedAnswers = { ...followUpAnswers, [ruleId]: followUpLocal } as Record<string, Record<string, string | string[]>>
-    setFollowUpAnswers(updatedAnswers)
-    setFollowUp(null)
-    // Trigger re-evaluation for any remaining mismatches
-    const self = deriveSelfBandsRt(formData as any, { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any)
-    const m = (machine || {}) as any
-    const qsets = getFollowUpsRt(m, self)
-    // Auto-apply any remaining no-question rules first
-    for (const r of qsets) {
-      if (updatedAnswers[r.ruleId]) continue
-      if (!r.questions || r.questions.length === 0) {
-        const dec2 = decideBandRt(r.ruleId, {}, { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any) || { updates: {} }
-        setDecisions(prev => [...prev, { ruleId: r.ruleId, ...dec2, decidedAt: new Date().toISOString(), specVersion: 'live' }])
-        setEffectiveBands((prev: any) => ({ ...prev, ...(dec2.updates || {}) }))
-        updatedAnswers[r.ruleId] = {}
-      }
-    }
-    // Then present the next unanswered rule that has questions
-    const next = qsets.find(q => !updatedAnswers[q.ruleId] && q.questions && q.questions.length)
-    if (next) {
-      setFollowUp({ ruleId: next.ruleId, category: next.category as any, dimension: next.dimension as any, questions: next.questions || [] })
-      setFollowUpLocal({})
-    }
+    recomputeEngine(updatedAnswers)
+    setActiveFollowUp(null)
   }
 
   // Small tag/chip input component used for irritating products
@@ -574,7 +568,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         drynessDuration: prevData.drynessDuration, // not asked; do not fabricate
       
       // Sensitivity questions
-        ...(nextMainConcerns.includes('Redness/Sensitivity') ? {
+        ...(nextMainConcerns.includes('Sensitivity') ? {
           sensitivityRedness: prevData.sensitivityRedness || dummyFormData.sensitivityRedness,
           sensitivityDiagnosis: prevData.sensitivityDiagnosis || dummyFormData.sensitivityDiagnosis,
           sensitivityCleansing: prevData.sensitivityCleansing || dummyFormData.sensitivityCleansing,
@@ -630,7 +624,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       } else if (concern === 'Acne') {
         concernSteps.push({concern, step: 'type'});
         concernSteps.push({concern, step: 'severity'});
-      } else if (concern === 'Redness/Sensitivity') {
+      } else if (concern === 'Sensitivity') {
         // Add 7 sensitivity questions
         for (let i = 0; i < 7; i++) {
           concernSteps.push({concern, step: 'sensitivity-question', questionIndex: i});
@@ -775,7 +769,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             const baseMap: Record<string, string> = {
               'Acne': 'acne',
               'Pigmentation': 'pigmentation',
-              'Dullness': 'dullness',
+              'Sensitivity': 'sensitivity',
               'Fine lines & wrinkles': 'wrinkles',
               'Large pores': 'pores',
             };
@@ -803,6 +797,18 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   };
 
   const handleNext = () => {
+    // If a follow-up page is active, treat Next as Continue only when answered (guarded elsewhere)
+    if (activeFollowUp) {
+      const allAnswered = (activeFollowUp.questions || []).every(q => followUpLocal[q.id] !== undefined && (Array.isArray(followUpLocal[q.id]) ? (followUpLocal[q.id] as any[]).length > 0 : String(followUpLocal[q.id]).length > 0))
+      if (allAnswered) handleSubmitFollowUp();
+      return;
+    }
+    // If a follow-up is queued (and not currently shown), open it instead of advancing
+    if (followUp) {
+      setActiveFollowUp(followUp)
+      setFollowUpLocal(followUpAnswers[followUp.ruleId] || {})
+      return;
+    }
     if (validateStep(currentStep)) {
       if (currentStep < getTotalSteps()) {
         setCurrentStep(currentStep + 1);
@@ -813,6 +819,11 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   };
 
   const handleBack = () => {
+    // If a follow-up page is active, exit it first
+    if (activeFollowUp) {
+      setActiveFollowUp(null)
+      return
+    }
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
@@ -875,12 +886,19 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
   // Allow pressing Enter to trigger Next (except in textareas)
   const handleEnterAdvance = (e: React.KeyboardEvent) => {
-  if (e.key !== 'Enter') return;
-  // If we're on the irritating products step, let the local TagInput handle Enter
-  if (currentStep === 13) return;
+    if (e.key !== 'Enter') return;
+    // If we're on the irritating products step, let the local TagInput handle Enter
+    if (currentStep === 13) return;
     const target = e.target as HTMLElement | null;
     const tag = target?.tagName?.toLowerCase();
     if (tag === 'textarea') return; // keep newline behavior in textareas
+    // If follow-up active, only continue when all answered
+    if (activeFollowUp) {
+      e.preventDefault();
+      const allAnswered = (activeFollowUp.questions || []).every(q => followUpLocal[q.id] !== undefined && (Array.isArray(followUpLocal[q.id]) ? (followUpLocal[q.id] as any[]).length > 0 : String(followUpLocal[q.id]).length > 0))
+      if (allAnswered) handleSubmitFollowUp();
+      return;
+    }
     // If focused on the actual submit button, let normal submit run
     if (tag === 'button') {
       const btn = target as HTMLButtonElement;
@@ -938,8 +956,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       switch (c) {
         case 'Acne': return 'acne';
         case 'Pigmentation': return 'pigmentation';
-        case 'Redness/Sensitivity': return null; // handled separately
-        case 'Dullness': return 'dullness';
+        case 'Sensitivity': return null; // handled separately
         case 'Fine lines & wrinkles': return 'wrinkles';
         case 'Large pores': return 'pores';
         case 'Oiliness': return 'oiliness';
@@ -963,8 +980,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       switch (concern) {
         case 'Acne': return <Shield className="w-8 h-8 text-amber-600" />;
         case 'Pigmentation': return <Sun className="w-8 h-8 text-amber-600" />;
-        case 'Redness/Sensitivity': return <Heart className="w-8 h-8 text-amber-600" />;
-        case 'Dullness': return <Sparkles className="w-8 h-8 text-amber-600" />;
+        case 'Sensitivity': return <Heart className="w-8 h-8 text-amber-600" />;
         case 'Fine lines & wrinkles': return <Clock className="w-8 h-8 text-amber-600" />;
         case 'Large pores': return <Droplets className="w-8 h-8 text-amber-600" />;
         case 'Oiliness': return <Sun className="w-8 h-8 text-amber-600" />;
@@ -1145,8 +1161,6 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         } else if (concern === 'Fine lines & wrinkles') {
           title = 'How would you describe the severity?';
         } else if (concern === 'Large pores') {
-          title = 'How would you describe the severity?';
-        } else if (concern === 'Dullness') {
           title = 'How would you describe the severity?';
         } else {
           title = 'What type do you experience?';
@@ -2111,8 +2125,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                 {[
                   'Acne',
                   'Pigmentation', 
-                  'Redness/Sensitivity',
-                  'Dullness',
+                  'Sensitivity',
                   'Fine lines & wrinkles',
                   'Large pores'
                 ].map((concern) => {
@@ -2223,6 +2236,32 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                 </div>
               </div>
             </div>
+            {/* Editable Follow-ups list for quick access */}
+            <div className="bg-white/95 border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+              <div className="px-4 py-2 bg-gray-800 text-white text-sm font-semibold">Follow-ups (Editable)</div>
+              <div className="p-4 text-sm text-gray-800 space-y-2">
+                {(() => {
+                  const qsets = getFollowUpsRt((machine as any) || {}, (runtimeSelf as any) || {})
+                  const items = qsets.filter(q => q.questions && q.questions.length)
+                  if (items.length === 0) return <div className="text-gray-400">None</div>
+                  return items.map(q => (
+                    <div key={q.ruleId} className="flex items-center justify-between">
+                      <div className="truncate pr-2">{q.category === 'Grease' ? 'Sebum' : q.category}{q.dimension ? ` (${q.dimension})` : ''}</div>
+                      <button
+                        type="button"
+                        className="px-2 py-1 text-xs border border-amber-300 text-amber-700 rounded hover:bg-amber-50"
+                        onClick={() => {
+                          setActiveFollowUp({ ruleId: q.ruleId, category: q.category as any, dimension: q.dimension as any, questions: q.questions || [] })
+                          setFollowUpLocal(followUpAnswers[q.ruleId] || {})
+                        }}
+                      >
+                        {followUpAnswers[q.ruleId] ? 'Edit' : 'Answer'}
+                      </button>
+                    </div>
+                  ))
+                })()}
+              </div>
+            </div>
           </div>
         )}
         {/* Header */}
@@ -2267,18 +2306,17 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         {/* Form Content */}
         <form onSubmit={handleFormSubmit} onKeyDownCapture={handleEnterAdvance} className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl min-h-[600px] flex flex-col">
           <div className="flex-1 p-8">
-            {renderStep()}
-            {/* Mandatory follow-ups (RULE_SPECS) */}
-            {followUp && (
-              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30">
-                <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-amber-200">
+            {!activeFollowUp && renderStep()}
+            {activeFollowUp && (
+              <div className="max-w-2xl mx-auto">
+                <div className="bg-white rounded-2xl shadow-xl border border-amber-200">
                   <div className="px-6 py-4 border-b border-amber-200 bg-amber-50 rounded-t-2xl">
-                    <div className="text-base font-semibold text-amber-900">Follow-up Required: {followUp.category === 'Grease' ? 'Sebum' : followUp.category}{followUp.dimension ? ` (${followUp.dimension})` : ''}</div>
+                    <div className="text-base font-semibold text-amber-900">Follow-up: {activeFollowUp.category === 'Grease' ? 'Sebum' : activeFollowUp.category}{activeFollowUp.dimension ? ` (${activeFollowUp.dimension})` : ''}</div>
                     <div className="text-xs text-amber-800/80">Resolve machine vs customer difference</div>
                   </div>
                   <div className="px-6 py-5 space-y-5">
-                    {followUp.questions.map((q) => (
-                      <div key={q.id} className="">
+                    {activeFollowUp.questions.map((q) => (
+                      <div key={q.id}>
                         <div className="text-sm font-medium text-gray-900 mb-2">{q.prompt}</div>
                         {!q.multi ? (
                           <div className="flex flex-wrap gap-2">
@@ -2314,10 +2352,6 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                       </div>
                     ))}
                   </div>
-                  <div className="px-6 py-4 border-t border-amber-200 flex justify-end gap-3 rounded-b-2xl bg-gray-50">
-                    <button type="button" disabled className="px-4 py-2 rounded-lg text-sm bg-gray-100 text-gray-400 cursor-not-allowed">Back</button>
-                    <button type="button" onClick={handleSubmitFollowUp} className="px-4 py-2 rounded-lg text-sm bg-amber-600 text-white hover:bg-amber-700">Continue</button>
-                  </div>
                 </div>
               </div>
             )}
@@ -2328,9 +2362,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             <button
               type="button"
               onClick={handleBack}
-              disabled={currentStep === 1 || !!followUp}
+              disabled={currentStep === 1}
               className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
-                currentStep === 1 || !!followUp
+                currentStep === 1
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
@@ -2339,23 +2373,34 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               <span>Back</span>
             </button>
 
-            <button
-              type="submit"
-              disabled={isSubmitting || !!followUp}
-              className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-semibold hover:from-amber-600 hover:to-amber-700 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Submitting...</span>
-                </>
-              ) : (
-                <>
-                  <span>{currentStep === totalSteps ? 'Submit' : 'Next'}</span>
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
-            </button>
+            {!activeFollowUp ? (
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-semibold hover:from-amber-600 hover:to-amber-700 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{currentStep === totalSteps ? 'Submit' : (followUp ? 'Resolve Follow-up' : 'Next')}</span>
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmitFollowUp}
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-semibold hover:from-amber-600 hover:to-amber-700 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span>Continue</span>
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </form>
       </div>

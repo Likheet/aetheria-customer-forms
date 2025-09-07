@@ -113,3 +113,130 @@ Notes
 
 # Rule Based Questions:
 
+
+## Decision Engine Rules (RULE_SPECS)
+
+The decision engine reads a static rules spec at `src/lib/decisionRules.ts` and uses it to drive follow-ups and band updates. Below is a human-readable listing of all rules, so you can review and request edits. Notes:
+- Category “Grease” in the spec is displayed as “Sebum” in the UI; updates map to the `sebum` metric.
+- “Dimension” only applies to Pigmentation (brown vs red).
+- Outcomes use a simple when-grammar (AND/OR, equality, in {…}, includes/excludes, and numeric comparisons). See file comments for details.
+
+Moisture
+- Rule: `moisture_machineLow_customerNormal`
+  - Trigger: Machine in {red,yellow} AND Customer in {green,blue}
+  - Questions: none
+  - Outcomes:
+    - when: - → updates: Moisture: Blue (verdict: Machine dry vs user normal – treat as normal hydration)
+- Rule: `moisture_machineNormal_customerDry`
+  - Trigger: Machine in {green,blue} AND Customer in {red,yellow}
+  - Questions:
+    - Q2: Does skin feel tight all day even after moisturizer? (Yes/No)
+    - Q3: Do you have visible flaking/rough patches? (Yes/No)
+    - Q4: Current actives/meds in last 4 weeks? (Retinoids, BPO, AHA/BHA, Adapalene, Isotretinoin, None) [multi]
+  - Outcomes:
+    - Q2=Yes AND Q3=Yes → Moisture: Red
+    - Q2=Yes OR Q3=Yes OR Q4 includes Retinoids/Isotretinoin → Moisture: Yellow
+    - Q2=No AND Q3=No AND Q4 excludes Retinoids/Isotretinoin → Moisture: Blue
+
+Sebum (Grease in spec)
+- Rule: `sebum_machineNormal_customerOily`
+  - Trigger: Machine in {green,blue} AND Customer in {red,yellow}
+  - Questions:
+    - Q1: How often do you blot/wash due to oil? (Never, 1–2x/day, ≥3x/day)
+    - Q2: Is shine localized to T‑zone? (T‑zone, All over, No shine)
+    - Q3: Used mattifying/clay/sheets within last 24h? (Yes/No)
+    - Q5: Any mattifying primer/powder in last 8h? (Yes/No)
+  - Outcomes:
+    - Q1≥3x/day AND Q2=All over → Sebum: Red
+    - Q1≥3x/day OR Q2=All over → Sebum: Yellow
+    - Q2=T‑zone AND Q1=1–2x/day → Sebum: Yellow (verdict: COMBINATION)
+- Rule: `sebum_machineOily_customerNormal`
+  - Trigger: Machine in {yellow,red} AND Customer in {green,blue}
+  - Questions:
+    - Q1: Shine within 2–4h after cleansing? (Yes/No)
+    - Q2: Frequent blackheads/whiteheads? (Yes/No)
+    - Q3: Using heavy creams/oils/sunscreens? (Yes/No)
+  - Outcomes:
+    - (Q1=Yes OR Q2=Yes) AND Q3=No → Sebum: Red
+    - (Q1=Yes OR Q2=Yes) AND Q3=Yes → Sebum: Yellow
+    - Q1=No AND Q2=No AND Q3=Yes → Sebum: Blue
+    - Q1=No AND Q2=No AND Q3=No → Sebum: Green
+
+Acne – Presence
+- Rule: `acne_machinePresence_customerNone`
+  - Trigger: Machine in {yellow,red} AND Customer in {green,blue}
+  - Questions: Q1 (None/1–2/Several), Q2 (Yes/No), Q3 (Yes/No/NA), Q4 (Yes/No)
+  - Outcomes:
+    - Q1=1–2 OR Q3=Yes → Acne: Blue (verdict: ACNE – MILD; flags: hormonal if Q3=Yes)
+    - Q2=Yes AND Q1 in {None,1–2} → Acne: Green (verdict: post‑acne marks; shift to pigmentation)
+    - Q1=Several OR Q4=Yes → Acne: Yellow (flags: comedonal if Q4=Yes)
+- Rule: `acne_machineClear_customerPresence`
+  - Trigger: Machine in {green,blue} AND Customer in {yellow,red}
+  - Questions: Q1 (None/1–5/6–15/≥15), Q2 (Yes/No), Q3 (None/<10/10–20/≥20), Q4 (Yes/No), Q5 (Yes/No/NA)
+  - Outcomes:
+    - Q2=Yes OR Q1≥15 → Acne: Red (flags: nodulocystic OR refer‑derm)
+    - Q1=6–15 AND Q2=No → Acne: Yellow (flags: mild inflammatory)
+    - Q1=1–5 AND Q3=<10 → Acne: Blue
+    - Q1≥15 AND Q2=No → Acne: Red (flags: moderate inflammatory – pustular/papular after follow‑up)
+    - Q1<5 AND Q3>10 → Acne: Yellow (flags: comedonal acne)
+    - Q1<5 AND Q3<10 AND Q4=Yes → Acne: Blue (flags: situational acne)
+
+Sensitivity
+- Rule: `sensitivity_placeholder`
+  - Trigger: Any machine/customer band
+  - Notes: Refer to sensitivity questions and index (no direct updates specified here).
+
+Pores
+- Rule: `pores_machineHigh_customerNormal`
+  - Trigger: Machine in {red,yellow} AND Customer in {green,blue}
+  - Questions: Q1 (Yes/No), Q2 (Yes/No), Q3 (Low/Normal/High)
+  - Outcomes:
+    - Q1=Yes AND Q2=Yes AND Q3=High → Pores: Yellow
+    - Q1=Yes OR Q2=Yes OR Q3=High → Pores: Blue
+    - Q1=No AND Q2=No AND Q3 in {Low,Normal} → Pores: Green
+- Rule: `pores_machineNormal_customerConcerned`
+  - Trigger: Machine in {green,blue} AND Customer in {red,yellow}
+  - Questions: Q1 (Yes/No), Q2 (Yes/No), Q3 (Yes/No)
+  - Outcomes:
+    - Q2=Yes OR Q3=Yes → Pores: Yellow
+    - Q1=Yes AND Q2=No AND Q3=No → Pores: Green
+
+Texture
+- Rule: `texture_machineSmooth_customerAging`
+  - Trigger: Machine in {green,blue} AND Customer in {red,yellow}
+  - Questions: none
+  - Outcomes:
+    - age > 35 → Texture: Yellow (verdict: follow anti‑aging routine)
+- Rule: `texture_machineSmooth_customerBumpy`
+  - Trigger: Machine in {green,blue} AND Customer in {red,yellow}
+  - Questions:
+    - Q1: When you say “bumpy,” do you mean: (Pimples/breakouts, Tiny uneven dots (not pimples), Just feels uneven to touch)
+    - Q2: Where do you notice this most? (Forehead, Chin, Cheeks, All over)
+  - Outcomes:
+    - Q1=Tiny uneven dots AND Q2 in {Chin, Cheeks, All over} → Texture: Yellow (verdict: clogged pores)
+- Rule: `texture_machineBumpy_customerSmooth`
+  - Trigger: Machine in {red,yellow} AND Customer in {green,blue}
+  - Questions: Q1 (Cheeks/Chin/Forehead/Other/No), Q2 (Yes/No), Q3 (Yes/No)
+  - Outcomes:
+    - Q1 in {Chin, Cheeks, Other} → Texture: Yellow (verdict: clogged pores)
+    - Q2=Yes → updates: [] (verdict: acne scars present – branch to scar type)
+    - Q1=No AND Q2=No AND Q3=Yes → Texture: Yellow (verdict: aging care)
+
+Pigmentation
+- Rule: `pigmentation_machineHigh_customerNormal_brown` (dimension: brown)
+  - Trigger: Machine in {red,yellow} AND Customer in {green,blue}
+  - Questions: none
+  - Outcomes: - → Pigmentation (Brown): Yellow
+- Rule: `pigmentation_machineNormal_customerHigh_brown` (dimension: brown)
+  - Trigger: Machine in {green,blue} AND Customer in {red,yellow}
+  - Questions: none
+  - Outcomes: - → Pigmentation (Brown): Yellow
+- Rule: `pigmentation_machineNormal_customerHigh_red` (dimension: red)
+  - Trigger: Machine in {green,blue} AND Customer in {red,yellow}
+  - Questions: none
+  - Outcomes: - → Pigmentation (Red): Yellow
+
+Editing
+- Edit the source of truth at `src/lib/decisionRules.ts`. The engine and UI consume these rules directly.
+- If you change prompts/options/conditions, the follow-up pages and outcomes will update automatically without touching runtime code.
+- If you want new categories or metrics, call them out and I can extend the mapper/evaluator safely.
