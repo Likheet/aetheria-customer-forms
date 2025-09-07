@@ -74,6 +74,8 @@ const initialFormData: UpdatedConsultData = {
   wrinklesDuration: '',
   poresType: '',
   poresDuration: '',
+  textureType: '',
+  textureDuration: '',
   oilinessType: '',
   oilinessDuration: '',
   drynessType: '',
@@ -201,6 +203,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   // active follow-up currently being displayed
   const [activeFollowUp, setActiveFollowUp] = useState<null | { ruleId: string; category: string; dimension?: 'brown'|'red'; questions: Array<{ id: string; prompt: string; options: string[]; multi?: boolean }> }>(null);
   const [followUpAnswers, setFollowUpAnswers] = useState<Record<string, Record<string, string | string[]>>>({});
+  // Tracks a dependency signature per rule when it was answered, so we can invalidate answers if base inputs change
+  const [followUpKeys, setFollowUpKeys] = useState<Record<string, string>>({});
   const [followUpLocal, setFollowUpLocal] = useState<Record<string, string | string[]>>({});
   // Track order of applied follow-up decisions to support undo on Back
   const [appliedFollowUps, setAppliedFollowUps] = useState<string[]>([]);
@@ -245,10 +249,43 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     setRuntimeSelf(self)
     const qsets = getFollowUpsRt(m, self)
     const applicable = new Set(qsets.map(q => q.ruleId))
+    // Build per-rule dependency keys (category + machine/self bands + key form fields)
+    const keysNow: Record<string, string> = {}
+    const norm = (s: any) => String(s ?? '').toLowerCase().trim()
+    const mcKey = (Array.isArray(formData.mainConcerns) ? [...formData.mainConcerns].sort().join('|') : '')
+    for (const r of qsets) {
+      let cat = r.category || ''
+      let dim = r.dimension || ''
+      let mBand = ''
+      let sBand = ''
+      switch (cat) {
+        case 'Moisture': mBand = norm(m.moisture); sBand = norm(self.moisture); break
+        case 'Grease': mBand = norm(m.sebum); sBand = norm(self.sebum); break
+        case 'Texture': mBand = norm(m.texture); sBand = norm(self.texture); break
+        case 'Pores': mBand = norm(m.pores); sBand = norm(self.pores); break
+        case 'Acne': mBand = norm(m.acne); sBand = norm(self.acne); break
+        case 'Pigmentation':
+          if (dim === 'red') { mBand = norm(m.pigmentation_red); sBand = norm(self.pigmentation_red) }
+          else { mBand = norm(m.pigmentation_brown); sBand = norm(self.pigmentation_brown) }
+          break
+        default: break
+      }
+      // Add concern-specific fields to ensure re-asking when user changes these
+      const extra = [
+        norm(formData.textureType), norm(formData.wrinklesType),
+        norm(formData.acneType), norm(formData.acneSeverity),
+        norm(formData.poresType), norm(formData.pigmentationType), norm(formData.pigmentationSeverity),
+        mcKey,
+      ].join('~')
+      keysNow[r.ruleId] = [cat, dim, mBand, sBand, extra].join('#')
+    }
     // Filter stale answered rules
     const filteredAnswers: Record<string, Record<string, string | string[]>> = {}
     for (const [rid, ans] of Object.entries(answersByRuleId || {})) {
-      if (applicable.has(rid)) filteredAnswers[rid] = ans
+      // Only keep if still applicable and dependency key hasn't changed
+      if (applicable.has(rid) && keysNow[rid] && (!followUpKeys[rid] || keysNow[rid] === followUpKeys[rid])) {
+        filteredAnswers[rid] = ans
+      }
     }
     const newDecisions: any[] = []
     let updates: any = {}
@@ -275,13 +312,14 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     setDecisions(newDecisions)
     setEffectiveBands({ ...m, ...updates })
     setFollowUpAnswers(filteredAnswers)
+    setFollowUpKeys(keysNow)
   }
 
   // Trigger recompute when base answers change
   useEffect(() => {
     recomputeEngine(followUpAnswers)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.oilLevels, formData.hydrationLevels, formData.acneType, formData.acneSeverity, formData.pigmentationType, formData.pigmentationSeverity, formData.poresType, formData.wrinklesType, formData.mainConcerns, formData.dateOfBirth, formData.pregnancyBreastfeeding])
+  }, [formData.oilLevels, formData.hydrationLevels, formData.acneType, formData.acneSeverity, formData.pigmentationType, formData.pigmentationSeverity, formData.poresType, formData.wrinklesType, formData.textureType, formData.mainConcerns, formData.dateOfBirth, formData.pregnancyBreastfeeding])
 
   const toggleFollowUpOption = (qid: string, opt: string, multi?: boolean) => {
     setFollowUpLocal(prev => {
@@ -307,6 +345,15 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     const decision = decideBandRt(ruleId, followUpLocal, { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any) || { updates: {} };
     setDecisions(prev => [...prev, { ruleId, ...decision, decidedAt: new Date().toISOString(), specVersion: 'live' }]);
     setEffectiveBands((prev: any) => ({ ...prev, ...(decision.updates || {}) }));
+    // Route handling: if rule indicates routing to Acne, ensure Acne follow-ups appear by injecting concern
+    const flags: string[] = Array.isArray((decision as any).flags) ? (decision as any).flags as string[] : []
+    if (flags.some(f => /route:acne/i.test(f))) {
+      setFormData(prev => {
+        const mc = Array.isArray(prev.mainConcerns) ? prev.mainConcerns : []
+        if (mc.includes('Acne') || mc.length >= 3) return prev
+        return { ...prev, mainConcerns: [...mc, 'Acne'] }
+      })
+    }
     // Compute updated answers synchronously for next-step selection
     const updatedAnswers = { ...followUpAnswers, [ruleId]: followUpLocal } as Record<string, Record<string, string | string[]>>
     recomputeEngine(updatedAnswers)
@@ -775,6 +822,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               'Sensitivity': 'sensitivity',
               'Fine lines & wrinkles': 'wrinkles',
               'Large pores': 'pores',
+              'Bumpy skin': 'texture',
             };
             const base = baseMap[concern] || concern.toLowerCase().replace(/[^a-z]/g, '');
             const concernsWithType = ['Acne', 'Pigmentation'];
@@ -971,6 +1019,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         case 'Sensitivity': return null; // handled separately
         case 'Fine lines & wrinkles': return 'wrinkles';
         case 'Large pores': return 'pores';
+        case 'Bumpy skin': return 'texture';
         case 'Oiliness': return 'oiliness';
         case 'Dryness': return 'dryness';
         default: return c.toLowerCase().replace(/[^a-z]/g, '') || null;
@@ -995,6 +1044,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         case 'Sensitivity': return <Heart className="w-8 h-8 text-amber-600" />;
         case 'Fine lines & wrinkles': return <Clock className="w-8 h-8 text-amber-600" />;
         case 'Large pores': return <Droplets className="w-8 h-8 text-amber-600" />;
+        case 'Bumpy skin': return <Sparkles className="w-8 h-8 text-amber-600" />;
         case 'Oiliness': return <Sun className="w-8 h-8 text-amber-600" />;
         case 'Dryness': return <Droplets className="w-8 h-8 text-amber-600" />;
         default: return <FileText className="w-8 h-8 text-amber-600" />;
@@ -1111,6 +1161,15 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             ];
           }
           return [];
+        case 'Bumpy skin':
+          if (stepType === 'severity') {
+            return [
+              'A few small areas with bumps or rough patches (like nose or chin) → Blue',
+              'Noticeable bumps or uneven texture in several areas of the face → Yellow',
+              'Rough or bumpy texture across most of the face → Red'
+            ];
+          }
+          return [];
         case 'Dullness':
           if (stepType === 'severity') {
             return [
@@ -1174,6 +1233,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           title = 'How would you describe the severity?';
         } else if (concern === 'Large pores') {
           title = 'How would you describe the severity?';
+        } else if (concern === 'Bumpy skin') {
+          title = 'Do you notice small clogged pores, rough patches, or tiny bumps under the skin that make it feel uneven?';
         } else {
           title = 'What type do you experience?';
         }
@@ -2139,7 +2200,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                   'Pigmentation', 
                   'Sensitivity',
                   'Fine lines & wrinkles',
-                  'Large pores'
+                  'Large pores',
+                  'Bumpy skin'
                 ].map((concern) => {
                   const isSelected = formData.mainConcerns.includes(concern);
                   const isDisabled = !isSelected && formData.mainConcerns.length >= 3;
@@ -2262,6 +2324,24 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                       <span key={s} className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs border border-red-200">{s}</span>
                     ))}
                     {decisions.length === 0 && <span className="text-gray-400">—</span>}
+                  </div>
+                </div>
+                <div className="pt-2">
+                  <div className="text-xs text-gray-600 mb-1">Remarks</div>
+                  <div className="space-y-1">
+                    {(() => {
+                      const fromDecisions = Array.from(new Set(decisions.map(d => (d.verdict || '').trim()).filter(Boolean)))
+                      const extra: string[] = []
+                      const wt = String((formData as any).wrinklesType || '').toLowerCase()
+                      if (wt.includes('yellow') || wt.includes('red')) {
+                        extra.push('Follow anti-aging routine.')
+                      }
+                      const all = Array.from(new Set([...fromDecisions, ...extra]))
+                      if (all.length === 0) return <span className="text-gray-400">—</span>
+                      return all.map(r => (
+                        <div key={r} className="text-gray-700 text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1">{r}</div>
+                      ))
+                    })()}
                   </div>
                 </div>
               </div>

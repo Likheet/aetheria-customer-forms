@@ -196,15 +196,7 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
   },
 
   // Texture
-  {
-    id: 'texture_machineSmooth_customerAging',
-    category: 'Texture',
-    machineInput: ['green', 'blue'],
-    customerInput: ['red', 'yellow'],
-    outcomes: [
-      { when: 'age > 35', updates: ['Texture: Yellow'], verdict: 'Follow anti‑aging routine.' },
-    ],
-  },
+  
   {
     id: 'texture_machineSmooth_customerBumpy',
     category: 'Texture',
@@ -213,11 +205,12 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
     questions: [
       { id: 'Q1', prompt: 'When you say "bumpy," do you mean:', options: ['Pimples / breakouts', 'Tiny uneven dots (not pimples)', 'Just feels uneven to touch'] },
       { id: 'Q2', prompt: 'Where do you notice this most?', options: ['Forehead', 'Chin', 'Cheeks', 'All over'] },
+      { id: 'Q3', prompt: 'Do you have dandruff or an oily scalp?', options: ['Yes', 'No'] },
     ],
     outcomes: [
       { when: 'Q1=Pimples / breakouts', updates: [], verdict: 'Route to ACNE questions.', flags: ['route:acne'] },
-      { when: 'Q1=Tiny uneven dots (not pimples) AND Q2=Forehead', updates: [], verdict: 'Possible scalp-origin bumps – consider scalp analysis.', flags: ['suggest:scalp-analysis'] },
-      { when: 'Q1=Tiny uneven dots AND Q2 in {Chin, Cheeks, All over}', updates: ['Texture: Yellow'], verdict: 'Clogged pores' },
+      { when: 'Q1=Tiny uneven dots (not pimples) AND Q2=Forehead AND Q3=Yes', updates: [], verdict: 'Recommend scalp analysis.', flags: ['suggest:scalp-analysis'] },
+      { when: 'Q1=Tiny uneven dots (not pimples) AND Q2 in {Chin, Cheeks, All over}', updates: ['Pores: Yellow'], verdict: 'Clogged pores' },
     ],
   },
   {
@@ -229,9 +222,11 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
       { id: 'Q1', prompt: 'Do you notice any unevenness in texture in particular areas (tiny bumps)?', options: ['Cheeks', 'Chin', 'Forehead', 'Other', 'No'] },
       { id: 'Q2', prompt: "Do you have any old acne scars or marks that haven't faded yet?", options: ['Yes', 'No'] },
       { id: 'Q3', prompt: 'Is your age above 40?', options: ['Yes', 'No'] },
+      { id: 'Q4', prompt: 'Do you have dandruff or an oily scalp?', options: ['Yes', 'No'] },
     ],
     outcomes: [
-      { when: 'Q1 in {Chin, Cheeks, Other}', updates: ['Texture: Yellow'], verdict: 'Clogged pores' },
+      { when: 'Q1 in {Chin, Cheeks, Other}', updates: ['Pores: Yellow'], verdict: 'Clogged pores' },
+      { when: 'Q1=Forehead AND Q4=Yes', updates: [], verdict: 'Recommend scalp analysis.', flags: ['suggest:scalp-analysis'] },
       { when: 'Q2=Yes', updates: [], verdict: 'Acne scars present - branch to scar type.' },
       { when: 'Q1=No AND Q2=No AND Q3=Yes', updates: ['Texture: Yellow'], verdict: 'Aging care (age > 40).' },
     ],

@@ -85,6 +85,7 @@ export function deriveSelfBandsFromForm(form: {
   acneType?: string;
   poresType?: string;
   pigmentationType?: string;
+  textureType?: string;
 }): SelfBands {
   const self: SelfBands = {};
   self.moisture = containsBand(form.hydrationLevels);
@@ -96,6 +97,11 @@ export function deriveSelfBandsFromForm(form: {
   if (concerns.has('Acne')) self.acne_claim = 'yellow'; // at least present
   if (concerns.has('Large pores')) self.pores = 'yellow';
   if (concerns.has('Dullness')) self.texture = 'yellow';
+  if (concerns.has('Bumpy skin')) self.texture = 'yellow';
+
+  // If a texture selection contains a band hint, use it
+  const tBand = containsBand(form.textureType);
+  if (tBand) self.texture = tBand;
   if (concerns.has('Pigmentation')) {
     // If user chose brown vs red in its follow-up, use that
     const t = (form.pigmentationType || '').toLowerCase();
@@ -610,7 +616,7 @@ export function deriveSelfBands(form: any, ctx: RuntimeContext = {}): RuntimeSel
     self.pores = 'yellow'
   }
 
-  // Texture baseline from wrinkles/aging
+  // Texture baseline from wrinkles/aging and bumpy-skin concern
   const wrinklesType = normalizeOptionLabel(form?.wrinklesType || form?.textureType || '')
   if (wrinklesType) {
     self.texture = toBand(wrinklesType) || (
@@ -618,7 +624,7 @@ export function deriveSelfBands(form: any, ctx: RuntimeContext = {}): RuntimeSel
       wrinklesType.includes('wrinkles') || wrinklesType.includes('sagging in several areas') ? 'yellow' :
       wrinklesType.includes('few fine lines') || wrinklesType.includes('slight looseness') ? 'blue' : 'green'
     )
-  } else if (has('texture') || has('dullness')) {
+  } else if (has('texture') || has('dullness') || has('bumpy skin') || has('wrinkles')) {
     self.texture = 'yellow'
   }
 

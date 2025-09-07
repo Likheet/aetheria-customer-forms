@@ -38,7 +38,8 @@ Below is a reference of every question asked by the Updated Client Consult form 
 	- Acne ACNE 
 	- Pigmentation PIGMENTATION_UV
 	- Sensitivity SENSITIVITY
-	- Fine lines & wrinkles (aging) TEXTURE
+	- Fine lines & wrinkles (aging) TEXTURE but no value updation
+	- Bumpy skin TEXTURE
 	- Large pores PORES
 
 
@@ -223,9 +224,10 @@ Texture
   - Trigger: Machine in {red,yellow} AND Customer in {green,blue}
   - Questions: Q1 (Cheeks/Chin/Forehead/Other/No), Q2 (Yes/No), Q3 (Yes/No)
   - Outcomes:
-    - Q1 in {Chin, Cheeks, Other} → Texture: Yellow (verdict: clogged pores)
-    - Q2=Yes → updates: [] (verdict: acne scars present – branch to scar type)
-    - Q1=No AND Q2=No AND Q3=Yes (age > 40) → Texture: Yellow (verdict: aging care)
+    - Q1 in {Chin, Cheeks, Other} → Pores: Yellow (verdict: clogged pores)
+    - Q1=Forehead AND Q4=Yes (dandruff/oily scalp) → Recommend scalp analysis (remark)
+    - Q2=Yes → Ask scar type (branch)
+    - Q1=No AND Q2=No AND Q3=Yes (age > 40) → Texture: Yellow (verdict: anti-aging routine)
 
 Pigmentation
 - Rule: `pigmentation_machineHigh_customerNormal_brown` (dimension: brown)

@@ -39,6 +39,8 @@ export interface UpdatedConsultData {
   wrinklesDuration: string;
   poresType: string;
   poresDuration: string;
+  textureType: string;
+  textureDuration: string;
   oilinessType: string;
   oilinessDuration: string;
   drynessType: string;
