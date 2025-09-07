@@ -13,6 +13,7 @@ type MachineScanBands = {
   acne?: Band
   pigmentation_brown?: Band
   pigmentation_red?: Band
+  sensitivity?: Band
 }
 
 export default function ChooseProfile({ onBack }: { onBack: () => void }) {
@@ -69,6 +70,7 @@ export default function ChooseProfile({ onBack }: { onBack: () => void }) {
         onBack={() => setSelected(null)}
         onComplete={() => setSelected(null)}
         machine={selected.machine}
+        machineRaw={(queue.find(q => q.session_id === selected.session_id) as any)?.metrics || undefined}
         sessionId={selected.session_id}
         prefill={{
           name: selected.customer_name || '',
@@ -146,10 +148,15 @@ export default function ChooseProfile({ onBack }: { onBack: () => void }) {
                         texture: ma.texture_band,
                         pores: ma.pores_band,
                         acne: ma.acne_band,
-                        // split UV/brown/red: map as you prefer
+                        // split UV/brown/red:
+                        // - Brown maps from brown_areas_band when present, else fall back to pigmentation_uv_band
+                        // - Red (PIE) mapped from redness_band when available (documented proxy)
                         pigmentation_brown: ma.brown_areas_band ?? ma.pigmentation_uv_band,
-                        pigmentation_red: 'green', // if PIE separately stored, map here
+                        pigmentation_red: ma.redness_band ?? undefined,
+                        sensitivity: ma.sensitivity_band ?? undefined,
                       }
+                      // stash metrics on the item so we can pass to form as machineRaw
+                      ;(item as any).metrics = ma
                       setSelected({
                         session_id: item.session_id,
                         machine,
@@ -231,4 +238,3 @@ export default function ChooseProfile({ onBack }: { onBack: () => void }) {
     </div>
   )
 }
-

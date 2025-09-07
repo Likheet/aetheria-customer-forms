@@ -1,0 +1,121 @@
+// src/lib/decisionEngine.ts
+// Covers: Moisture, Sebum, Acne (both dirs), Pores (both dirs), Texture (both dirs), Pigmentation (both dirs), Sensitivity hand-off
+
+export type Band = 'green' | 'blue' | 'yellow' | 'red';
+export type YesNo = 'Yes' | 'No';
+
+export type Category =
+  | 'Moisture'
+  | 'Grease'      // your sheet labels oil/sebum "Grease" in outcomes
+  | 'Acne'
+  | 'Pores'
+  | 'Texture'
+  | 'Pigmentation'
+  | 'Sensitivity';
+
+export interface MachineScanBands {
+  moisture?: Band;         // from machine_analysis.moisture_band
+  sebum?: Band;            // machine_analysis.sebum_band
+  texture?: Band;
+  pores?: Band;
+  acne?: Band;
+  pigmentation_brown?: Band; // if you split; else map from pigmentation_uv_band
+  pigmentation_red?: Band;
+  redness?: Band;          // optional, not used in rules below
+}
+
+export interface SelfBands {
+  moisture?: Band;   // from Hydration Levels choice
+  sebum?: Band;      // from Oil Levels choice
+  texture?: Band;    // from Dullness / bumpy claims when present
+  pores?: Band;      // from “Large pores” concern choice if user flags it
+  acne_claim?: Band; // green/blue = none/mild, yellow/red = user says acne present
+  pigmentation_brown_claim?: Band;
+  pigmentation_red_claim?: Band;
+}
+
+export interface ContextInput {
+  // optional context we can use (age, pregnancy/breastfeeding, etc.)
+  dateOfBirth?: string; // YYYY-MM-DD
+  pregnancyBreastfeeding?: string; // Yes/No/NA
+}
+
+export interface Question {
+  id: string;                  // unique within a rule
+  prompt: string;
+  options: string[];           // exact options to show
+  multi?: boolean;             // when "Select all that apply"
+}
+
+export interface Outcome {
+  scope: Category;
+  updatedBand?: Band;          // new band to set in UI (e.g., Yellow for clogged pores)
+  verdict: string;             // human-readable verdict
+  flags?: string[];            // internal flags for staff/system
+  safety?: string[];           // referrals / pregnancy filters
+  updates?: Record<string, any>; // optional structured data (e.g., Acne category)
+}
+
+export interface Rule {
+  id: string;
+  scope: Category;
+  // decide if this rule should run based on machine vs self
+  when: (m: MachineScanBands, s: SelfBands) => boolean;
+  // follow-ups to ask (in order). optional if rule is auto-resolution.
+  questions?: Question[];
+  // compute outcome using collected answers (map: questionId -> value(s))
+  decide: (answers: Record<string, string | string[]>, ctx: ContextInput) => Outcome;
+}
+
+// ---------- helpers ----------
+const containsBand = (s?: string): Band | undefined => {
+  if (!s) return undefined;
+  const t = s.toLowerCase();
+  if (/\bred\b/.test(t)) return 'red';
+  if (/\byellow\b/.test(t)) return 'yellow';
+  if (/\bblue\b/.test(t)) return 'blue';
+  if (/\bgreen\b/.test(t)) return 'green';
+  return undefined;
+};
+
+export function deriveSelfBandsFromForm(form: {
+  oilLevels?: string;
+  hydrationLevels?: string;
+  mainConcerns?: string[];
+  acneType?: string;
+  poresType?: string;
+  pigmentationType?: string;
+}): SelfBands {
+  const self: SelfBands = {};
+  self.moisture = containsBand(form.hydrationLevels);
+  self.sebum = containsBand(form.oilLevels);
+
+  // Coarse claims from concerns (user says “I have X”)
+  // We'll treat presence of a concern as at-least Blue (i.e., bothered).
+  const concerns = new Set((form.mainConcerns || []).map(String));
+  if (concerns.has('Acne')) self.acne_claim = 'yellow'; // at least present
+  if (concerns.has('Large pores')) self.pores = 'yellow';
+  if (concerns.has('Dullness')) self.texture = 'yellow';
+  if (concerns.has('Pigmentation')) {
+    // If user chose brown vs red in its follow-up, use that
+    const t = (form.pigmentationType || '').toLowerCase();
+    if (t.includes('pie') || t.includes('red')) self.pigmentation_red_claim = 'yellow';
+    if (t.includes('pih') || t.includes('brown') || t.includes('melasma')) self.pigmentation_brown_claim = 'yellow';
+  }
+  return self;
+}
+
+const ageFromDOB = (dob?: string): number | undefined => {
+  if (!dob) return;
+  const d = new Date(dob + 'T00:00:00');
+  if (isNaN(d.getTime())) return;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age;
+};
+
+// mini utils
+const includesAny = (arr: string[], needles: string[]) =>
+

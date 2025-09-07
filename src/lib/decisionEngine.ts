@@ -497,3 +497,277 @@ export function answer(session: Session, questionId: string, value: string | str
 export function isComplete(session: Session): boolean {
   return session.pending.length === 0 && !session.current;
 }
+
+// ==================== Thin runtime around RULE_SPECS ====================
+// Exposes: deriveSelfBands, getFollowUpQuestions, decideBandUpdates,
+// decideAllBandUpdates, mergeBands, normalizeOptionLabel
+
+import RULE_SPECS from './decisionRules'
+import { getFollowUpQuestions as specGetFollowUps, decideBandUpdates as specDecide } from './decisionRulesUtil'
+
+// Canonical band ordering (worst-wins)
+export type Band4 = 'green' | 'blue' | 'yellow' | 'red'
+const BAND_ORDER: Record<Band4, number> = { green: 0, blue: 1, yellow: 2, red: 3 }
+
+export type RuntimeMachineBands = {
+  moisture?: Band4
+  sebum?: Band4
+  texture?: Band4
+  pores?: Band4
+  acne?: Band4
+  pigmentation_brown?: Band4
+  pigmentation_red?: Band4
+  sensitivity?: Band4
+}
+
+export type RuntimeSelfBands = RuntimeMachineBands
+
+export type RuntimeContext = {
+  dateOfBirth?: string
+  age?: number
+  pregnancyBreastfeeding?: string
+}
+
+export type FollowUp = {
+  ruleId: string
+  category: 'Moisture' | 'Grease' | 'Acne' | 'Pores' | 'Texture' | 'Pigmentation' | 'Sensitivity'
+  dimension?: 'brown' | 'red'
+  questions: { id: string; prompt: string; options: string[]; multi?: boolean }[]
+}
+
+export type Decision = {
+  ruleId: string
+  updates: Partial<RuntimeMachineBands>
+  verdict?: string
+  flags?: string[]
+  safety?: string[]
+  decidedAt: string
+  specVersion: string
+}
+
+export function normalizeOptionLabel(str: string): string {
+  if (!str) return ''
+  // replace various dashes and comparison signs; collapse whitespace; lowercase
+  return String(str)
+    .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015]/g, '-') // dashes to '-'
+    .replace(/[\u2265]/g, '>=') // ≥
+    .replace(/[\u2264]/g, '<=') // ≤
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+}
+
+// Helper: map common band-like labels to canonical bands
+function toBand(val?: string): Band4 | undefined {
+  if (!val) return undefined
+  const t = normalizeOptionLabel(val)
+  if (/(^|\b)red(\b|$)/.test(t)) return 'red'
+  if (/(^|\b)yellow(\b|$)/.test(t)) return 'yellow'
+  if (/(^|\b)blue(\b|$)/.test(t)) return 'blue'
+  if (/(^|\b)green(\b|$)/.test(t)) return 'green'
+  return undefined
+}
+
+// ---- deriveSelfBands(formAnswers, ctx)
+// Adapts UpdatedConsultData-like answers into standard bands
+export function deriveSelfBands(form: any, ctx: RuntimeContext = {}): RuntimeSelfBands {
+  const self: RuntimeSelfBands = {}
+
+  // Sebum (oil) mapping from single-question prompt or band value
+  const oil = normalizeOptionLabel(form?.oilLevels || form?.oilLevel || form?.oil || '')
+  self.sebum = toBand(oil) || (
+    oil.includes('very greasy') || oil.includes('across face') || oil.includes('frequent blotting') ? 'red' :
+    oil.includes('noticeable shine') || oil.includes('multiple areas') ? 'yellow' :
+    oil.includes('slight shine') || oil.includes('t-zone') ? 'blue' :
+    oil ? 'green' : undefined
+  )
+
+  // Moisture (hydration)
+  const hyd = normalizeOptionLabel(form?.hydrationLevels || form?.hydration || '')
+  self.moisture = toBand(hyd) || (
+    hyd.includes('always very tight') || hyd.includes('itchy') || hyd.includes('cracks') || hyd.includes('peels') ? 'red' :
+    hyd.includes('often feels tight') || hyd.includes('rough') || hyd.includes('flaky') ? 'yellow' :
+    hyd.includes('slight tightness') || hyd.includes('occasional dryness') ? 'blue' :
+    hyd ? 'green' : undefined
+  )
+
+  // Concerns list to seed baseline intent
+  const concerns: string[] = Array.isArray(form?.mainConcerns) ? form.mainConcerns : []
+  const has = (label: string) => concerns.some((c) => normalizeOptionLabel(c).includes(normalizeOptionLabel(label)))
+
+  // Acne baseline: will be refined by subtype severity below
+  if (has('acne')) self.acne = 'yellow'
+
+  // Pores baseline
+  const poresType = normalizeOptionLabel(form?.poresType || '')
+  if (poresType) {
+    self.pores = toBand(poresType) || (
+      poresType.includes('visible from a distance') ? 'red' :
+      poresType.includes('several zones') ? 'yellow' :
+      poresType.includes('near nose') || poresType.includes('close inspection') ? 'blue' : 'green'
+    )
+  } else if (has('pores')) {
+    self.pores = 'yellow'
+  }
+
+  // Texture baseline from wrinkles/aging
+  const wrinklesType = normalizeOptionLabel(form?.wrinklesType || form?.textureType || '')
+  if (wrinklesType) {
+    self.texture = toBand(wrinklesType) || (
+      wrinklesType.includes('deep wrinkles') || wrinklesType.includes('obvious sagging') ? 'red' :
+      wrinklesType.includes('wrinkles') || wrinklesType.includes('sagging in several areas') ? 'yellow' :
+      wrinklesType.includes('few fine lines') || wrinklesType.includes('slight looseness') ? 'blue' : 'green'
+    )
+  } else if (has('texture') || has('dullness')) {
+    self.texture = 'yellow'
+  }
+
+  // Pigmentation baseline from user-selected type/severity
+  const pigType = normalizeOptionLabel(form?.pigmentationType || '')
+  const pigSeverity = normalizeOptionLabel(form?.pigmentationSeverity || '')
+  const sevToBand = (s: string): Band4 | undefined => (
+    s.includes('bright') || s.includes('deep') || s.includes('widespread') ? 'red' :
+    s.includes('moderate') || s.includes('several') ? 'yellow' :
+    s.includes('light') || s.includes('small') ? 'blue' : undefined
+  )
+  if (pigType.includes('red') || pigType.includes('pie')) {
+    self.pigmentation_red = sevToBand(pigSeverity) || 'yellow'
+  }
+  if (pigType.includes('brown') || pigType.includes('pih') || pigType.includes('melasma')) {
+    self.pigmentation_brown = sevToBand(pigSeverity) || 'yellow'
+  }
+  // Dullness priority nudges brown at least Yellow
+  if (has('dullness')) {
+    self.pigmentation_brown = mergeBands({ pigmentation_brown: self.pigmentation_brown }, { pigmentation_brown: 'yellow' }).pigmentation_brown
+  }
+
+  // Acne severity ladder based on subtype + severity strings
+  const acneType = normalizeOptionLabel(form?.acneType || form?.acneSubtype || '')
+  const acneSeverity = normalizeOptionLabel(form?.acneSeverity || '')
+  if (acneType) {
+    if (/(^|\b)(none|no acne)(\b|$)/.test(acneType)) {
+      self.acne = 'green'
+    } else if (acneType.includes('blackheads')) {
+      if (acneSeverity.includes('30+')) self.acne = 'red'
+      else if (acneSeverity.includes('11-30')) self.acne = 'yellow'
+      else if (acneSeverity.includes('<=10') || acneSeverity.includes('up to 10') || acneSeverity.includes('<10')) self.acne = 'blue'
+      else self.acne = self.acne || 'blue'
+    } else if (acneType.includes('whiteheads')) {
+      if (acneSeverity.includes('20+')) self.acne = 'red'
+      else if (acneSeverity.includes('11-20')) self.acne = 'yellow'
+      else if (acneSeverity.includes('<=10') || acneSeverity.includes('<10')) self.acne = 'blue'
+      else self.acne = self.acne || 'blue'
+    } else if (acneType.includes('red pimples') || acneType.includes('inflamed')) {
+      if (acneSeverity.includes('10+')) self.acne = 'red'
+      else if (acneSeverity.includes('4-10')) self.acne = 'yellow'
+      else if (acneSeverity.includes('1-3')) self.acne = 'blue'
+      else self.acne = self.acne || 'blue'
+    } else if (acneType.includes('cystic')) {
+      if (acneSeverity.includes('4+') || acneSeverity.includes('per week 4') || acneSeverity.includes('>=4/week')) self.acne = 'red'
+      else if (acneSeverity.includes('1-3/week')) self.acne = 'yellow'
+      else if (acneSeverity.includes('rare') || acneSeverity.includes('1 in last 2 weeks')) self.acne = 'blue'
+      else self.acne = self.acne || 'yellow'
+    } else if (acneType.includes('hormonal')) {
+      if (acneSeverity.includes('strong monthly flare')) self.acne = 'red'
+      else if (acneSeverity.includes('clear monthly flare')) self.acne = 'yellow'
+      else if (acneSeverity.includes('mild monthly flare') || acneSeverity.includes('(1-3)')) self.acne = 'blue'
+      else self.acne = self.acne || 'blue'
+    }
+  }
+
+  // Sensitivity (optional; only if present)
+  const sens = normalizeOptionLabel(form?.sensitivity || '')
+  if (sens) {
+    self.sensitivity = toBand(sens) || (sens.includes('high') ? 'red' : sens.includes('medium') ? 'yellow' : sens.includes('low') ? 'blue' : 'green')
+  }
+
+  return self
+}
+
+// ---- getFollowUpQuestions(machine, self)
+export function getFollowUpQuestions(machine: RuntimeMachineBands, self: RuntimeSelfBands): FollowUp[] {
+  // Delegate matching to util built on RULE_SPECS
+  const qsets = specGetFollowUps(machine as any, self as any)
+  return qsets.map(q => ({ ruleId: q.ruleId, category: q.category, dimension: q.dimension, questions: q.questions }))
+}
+
+// ---- decideBandUpdates(ruleId, answersByQid, ctx)
+export function decideBandUpdates(ruleId: string, answers: Record<string, string | string[]>, ctx: RuntimeContext = {}): { updates: Partial<RuntimeMachineBands>; verdict?: string; flags?: string[]; safety?: string[] } {
+  const out = specDecide(ruleId, answers, ctx as any)
+  const rawFlags = out?.flags || []
+  const flags: string[] = []
+  const safety: string[] = []
+  for (const f of rawFlags) {
+    // Split composite flags like "acne-category:Nodulocystic OR refer-derm"
+    const parts = String(f).split(/\s+OR\s+/i)
+    for (const p of parts) {
+      const n = normalizeOptionLabel(p)
+      if (n.includes('refer-derm') || n.includes('pregnancy-filter')) {
+        safety.push(p.trim())
+      } else {
+        flags.push(p.trim())
+      }
+    }
+  }
+  return { updates: (out?.updates || {}) as Partial<RuntimeMachineBands>, verdict: out?.verdict, flags, safety }
+}
+
+// ---- mergeBands(base, updates) worst-wins
+export function mergeBands(base: Partial<RuntimeMachineBands>, updates: Partial<RuntimeMachineBands>): Partial<RuntimeMachineBands> {
+  const out: Partial<RuntimeMachineBands> = { ...base }
+  for (const k of Object.keys(updates) as (keyof RuntimeMachineBands)[]) {
+    const ub = updates[k]
+    const bb = out[k]
+    if (!bb) {
+      out[k] = ub
+    } else if (ub && BAND_ORDER[ub] > BAND_ORDER[bb]) {
+      out[k] = ub
+    }
+  }
+  return out
+}
+
+// ---- decideAllBandUpdates: evaluate answered rules and merge with machine (worst-wins)
+export function decideAllBandUpdates(
+  machine: RuntimeMachineBands,
+  self: RuntimeSelfBands,
+  answersByRuleId: Record<string, Record<string, string | string[]>>,
+  ctx: RuntimeContext = {}
+): { effectiveBands: RuntimeMachineBands; decisions: Decision[] } {
+  const followUps = getFollowUpQuestions(machine, self)
+  const decisions: Decision[] = []
+  let merged: Partial<RuntimeMachineBands> = {}
+
+  const specVersion = shortSpecVersion()
+
+  for (const f of followUps) {
+    const ans = answersByRuleId[f.ruleId]
+    if (!ans) continue
+    const d = decideBandUpdates(f.ruleId, ans, ctx)
+    const decidedAt = new Date().toISOString()
+    decisions.push({ ruleId: f.ruleId, updates: d.updates || {}, verdict: d.verdict, flags: d.flags || [], safety: d.safety || [], decidedAt, specVersion })
+    merged = mergeBands(merged, d.updates || {})
+  }
+
+  const effective: RuntimeMachineBands = { ...machine }
+  for (const key of Object.keys(merged) as (keyof RuntimeMachineBands)[]) {
+    const m = effective[key]
+    const u = merged[key]
+    if (!m) effective[key] = u
+    else if (u && BAND_ORDER[u] > BAND_ORDER[m]) effective[key] = u
+  }
+
+  return { effectiveBands: effective, decisions }
+}
+
+function shortSpecVersion(): string {
+  // simple deterministic hash of rule IDs + outcome strings
+  try {
+    const src = RULE_SPECS.map(r => r.id + '|' + (r.outcomes || []).map(o => o.when + ':' + (o.updates || []).join(',')).join(';')).join('#')
+    let h = 0
+    for (let i = 0; i < src.length; i++) h = ((h << 5) - h + src.charCodeAt(i)) | 0
+    return 'spec-' + (Math.abs(h) % 1000000).toString(36)
+  } catch {
+    return 'spec-unk'
+  }
+}

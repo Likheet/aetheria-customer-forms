@@ -34,16 +34,14 @@ Below is a reference of every question asked by the Updated Client Consult form 
 - Any product that caused irritation/breakouts/redness? (Specify) — tag/chip input with suggestions
 
 ### Section D — Main Concerns (customer picks 1–3)
-- Main concerns list (choose up to 3):
-	- Acne ACNE (mark green if acne not chosen)
+- Main concerns list (choose up to 3): MARK EMPTY IF ANY CONCERN NOT CHOSEN
+	- Acne ACNE 
 	- Pigmentation PIGMENTATION_UV
 	- Sensitivity SENSITIVITY
 	- Dullness TREAT AS BROWN PIGMENTATION IF MARKED AS PRIORITY
 	- Fine lines & wrinkles (aging) TEXTURE
-	- Bumpy TEXTURE ADD 
 	- Large pores PORES
-	- Oiliness REMOVE
-	- Dryness REMOVE
+
 
 When a concern is selected the form shows follow-up questions specific to that concern:
 
@@ -57,19 +55,15 @@ When a concern is selected the form shows follow-up questions specific to that c
 		- Hormonal Acne: Mild monthly flare (1–3 pimples) → Blue, Clear monthly flare (several pimples/cyst lasting a week) → Yellow, Strong monthly flare (multiple cysts lasting >1 week) → Red
 
 - Pigmentation
-	- What type do you experience? (Red, Brown)
+	- What type do you experience? (Red Pigmentation, Brown Pigmentation)
 	- If red pigmentation: 
 	   - Light red, only in a small area → Blue 
-
 	   - Moderate red, noticeable in several zones → Yellow 
-
 	   - Bright or deep red, widespread across the face → Red  
 
 	- If brown pigmentation 
 		- Light brown patches, visible up close but small in size → Blue 
-
 		- Moderate brown spots/patches, noticeable in several areas → Yellow 
-
 		- Dark brown patches, large or widespread across the face → Red 
 
 - Redness / Sensitivity
@@ -85,23 +79,14 @@ When a concern is selected the form shows follow-up questions specific to that c
 
 - Fine lines & wrinkles
 	- A few fine lines or slight looseness in some spots → Blue 
-
     - Wrinkles or sagging you can see in several areas → Yellow 
-
     - Deep wrinkles or sagging that’s easy to notice → Red 
 
 - Large pores
 	- Noticeable near the nose or small areas on close inspection → Blue 
-
     - Clearly visible on multiple zones (nose, cheeks, forehead) → Yellow 
-
     - Large, obvious pores across much of the face, visible from a distance → Red 
 
-- Oiliness
-	- What type do you experience? (T-zone only, Cheeks + T-zone, All over) REMOVE AS IT IS ASKED IN THE BEGINNING
-
-- Dryness
-	- What type do you experience? (Tight/rough, Flaky, Cracks/peels) REMOVE AS IT IS ASKED IN THE BEGINNING
 
 ### Section E — Lifestyle Inputs
 - What type of diet do you follow? (Balanced, Oily/Spicy, Vegetarian, High Sugar)
