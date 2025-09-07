@@ -38,7 +38,6 @@ Below is a reference of every question asked by the Updated Client Consult form 
 	- Acne ACNE 
 	- Pigmentation PIGMENTATION_UV
 	- Sensitivity SENSITIVITY
-	- Dullness TREAT AS BROWN PIGMENTATION IF MARKED AS PRIORITY
 	- Fine lines & wrinkles (aging) TEXTURE
 	- Large pores PORES
 

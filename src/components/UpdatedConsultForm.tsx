@@ -202,6 +202,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const [activeFollowUp, setActiveFollowUp] = useState<null | { ruleId: string; category: string; dimension?: 'brown'|'red'; questions: Array<{ id: string; prompt: string; options: string[]; multi?: boolean }> }>(null);
   const [followUpAnswers, setFollowUpAnswers] = useState<Record<string, Record<string, string | string[]>>>({});
   const [followUpLocal, setFollowUpLocal] = useState<Record<string, string | string[]>>({});
+  // Track order of applied follow-up decisions to support undo on Back
+  const [appliedFollowUps, setAppliedFollowUps] = useState<string[]>([]);
   const [effectiveBands, setEffectiveBands] = useState<any>(machine || {});
   const [decisions, setDecisions] = useState<any[]>([]);
   
@@ -308,6 +310,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     // Compute updated answers synchronously for next-step selection
     const updatedAnswers = { ...followUpAnswers, [ruleId]: followUpLocal } as Record<string, Record<string, string | string[]>>
     recomputeEngine(updatedAnswers)
+    setAppliedFollowUps(prev => [...prev, ruleId])
     setActiveFollowUp(null)
   }
 
@@ -822,6 +825,15 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     // If a follow-up page is active, exit it first
     if (activeFollowUp) {
       setActiveFollowUp(null)
+      return
+    }
+    // If there is an applied follow-up, undo the last one
+    if (appliedFollowUps.length > 0) {
+      const lastRuleId = appliedFollowUps[appliedFollowUps.length - 1]
+      const newAnswers = { ...followUpAnswers }
+      delete newAnswers[lastRuleId]
+      setAppliedFollowUps(prev => prev.slice(0, -1))
+      recomputeEngine(newAnswers)
       return
     }
     if (currentStep > 1) {
@@ -2198,8 +2210,17 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                 <div><span className="font-medium">Texture:</span> {machine.texture || '-'} {machineRaw?.texture !== undefined && <span className="text-gray-500">(val: {String(machineRaw.texture)})</span>}</div>
                 <div><span className="font-medium">Pores:</span> {machine.pores || '-'} {machineRaw?.pores !== undefined && <span className="text-gray-500">(val: {String(machineRaw.pores)})</span>}</div>
                 <div><span className="font-medium">Acne:</span> {machine.acne || '-'} {machineRaw?.acne !== undefined && <span className="text-gray-500">(val: {String(machineRaw.acne)})</span>}</div>
-                <div><span className="font-medium">Pigment (Brown):</span> {machine.pigmentation_brown || '-'} {machineRaw?.brown_areas !== undefined ? <span className="text-gray-500">(val: {String(machineRaw.brown_areas)})</span> : machineRaw?.pigmentation_uv !== undefined ? <span className="text-gray-500">(uv: {String(machineRaw.pigmentation_uv)})</span> : null}</div>
-                <div><span className="font-medium">Pigment (Red):</span> {machine.pigmentation_red || '-'} {machineRaw?.redness !== undefined && <span className="text-gray-500">(val: {String(machineRaw.redness)})</span>}</div>
+                {(() => {
+                  const order: any = { green: 0, blue: 1, yellow: 2, red: 3 }
+                  const b = machine.pigmentation_brown as any
+                  const r = machine.pigmentation_red as any
+                  const combined = (b && r)
+                    ? (order[b] >= order[r] ? b : r)
+                    : (b || r || '-')
+                  return (
+                    <div><span className="font-medium">Pigmentation:</span> {combined}</div>
+                  )
+                })()}
                 <div><span className="font-medium">Sensitivity:</span> {machine.sensitivity || '-'} {machineRaw?.sensitivity !== undefined && <span className="text-gray-500">(val: {String(machineRaw.sensitivity)})</span>}</div>
               </div>
             </div>
@@ -2211,8 +2232,17 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                 <div><span className="font-medium">Texture:</span> {effectiveBands?.texture || '-'}</div>
                 <div><span className="font-medium">Pores:</span> {effectiveBands?.pores || '-'}</div>
                 <div><span className="font-medium">Acne:</span> {effectiveBands?.acne || '-'}</div>
-                <div><span className="font-medium">Pigment (Brown):</span> {effectiveBands?.pigmentation_brown || '-'}</div>
-                <div><span className="font-medium">Pigment (Red):</span> {effectiveBands?.pigmentation_red || '-'}</div>
+                {(() => {
+                  const order: any = { green: 0, blue: 1, yellow: 2, red: 3 }
+                  const b = effectiveBands?.pigmentation_brown as any
+                  const r = effectiveBands?.pigmentation_red as any
+                  const combined = (b && r)
+                    ? (order[b] >= order[r] ? b : r)
+                    : (b || r || '-')
+                  return (
+                    <div><span className="font-medium">Pigmentation:</span> {combined}</div>
+                  )
+                })()}
                 <div className="pt-2">
                   <div className="text-xs text-gray-600 mb-1">Flags</div>
                   <div className="flex flex-wrap gap-1">
