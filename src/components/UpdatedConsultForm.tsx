@@ -250,7 +250,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           // auto-apply decision for no-question rules
           const decision = decideBandRt(r.ruleId, {}, { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any) || { updates: {} };
           setDecisions(prev => [...prev, { ruleId: r.ruleId, ...decision, decidedAt: new Date().toISOString(), specVersion: 'live' }]);
-          setEffectiveBands((prev: any) => mergeBandsRt(prev, decision.updates || {}) as any);
+          setEffectiveBands((prev: any) => ({ ...prev, ...(decision.updates || {}) }));
           setFollowUpAnswers(prev => ({ ...prev, [r.ruleId]: {} }));
           idx++;
           continue;
@@ -290,14 +290,27 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     const ruleId = followUp.ruleId
     const decision = decideBandRt(ruleId, followUpLocal, { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any) || { updates: {} };
     setDecisions(prev => [...prev, { ruleId, ...decision, decidedAt: new Date().toISOString(), specVersion: 'live' }]);
-    setEffectiveBands((prev: any) => mergeBandsRt(prev, decision.updates || {}) as any);
-    setFollowUpAnswers(prev => ({ ...prev, [ruleId]: followUpLocal }));
-    setFollowUp(null);
+    setEffectiveBands((prev: any) => ({ ...prev, ...(decision.updates || {}) }));
+    // Compute updated answers synchronously for next-step selection
+    const updatedAnswers = { ...followUpAnswers, [ruleId]: followUpLocal } as Record<string, Record<string, string | string[]>>
+    setFollowUpAnswers(updatedAnswers)
+    setFollowUp(null)
     // Trigger re-evaluation for any remaining mismatches
-    const self = deriveSelfBandsRt(formData as any, { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any);
-    const m = (machine || {}) as any;
-    const qsets = getFollowUpsRt(m, self);
-    const next = qsets.find(q => !followUpAnswers[q.ruleId] && q.ruleId !== ruleId);
+    const self = deriveSelfBandsRt(formData as any, { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any)
+    const m = (machine || {}) as any
+    const qsets = getFollowUpsRt(m, self)
+    // Auto-apply any remaining no-question rules first
+    for (const r of qsets) {
+      if (updatedAnswers[r.ruleId]) continue
+      if (!r.questions || r.questions.length === 0) {
+        const dec2 = decideBandRt(r.ruleId, {}, { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any) || { updates: {} }
+        setDecisions(prev => [...prev, { ruleId: r.ruleId, ...dec2, decidedAt: new Date().toISOString(), specVersion: 'live' }])
+        setEffectiveBands((prev: any) => ({ ...prev, ...(dec2.updates || {}) }))
+        updatedAnswers[r.ruleId] = {}
+      }
+    }
+    // Then present the next unanswered rule that has questions
+    const next = qsets.find(q => !updatedAnswers[q.ruleId] && q.questions && q.questions.length)
     if (next) {
       setFollowUp({ ruleId: next.ruleId, category: next.category as any, dimension: next.dimension as any, questions: next.questions || [] })
       setFollowUpLocal({})
@@ -2190,9 +2203,12 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                 <div className="pt-2">
                   <div className="text-xs text-gray-600 mb-1">Flags</div>
                   <div className="flex flex-wrap gap-1">
-                    {Array.from(new Set(decisions.flatMap(d => d.flags || []))).map(f => (
-                      <span key={f} className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs border border-amber-200">{f}</span>
-                    ))}
+                    {Array.from(new Set(decisions.flatMap(d => d.flags || []))).map(f => {
+                      const label = f.replace(/^Grease\s*:/i, 'Sebum:')
+                      return (
+                        <span key={f} className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs border border-amber-200">{label}</span>
+                      )
+                    })}
                     {decisions.length === 0 && <span className="text-gray-400">—</span>}
                   </div>
                 </div>
@@ -2257,7 +2273,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30">
                 <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-amber-200">
                   <div className="px-6 py-4 border-b border-amber-200 bg-amber-50 rounded-t-2xl">
-                    <div className="text-base font-semibold text-amber-900">Follow-up Required: {followUp.category}{followUp.dimension ? ` (${followUp.dimension})` : ''}</div>
+                    <div className="text-base font-semibold text-amber-900">Follow-up Required: {followUp.category === 'Grease' ? 'Sebum' : followUp.category}{followUp.dimension ? ` (${followUp.dimension})` : ''}</div>
                     <div className="text-xs text-amber-800/80">Resolve machine vs customer difference</div>
                   </div>
                   <div className="px-6 py-5 space-y-5">

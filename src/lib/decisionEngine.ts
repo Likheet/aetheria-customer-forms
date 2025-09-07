@@ -749,12 +749,11 @@ export function decideAllBandUpdates(
     merged = mergeBands(merged, d.updates || {})
   }
 
+  // Apply decided updates over machine bands (override as per rule decision)
   const effective: RuntimeMachineBands = { ...machine }
   for (const key of Object.keys(merged) as (keyof RuntimeMachineBands)[]) {
-    const m = effective[key]
     const u = merged[key]
-    if (!m) effective[key] = u
-    else if (u && BAND_ORDER[u] > BAND_ORDER[m]) effective[key] = u
+    if (u) effective[key] = u
   }
 
   return { effectiveBands: effective, decisions }
