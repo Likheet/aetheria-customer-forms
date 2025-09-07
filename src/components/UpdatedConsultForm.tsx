@@ -210,6 +210,62 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const [appliedFollowUps, setAppliedFollowUps] = useState<string[]>([]);
   const [effectiveBands, setEffectiveBands] = useState<any>(machine || {});
   const [decisions, setDecisions] = useState<any[]>([]);
+
+  // Gate discrepancy follow-ups until Section-D concern answers are complete
+  const isSectionDComplete = () => {
+    const concerns: string[] = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : []
+    // Only gate for concerns that have structured Section-D inputs
+    // Acne: requires type + severity
+    if (concerns.includes('Acne')) {
+      if (!String(formData.acneType || '').trim() || !String(formData.acneSeverity || '').trim()) return false
+    }
+    // Pigmentation: requires type + severity
+    if (concerns.includes('Pigmentation')) {
+      if (!String(formData.pigmentationType || '').trim() || !String(formData.pigmentationSeverity || '').trim()) return false
+    }
+    // Fine lines & wrinkles: single severity captured in wrinklesType
+    if (concerns.includes('Fine lines & wrinkles')) {
+      if (!String(formData.wrinklesType || '').trim()) return false
+    }
+    // Large pores: single severity captured in poresType
+    if (concerns.includes('Large pores')) {
+      if (!String(formData.poresType || '').trim()) return false
+    }
+    // Bumpy skin: single severity captured in textureType
+    if (concerns.includes('Bumpy skin')) {
+      if (!String(formData.textureType || '').trim()) return false
+    }
+    // Do not block on Sensitivity or other concerns without structured inputs here
+    return true
+  }
+
+  // Per-concern readiness: allow follow-ups for a category once that concern's Section-D is done
+  const isCategoryReady = (category: string, dimension?: 'brown' | 'red') => {
+    const concerns: string[] = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : []
+    switch (category) {
+      case 'Acne':
+        return !concerns.includes('Acne') || (
+          String(formData.acneType || '').trim() && String(formData.acneSeverity || '').trim()
+        )
+      case 'Pigmentation':
+        return !concerns.includes('Pigmentation') || (
+          String(formData.pigmentationType || '').trim() && String(formData.pigmentationSeverity || '').trim()
+        )
+      case 'Texture': {
+        const wantsWrinkles = concerns.includes('Fine lines & wrinkles')
+        const wantsBumpy = concerns.includes('Bumpy skin')
+        if (!wantsWrinkles && !wantsBumpy) return true
+        if (wantsWrinkles && !String(formData.wrinklesType || '').trim()) return false
+        if (wantsBumpy && !String(formData.textureType || '').trim()) return false
+        return true
+      }
+      case 'Pores':
+        return !concerns.includes('Large pores') || !!String(formData.poresType || '').trim()
+      // Do not gate Grease/Moisture/Sensitivity here
+      default:
+        return true
+    }
+  }
   
   // Auto-focus functionality
   const firstInputRef = useRef<HTMLInputElement>(null);
@@ -247,7 +303,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     const m = (machine || {}) as any
     const self = deriveSelfBandsRt(formData as any, ctx)
     setRuntimeSelf(self)
-    const qsets = getFollowUpsRt(m, self)
+    // Build follow-ups, then filter per category readiness
+    const qsets = getFollowUpsRt(m, self).filter(q => isCategoryReady(q.category as any, q.dimension as any))
     const applicable = new Set(qsets.map(q => q.ruleId))
     // Build per-rule dependency keys (category + machine/self bands + key form fields)
     const keysNow: Record<string, string> = {}
@@ -2364,7 +2421,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               <div className="px-4 py-2 bg-gray-800 text-white text-sm font-semibold">Follow-ups (Editable)</div>
               <div className="p-4 text-sm text-gray-800 space-y-2">
                 {(() => {
-                  const qsets = getFollowUpsRt((machine as any) || {}, (runtimeSelf as any) || {})
+                  const qsets = getFollowUpsRt((machine as any) || {}, (runtimeSelf as any) || {}).filter(q => isCategoryReady(q.category as any, q.dimension as any))
                   const items = qsets.filter(q => q.questions && q.questions.length)
                   if (items.length === 0) return <div className="text-gray-400">None</div>
                   return items.map(q => (
