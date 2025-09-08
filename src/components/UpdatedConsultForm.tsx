@@ -10,6 +10,7 @@ import {
   decideBandUpdates as decideBandRt,
   decideAllBandUpdates as decideAllRt,
   mergeBands as mergeBandsRt,
+  computeSensitivityFromForm,
 } from '../lib/decisionEngine';
 import { UpdatedConsultData } from '../types';
 import ProductAutocomplete from './ProductAutocomplete';
@@ -209,6 +210,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   // Track order of applied follow-up decisions to support undo on Back
   const [appliedFollowUps, setAppliedFollowUps] = useState<string[]>([]);
   const [effectiveBands, setEffectiveBands] = useState<any>(machine || {});
+  const [computedSensitivity, setComputedSensitivity] = useState<{ score: number; tier: string; band: string; remark: string } | null>(null);
   const [decisions, setDecisions] = useState<any[]>([]);
 
   // Gate discrepancy follow-ups until Section-D concern answers are complete
@@ -367,7 +369,10 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     setFollowUp(next ? { ruleId: next.ruleId, category: next.category as any, dimension: next.dimension as any, questions: next.questions || [] } : null)
     if (next) setFollowUpLocal(filteredAnswers[next.ruleId] || {})
     setDecisions(newDecisions)
-    setEffectiveBands({ ...m, ...updates })
+    // Compute sensitivity band from form inputs and merge into effective bands
+    const sens = computeSensitivityFromForm(formData as any, ctx)
+    setComputedSensitivity(sens as any)
+    setEffectiveBands({ ...m, ...updates, sensitivity: sens.band })
     setFollowUpAnswers(filteredAnswers)
     setFollowUpKeys(keysNow)
   }
@@ -376,7 +381,28 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   useEffect(() => {
     recomputeEngine(followUpAnswers)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.oilLevels, formData.hydrationLevels, formData.acneType, formData.acneSeverity, formData.pigmentationType, formData.pigmentationSeverity, formData.poresType, formData.wrinklesType, formData.textureType, formData.mainConcerns, formData.dateOfBirth, formData.pregnancyBreastfeeding])
+  }, [
+    formData.oilLevels,
+    formData.hydrationLevels,
+    formData.acneType,
+    formData.acneSeverity,
+    formData.pigmentationType,
+    formData.pigmentationSeverity,
+    formData.poresType,
+    formData.wrinklesType,
+    formData.textureType,
+    formData.mainConcerns,
+    formData.dateOfBirth,
+    formData.pregnancyBreastfeeding,
+    // Sensitivity score drivers (Yes/No)
+    (formData as any).sensitivityRedness,
+    (formData as any).sensitivityDiagnosis,
+    (formData as any).sensitivityProducts,
+    (formData as any).sensitivitySun,
+    (formData as any).sensitivityCapillaries,
+    (formData as any).sensitivitySeasonal, // age under 20
+    (formData as any).sensitivityCleansing, // very dry baseline
+  ])
 
   const toggleFollowUpOption = (qid: string, opt: string, multi?: boolean) => {
     setFollowUpLocal(prev => {
@@ -860,15 +886,17 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         } else if (currentConcernStep && typeof currentConcernStep === 'object') {
           const { concern, step: stepType, questionIndex } = currentConcernStep as any;
           if (stepType === 'sensitivity-question' && typeof questionIndex === 'number') {
-            const sensitivityFields = [
-              'sensitivityRedness',
-              'sensitivityDiagnosis',
-              'sensitivityCleansing',
-              'sensitivityProducts',
-              'sensitivitySun',
-              'sensitivityCapillaries',
-              'sensitivitySeasonal'
-            ];
+        const sensitivityFields = [
+            'sensitivityRedness',
+            'sensitivityDiagnosis',
+            // Mapped to very-dry-baseline (repurposed key)
+            'sensitivityCleansing',
+            'sensitivityProducts',
+            'sensitivitySun',
+            'sensitivityCapillaries',
+            // Mapped to age-under-20 (repurposed key)
+            'sensitivitySeasonal'
+          ];
             const key = sensitivityFields[questionIndex] as keyof UpdatedConsultData;
             const val = (formData[key] as string) || '';
             if (!val.trim()) newErrors[key as string] = 'Please select an option';
@@ -1253,14 +1281,14 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           'sensitivitySeasonal'
         ];
         const sensitivityTitles = [
-          'Do you often experience redness, burning, or stinging when using skincare products?',
-          'Have you ever been diagnosed with sensitive skin, rosacea, or eczema?',
-          'Does your skin get easily irritated by sun, heat, wind, or pollution?',
-          'Have you noticed breakouts or irritation when using active ingredients (Vitamin C, AHAs, Niacinamide, Retinoids, etc.)?',
-          'Do you have visible broken capillaries or flushing on your skin (cheeks, nose, etc.)?',
-          'Are you under 20 years of age?',
-          'Would you describe your skin baseline as very dry (tight, flaky, rough)?'
-        ];
+            'Do you often experience redness, burning, or stinging when using skincare products?',
+            'Have you ever been diagnosed with sensitive skin, rosacea, or eczema?',
+            'Would you describe your skin baseline as very dry (tight, flaky, rough)?',
+            'Have you noticed breakouts or irritation when using active ingredients (Vitamin C, AHAs, Niacinamide, Retinoids, etc.)?',
+            'Does your skin get easily irritated by sun, heat, wind, or pollution?',
+            'Do you have visible broken capillaries or flushing on your skin (cheeks, nose, etc.)?',
+            'Are you under 20 years of age?'
+          ];
         return {
           fieldKey: sensitivityFields[questionIndex],
           title: sensitivityTitles[questionIndex],
@@ -2362,6 +2390,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                     <div><span className="font-medium">Pigmentation:</span> {combined}</div>
                   )
                 })()}
+                <div><span className="font-medium">Sensitivity:</span> {effectiveBands?.sensitivity || '-'}{computedSensitivity ? <span className="text-gray-600"> (score: {computedSensitivity.score} — {computedSensitivity.remark})</span> : null}</div>
                 <div className="pt-2">
                   <div className="text-xs text-gray-600 mb-1">Flags</div>
                   <div className="flex flex-wrap gap-1">

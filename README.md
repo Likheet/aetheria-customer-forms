@@ -10,12 +10,12 @@ Below is a reference of every question asked by the Updated Client Consult form 
 
 ### Section A — Skin Basics
  - What do you think your skin type is? (Normal / Oily / Dry / Combination)
-- How would you describe your skin's oil levels? SEBUM (aka oiliness)
+- How would you describe your skin's oil levels? SEBUM
   - Comfortable, no shine or greasiness → Green
   - Slight shine only in T-zone, not bothersome → Blue
   - Noticeable shine in multiple areas → Yellow
   - Very greasy/heavy shine across face, frequent blotting/wash needed → Red
-- How would you describe your skin's hydration levels? MOISTURE (aka dryness)
+- How would you describe your skin's hydration levels? MOISTURE
   - Comfortable, no tightness → Green
   - Slight tightness or occasional dryness → Blue
   - Often feels tight, rough, or flaky → Yellow
@@ -66,7 +66,7 @@ When a concern is selected the form shows follow-up questions specific to that c
 		- Moderate brown spots/patches, noticeable in several areas → Yellow 
 		- Dark brown patches, large or widespread across the face → Red 
 
-- Redness / Sensitivity
+- Sensitivity
 	- Follow-up: Seven sensitivity questions (each is a choice, typically Yes/No):
 	1. Do you often experience redness, burning, or stinging when using skincare products?
 	2. Have you ever been diagnosed with sensitive skin, rosacea, or eczema?

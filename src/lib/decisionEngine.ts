@@ -690,6 +690,69 @@ export function deriveSelfBands(form: any, ctx: RuntimeContext = {}): RuntimeSel
   return self
 }
 
+// ---- computeSensitivityFromForm(form, ctx)
+// Computes a numeric sensitivity score from yes/no prompts and maps to a band.
+// Scoring (additive):
+// +2: History of redness/burning/stinging from products (sensitivityRedness === 'Yes')
+// +3: Diagnosed sensitive skin / rosacea / eczema (sensitivityDiagnosis === 'Yes')
+// +1: Environmental sensitivity to sun/heat/wind/pollution (sensitivitySun === 'Yes')
+// +1: Reacts to common actives (Vitamin C, AHAs, Niacinamide, Retinoids) (sensitivityProducts === 'Yes')
+// +1: Visible broken capillaries or flushing (sensitivityCapillaries === 'Yes')
+// +0.5: Age < 20 (either via explicit yes/no answer if present, or derived from DOB)
+// +1: Very dry skin baseline (mapped here to sensitivityCleansing === 'Yes')
+// Final tiers:
+//  0–1   => Low       => band: green
+//  2–3   => Moderate  => band: blue
+//  4–5   => High      => band: yellow
+//  6+    => Very High => band: red
+export function computeSensitivityFromForm(
+  form: any,
+  ctx: RuntimeContext = {}
+): { score: number; tier: 'Low' | 'Moderate' | 'High' | 'Very High'; band: Band4; remark: string } {
+  const yn = (v: any) => String(v || '').trim().toLowerCase() === 'yes'
+  let score = 0
+  if (yn(form?.sensitivityRedness)) score += 2
+  if (yn(form?.sensitivityDiagnosis)) score += 3
+  if (yn(form?.sensitivitySun)) score += 1
+  if (yn(form?.sensitivityProducts)) score += 1
+  if (yn(form?.sensitivityCapillaries)) score += 1
+
+  // Age < 20: prefer explicit yes/no if captured (we reuse sensitivitySeasonal)
+  let ageUnder20 = yn(form?.sensitivitySeasonal)
+  if (!ageUnder20) {
+    const dob = form?.dateOfBirth || ctx.dateOfBirth
+    if (dob) {
+      const d = new Date(String(dob) + 'T00:00:00')
+      if (!isNaN(d.getTime())) {
+        const now = new Date()
+        let age = now.getFullYear() - d.getFullYear()
+        const m = now.getMonth() - d.getMonth()
+        if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--
+        if (age < 20) ageUnder20 = true
+      }
+    }
+  }
+  if (ageUnder20) score += 0.5
+
+  // Very dry baseline (mapped to sensitivityCleansing in current form wiring)
+  if (yn(form?.sensitivityCleansing)) score += 1
+
+  let tier: 'Low' | 'Moderate' | 'High' | 'Very High'
+  let band: Band4
+  let remark = ''
+  if (score <= 1) {
+    tier = 'Low'; band = 'green'; remark = 'Resilient skin'
+  } else if (score <= 3) {
+    tier = 'Moderate'; band = 'blue'; remark = 'Can tolerate most, but not all'
+  } else if (score <= 5) {
+    tier = 'High'; band = 'yellow'; remark = 'Only gentle actives, barrier focus first'
+  } else {
+    tier = 'Very High'; band = 'red'; remark = 'Use only barrier repair, hydration, sunscreen; avoid strong actives'
+  }
+
+  return { score, tier, band, remark }
+}
+
 // ---- getFollowUpQuestions(machine, self)
 export function getFollowUpQuestions(machine: RuntimeMachineBands, self: RuntimeSelfBands): FollowUp[] {
   // Delegate matching to util built on RULE_SPECS
