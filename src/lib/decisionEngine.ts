@@ -508,7 +508,7 @@ export function isComplete(session: Session): boolean {
 // Exposes: deriveSelfBands, getFollowUpQuestions, decideBandUpdates,
 // decideAllBandUpdates, mergeBands, normalizeOptionLabel
 
-import RULE_SPECS from './decisionRules'
+import { RULE_SPECS } from './decisionRules'
 import { getFollowUpQuestions as specGetFollowUps, decideBandUpdates as specDecide } from './decisionRulesUtil'
 
 // Canonical band ordering (worst-wins)
@@ -839,3 +839,4 @@ function shortSpecVersion(): string {
     return 'spec-unk'
   }
 }
+

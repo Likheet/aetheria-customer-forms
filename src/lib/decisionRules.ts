@@ -265,4 +265,3 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
   },
 ]
 
-export default RULE_SPECS
