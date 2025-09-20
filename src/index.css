@@ -1,7 +1,10 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap');
 /* Import Poppins font */
-@import '@coreui/coreui/dist/css/coreui.min.css';
+/* CoreUI styles were removed (legacy form). Importing the package caused build failures on Vercel
+  because @coreui/coreui is not installed. If you need CoreUI in the future, add it to
+  package.json dependencies and run `pnpm install`.
+*/
 
 /* Custom calendar styling */
 .calendar-wrapper {
