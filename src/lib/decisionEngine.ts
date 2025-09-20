@@ -1,6 +1,8 @@
 // src/lib/decisionEngine.ts
 // Covers: Moisture, Sebum, Acne (both dirs), Pores (both dirs), Texture (both dirs), Pigmentation (both dirs), Sensitivity hand-off
 
+import type { AcneBreakoutDetail, AcneCategory } from '../types';
+
 export type Band = 'green' | 'blue' | 'yellow' | 'red';
 export type YesNo = 'Yes' | 'No';
 
@@ -13,15 +15,29 @@ export type Category =
   | 'Pigmentation'
   | 'Sensitivity';
 
+export interface MachineAcneBreakout {
+  type: string;
+  severity?: string;
+  category?: AcneCategory;
+}
+
+export interface MachineAcneReading {
+  band?: Band;
+  breakouts: MachineAcneBreakout[];
+  raw?: unknown;
+}
+
 export interface MachineScanBands {
   moisture?: Band;         // from machine_analysis.moisture_band
   sebum?: Band;            // machine_analysis.sebum_band
   texture?: Band;
   pores?: Band;
   acne?: Band;
+  acneDetails?: MachineAcneReading;
   pigmentation_brown?: Band; // if you split; else map from pigmentation_uv_band
   pigmentation_red?: Band;
   redness?: Band;          // optional, not used in rules below
+  sensitivity?: Band;
 }
 
 export interface SelfBands {
@@ -75,6 +91,71 @@ const containsBand = (s?: string): Band | undefined => {
   if (/\byellow\b/.test(t)) return 'yellow';
   if (/\bblue\b/.test(t)) return 'blue';
   if (/\bgreen\b/.test(t)) return 'green';
+  return undefined;
+};
+
+const BAND_PRIORITY: Record<Band, number> = { green: 0, blue: 1, yellow: 2, red: 3 };
+
+const elevateBand = (current?: Band, candidate?: Band): Band | undefined => {
+  if (!candidate) return current;
+  if (!current) return candidate;
+  return BAND_PRIORITY[candidate] > BAND_PRIORITY[current] ? candidate : current;
+};
+
+export const deriveAcneCategoryLabel = (label: string): AcneCategory | undefined => {
+  const normalized = normalizeOptionLabel(label);
+  if (!normalized) return undefined;
+  if (normalized.includes('blackhead') || normalized.includes('whitehead')) return 'Comedonal acne';
+  if (normalized.includes('large painful') || normalized.includes('cystic')) return 'Cystic acne';
+  if (normalized.includes('jawline') || normalized.includes('hormonal')) return 'Hormonal acne';
+  if (normalized.includes('red pimple') || normalized.includes('inflamed')) return 'Inflammatory acne';
+  return undefined;
+};
+
+export const deriveAcneBandFromTypeSeverity = (type: string, severity: string): Band | undefined => {
+  const acneType = normalizeOptionLabel(type);
+  const acneSeverity = normalizeOptionLabel(severity);
+  if (!acneType) return undefined;
+
+  if (/(^|\b)(none|no acne)(\b|$)/.test(acneType)) {
+    return 'green';
+  }
+
+  if (acneType.includes('blackhead')) {
+    if (acneSeverity.includes('30+')) return 'red';
+    if (acneSeverity.includes('11-30')) return 'yellow';
+    if (acneSeverity.includes('<=10') || acneSeverity.includes('up to 10') || acneSeverity.includes('<10')) return 'blue';
+    return 'blue';
+  }
+
+  if (acneType.includes('whitehead')) {
+    if (acneSeverity.includes('20+')) return 'red';
+    if (acneSeverity.includes('11-20')) return 'yellow';
+    if (acneSeverity.includes('<=10') || acneSeverity.includes('<10')) return 'blue';
+    return 'blue';
+  }
+
+  if (acneType.includes('red pimple') || acneType.includes('inflamed')) {
+    if (acneSeverity.includes('10+')) return 'red';
+    if (acneSeverity.includes('4-10')) return 'yellow';
+    if (acneSeverity.includes('1-3')) return 'blue';
+    return 'blue';
+  }
+
+  if (acneType.includes('cystic') || acneType.includes('large painful')) {
+    if (acneSeverity.includes('4+') || acneSeverity.includes('per week 4') || acneSeverity.includes('>=4/week')) return 'red';
+    if (acneSeverity.includes('1-3/week')) return 'yellow';
+    if (acneSeverity.includes('rare') || acneSeverity.includes('1 in last 2 weeks')) return 'blue';
+    return 'yellow';
+  }
+
+  if (acneType.includes('hormonal') || acneType.includes('jawline')) {
+    if (acneSeverity.includes('strong monthly flare')) return 'red';
+    if (acneSeverity.includes('clear monthly flare')) return 'yellow';
+    if (acneSeverity.includes('mild monthly flare') || acneSeverity.includes('(1-3)')) return 'blue';
+    return 'blue';
+  }
+
   return undefined;
 };
 
@@ -647,37 +728,31 @@ export function deriveSelfBands(form: any, ctx: RuntimeContext = {}): RuntimeSel
     self.pigmentation_brown = mergeBands({ pigmentation_brown: self.pigmentation_brown }, { pigmentation_brown: 'yellow' }).pigmentation_brown
   }
 
-  // Acne severity ladder based on subtype + severity strings
-  const acneType = normalizeOptionLabel(form?.acneType || form?.acneSubtype || '')
-  const acneSeverity = normalizeOptionLabel(form?.acneSeverity || '')
-  if (acneType) {
-    if (/(^|\b)(none|no acne)(\b|$)/.test(acneType)) {
-      self.acne = 'green'
-    } else if (acneType.includes('blackheads')) {
-      if (acneSeverity.includes('30+')) self.acne = 'red'
-      else if (acneSeverity.includes('11-30')) self.acne = 'yellow'
-      else if (acneSeverity.includes('<=10') || acneSeverity.includes('up to 10') || acneSeverity.includes('<10')) self.acne = 'blue'
-      else self.acne = self.acne || 'blue'
-    } else if (acneType.includes('whiteheads')) {
-      if (acneSeverity.includes('20+')) self.acne = 'red'
-      else if (acneSeverity.includes('11-20')) self.acne = 'yellow'
-      else if (acneSeverity.includes('<=10') || acneSeverity.includes('<10')) self.acne = 'blue'
-      else self.acne = self.acne || 'blue'
-    } else if (acneType.includes('red pimples') || acneType.includes('inflamed')) {
-      if (acneSeverity.includes('10+')) self.acne = 'red'
-      else if (acneSeverity.includes('4-10')) self.acne = 'yellow'
-      else if (acneSeverity.includes('1-3')) self.acne = 'blue'
-      else self.acne = self.acne || 'blue'
-    } else if (acneType.includes('cystic')) {
-      if (acneSeverity.includes('4+') || acneSeverity.includes('per week 4') || acneSeverity.includes('>=4/week')) self.acne = 'red'
-      else if (acneSeverity.includes('1-3/week')) self.acne = 'yellow'
-      else if (acneSeverity.includes('rare') || acneSeverity.includes('1 in last 2 weeks')) self.acne = 'blue'
-      else self.acne = self.acne || 'yellow'
-    } else if (acneType.includes('hormonal')) {
-      if (acneSeverity.includes('strong monthly flare')) self.acne = 'red'
-      else if (acneSeverity.includes('clear monthly flare')) self.acne = 'yellow'
-      else if (acneSeverity.includes('mild monthly flare') || acneSeverity.includes('(1-3)')) self.acne = 'blue'
-      else self.acne = self.acne || 'blue'
+  // Acne severity ladder based on multiple subtype selections
+  const acneEntries: AcneBreakoutDetail[] = Array.isArray(form?.acneBreakouts)
+    ? form.acneBreakouts
+    : []
+  if (acneEntries.length) {
+    let derivedBand = self.acne
+    for (const entry of acneEntries) {
+      const band = deriveAcneBandFromTypeSeverity(entry?.type, entry?.severity)
+      derivedBand = elevateBand(derivedBand, band)
+    }
+    if (!derivedBand) {
+      // Legacy fallback: treat presence of acne concern as at least yellow
+      derivedBand = has('acne') ? 'yellow' : undefined
+    }
+    if (derivedBand) {
+      self.acne = derivedBand
+    }
+  } else {
+    // Legacy support for scalar acneType/acneSeverity
+    const legacyBand = deriveAcneBandFromTypeSeverity(
+      form?.acneType || form?.acneSubtype || '',
+      form?.acneSeverity || ''
+    )
+    if (legacyBand) {
+      self.acne = legacyBand
     }
   }
 
