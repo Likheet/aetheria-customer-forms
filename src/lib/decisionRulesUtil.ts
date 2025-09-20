@@ -1,4 +1,4 @@
-import RULE_SPECS, { DecisionRuleSpec, QuestionSpec, Band, Category } from './decisionRules'
+import { RULE_SPECS, DecisionRuleSpec, QuestionSpec, Band, Category } from './decisionRules'
 
 export type MachineBands = {
   moisture?: Band
@@ -280,3 +280,4 @@ export function decideAllBandUpdates(
   }
   return { updates, perRule }
 }
+

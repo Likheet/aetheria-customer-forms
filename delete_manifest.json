@@ -1,0 +1,22 @@
+[
+  "app/layout.tsx",
+  "app/page.tsx",
+  "components/form-context.tsx",
+  "components/form-renderer.tsx",
+  "components/form.tsx",
+  "components/greeting.tsx",
+  "components/header.tsx",
+  "components/lights.tsx",
+  "components/logo.tsx",
+  "components/thank-you.tsx",
+  "components/theme-provider.tsx",
+  "components/v0-setup.tsx",
+  "components/fields",
+  "components/ui",
+  "src/components/UpdatedConsultForm.backup.tsx",
+  "src/components/UpdatedConsultFormNew.tsx",
+  "src/components/UpdatedConsultFormWithConcerns.tsx",
+  "src/components/DecisionEngineDemo.tsx",
+  "src/components/DecisionEngineTestPage.tsx",
+  "src/components/RealTimeConflictTest.tsx"
+]
