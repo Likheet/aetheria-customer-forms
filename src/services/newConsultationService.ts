@@ -98,6 +98,7 @@ function transformFormData(formData: UpdatedConsultData & { triageOutcomes?: any
       main_concerns: normalizeValue(formData.mainConcerns),
       // Include concern-specific data
       acne_type: normalizeValue(formData.acneType),
+      acne_category: normalizeValue(formData.acneCategory),
       acne_duration: normalizeValue(formData.acneDuration),
       pigmentation_type: normalizeValue(formData.pigmentationType),
       pigmentation_duration: normalizeValue(formData.pigmentationDuration),

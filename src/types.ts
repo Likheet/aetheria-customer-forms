@@ -27,6 +27,7 @@ export interface UpdatedConsultData {
   mainConcerns: string[];
   acneType: string;
   acneSeverity: string;
+  acneCategory: string;
   acneDuration: string;
   pigmentationType: string;
   pigmentationSeverity: string;
