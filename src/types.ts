@@ -1,3 +1,15 @@
+export type AcneCategory =
+  | 'Comedonal acne'
+  | 'Inflammatory acne'
+  | 'Cystic acne'
+  | 'Hormonal acne';
+
+export interface AcneBreakoutDetail {
+  type: string;
+  severity: string;
+  category: AcneCategory;
+}
+
 export interface UpdatedConsultData {
   // Personal Information  
   name: string;
@@ -25,9 +37,7 @@ export interface UpdatedConsultData {
   
   // Section D – Main Concerns
   mainConcerns: string[];
-  acneType: string;
-  acneSeverity: string;
-  acneCategory: string;
+  acneBreakouts: AcneBreakoutDetail[];
   acneDuration: string;
   pigmentationType: string;
   pigmentationSeverity: string;

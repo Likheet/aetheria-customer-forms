@@ -3,31 +3,22 @@ import { CheckCircle, ArrowLeft, ArrowRight, FileText, Droplets, Shield, Heart, 
 import { DatePicker } from '@mantine/dates';
 import { saveConsultationData } from '../services/newConsultationService';
 import {
-  deriveSelfBandsFromForm,
-  startSession,
   deriveSelfBands as deriveSelfBandsRt,
   getFollowUpQuestions as getFollowUpsRt,
   decideBandUpdates as decideBandRt,
   decideAllBandUpdates as decideAllRt,
   mergeBands as mergeBandsRt,
   computeSensitivityFromForm,
+  deriveAcneCategoryLabel,
 } from '../lib/decisionEngine';
-import { UpdatedConsultData } from '../types';
+import type { MachineScanBands } from '../lib/decisionEngine';
+import { UpdatedConsultData, AcneCategory } from '../types';
 import ProductAutocomplete from './ProductAutocomplete';
 
 interface UpdatedConsultFormProps {
   onBack: () => void;
   onComplete: () => void;
-  machine?: {
-    moisture?: 'green'|'blue'|'yellow'|'red';
-    sebum?: 'green'|'blue'|'yellow'|'red';
-    texture?: 'green'|'blue'|'yellow'|'red';
-    pores?: 'green'|'blue'|'yellow'|'red';
-    acne?: 'green'|'blue'|'yellow'|'red';
-    pigmentation_brown?: 'green'|'blue'|'yellow'|'red';
-    pigmentation_red?: 'green'|'blue'|'yellow'|'red';
-    sensitivity?: 'green'|'blue'|'yellow'|'red';
-  };
+  machine?: MachineScanBands;
   // raw metrics payload from machine_analysis (for dev box)
   machineRaw?: any;
   sessionId?: string;
@@ -61,9 +52,7 @@ const initialFormData: UpdatedConsultData = {
   
   // Section D – Main Concerns
   mainConcerns: [],
-  acneType: '',
-  acneSeverity: '',
-  acneCategory: '',
+  acneBreakouts: [],
   acneDuration: '',
   pigmentationType: '',
   pigmentationSeverity: '',
@@ -144,9 +133,13 @@ const dummyFormData: UpdatedConsultData = {
   
   // Section D – Main Concerns
   mainConcerns: ['Acne', 'Pigmentation', 'Large pores'],
-  acneType: 'Red pimples (inflamed, sometimes pus-filled)',
-  acneSeverity: '',
-  acneCategory: 'Inflammatory acne',
+  acneBreakouts: [
+    {
+      type: 'Red pimples (inflamed, sometimes pus-filled)',
+      severity: '',
+      category: 'Inflammatory acne',
+    },
+  ],
   acneDuration: '',
   pigmentationType: 'Moderate brown spots/patches, noticeable in several areas → Yellow',
   pigmentationSeverity: '',
@@ -193,19 +186,90 @@ const dummyFormData: UpdatedConsultData = {
   medications: 'None',
 };
 
-const deriveAcneCategory = (acneType: string): string => {
+const deriveAcneCategory = (acneType: string): string => deriveAcneCategoryLabel(acneType) || '';
+
+const ACNE_TYPE_OPTIONS = [
+  'Blackheads (tiny dark dots in pores)',
+  'Whiteheads (small white bumps under the skin)',
+  'Red pimples (inflamed, sometimes pus-filled)',
+  'Large painful bumps (deep cystic acne)',
+  'Mostly around jawline/chin, often before periods (hormonal)',
+];
+
+const getAcneSeverityOptions = (acneType: string): string[] => {
   const normalized = (acneType || '').toLowerCase();
-  if (!normalized) return '';
-  if (normalized.includes('blackheads') || normalized.includes('whiteheads')) return 'Comedonal acne';
-  if (normalized.includes('large painful bumps') || normalized.includes('cystic')) return 'Cystic acne';
-  if (normalized.includes('jawline') || normalized.includes('hormonal')) return 'Hormonal acne';
-  if (normalized.includes('red pimples') || normalized.includes('inflamed')) return 'Inflammatory acne';
-  return '';
+  if (normalized.includes('blackheads')) {
+    return [
+      'A few, mostly on the nose (≤10) → Blue',
+      'Many in the T-zone (11–30) → Yellow',
+      'Widespread across face (30+) → Red',
+    ];
+  }
+  if (normalized.includes('whiteheads')) {
+    return [
+      'A few, small area (≤10) → Blue',
+      'Many in several areas (11–20) → Yellow',
+      'Widespread across face (20+) → Red',
+    ];
+  }
+  if (normalized.includes('red pimples') || normalized.includes('inflamed')) {
+    return [
+      'A few (1–3), mild → Blue',
+      'Several (4–10), some painful → Yellow',
+      'Many (10+), inflamed/widespread → Red',
+    ];
+  }
+  if (normalized.includes('cystic') || normalized.includes('large painful')) {
+    return [
+      'Rare (1 in last 2 weeks) → Blue',
+      'Frequent (1–3 per week) → Yellow',
+      'Persistent (4+ per week or multiple at once) → Red',
+    ];
+  }
+  if (normalized.includes('jawline') || normalized.includes('hormonal')) {
+    return [
+      'Mild monthly flare (1–3 pimples) → Blue',
+      'Clear monthly flare (several pimples/cyst lasting a week) → Yellow',
+      'Strong monthly flare (multiple cysts lasting >1 week) → Red',
+    ];
+  }
+  return [
+    'Mild (few breakouts) → Blue',
+    'Moderate (several breakouts) → Yellow',
+    'Severe (many breakouts) → Red',
+  ];
 };
 
 const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onComplete, machine, machineRaw, sessionId, prefill }) => {
+  const buildInitialFormData = (): UpdatedConsultData => {
+    const base: any = { ...initialFormData, ...(prefill || {}) }
+    const providedBreakouts = Array.isArray(base.acneBreakouts) ? base.acneBreakouts : []
+    const normalizedBreakouts = providedBreakouts.length
+      ? providedBreakouts.map((item: any) => ({
+          type: item?.type || '',
+          severity: item?.severity || '',
+          category: (deriveAcneCategory(item?.type || '') || item?.category || 'Comedonal acne') as AcneCategory,
+        }))
+      : (() => {
+          const legacyType = base.acneType || base.acneSubtype || ''
+          if (!legacyType) return []
+          return [
+            {
+              type: legacyType,
+              severity: base.acneSeverity || '',
+              category: (deriveAcneCategory(legacyType) || 'Comedonal acne') as AcneCategory,
+            },
+          ]
+        })()
+    base.acneBreakouts = normalizedBreakouts
+    delete base.acneType
+    delete base.acneSeverity
+    delete base.acneCategory
+    return base as UpdatedConsultData
+  }
+
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<UpdatedConsultData>({ ...initialFormData, ...(prefill || {}) });
+  const [formData, setFormData] = useState<UpdatedConsultData>(buildInitialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -225,42 +289,15 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const [computedSensitivity, setComputedSensitivity] = useState<{ score: number; tier: string; band: string; remark: string } | null>(null);
   const [decisions, setDecisions] = useState<any[]>([]);
 
-  // Gate discrepancy follow-ups until Section-D concern answers are complete
-  const isSectionDComplete = () => {
-    const concerns: string[] = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : []
-    // Only gate for concerns that have structured Section-D inputs
-    // Acne: requires type + severity
-    if (concerns.includes('Acne')) {
-      if (!String(formData.acneType || '').trim() || !String(formData.acneSeverity || '').trim()) return false
-    }
-    // Pigmentation: requires type + severity
-    if (concerns.includes('Pigmentation')) {
-      if (!String(formData.pigmentationType || '').trim() || !String(formData.pigmentationSeverity || '').trim()) return false
-    }
-    // Fine lines & wrinkles: single severity captured in wrinklesType
-    if (concerns.includes('Fine lines & wrinkles')) {
-      if (!String(formData.wrinklesType || '').trim()) return false
-    }
-    // Large pores: single severity captured in poresType
-    if (concerns.includes('Large pores')) {
-      if (!String(formData.poresType || '').trim()) return false
-    }
-    // Bumpy skin: single severity captured in textureType
-    if (concerns.includes('Bumpy skin')) {
-      if (!String(formData.textureType || '').trim()) return false
-    }
-    // Do not block on Sensitivity or other concerns without structured inputs here
-    return true
-  }
-
   // Per-concern readiness: allow follow-ups for a category once that concern's Section-D is done
   const isCategoryReady = (category: string, dimension?: 'brown' | 'red') => {
     const concerns: string[] = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : []
+    const acneBreakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : []
     switch (category) {
       case 'Acne':
-        return !concerns.includes('Acne') || (
-          String(formData.acneType || '').trim() && String(formData.acneSeverity || '').trim()
-        )
+        if (!concerns.includes('Acne')) return true
+        if (!acneBreakouts.length) return false
+        return acneBreakouts.every(item => String(item.type || '').trim() && String(item.severity || '').trim())
       case 'Pigmentation':
         return !concerns.includes('Pigmentation') || (
           String(formData.pigmentationType || '').trim() && String(formData.pigmentationSeverity || '').trim()
@@ -342,10 +379,18 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         default: break
       }
       // Add concern-specific fields to ensure re-asking when user changes these
+      const acneKey = Array.isArray(formData.acneBreakouts)
+        ? (formData.acneBreakouts as any[])
+            .map((item) => `${norm(item.type)}|${norm(item.severity)}`)
+            .join(',')
+        : ''
       const extra = [
-        norm(formData.textureType), norm(formData.wrinklesType),
-        norm(formData.acneType), norm(formData.acneSeverity),
-        norm(formData.poresType), norm(formData.pigmentationType), norm(formData.pigmentationSeverity),
+        norm(formData.textureType),
+        norm(formData.wrinklesType),
+        acneKey,
+        norm(formData.poresType),
+        norm(formData.pigmentationType),
+        norm(formData.pigmentationSeverity),
         mcKey,
       ].join('~')
       keysNow[r.ruleId] = [cat, dim, mBand, sBand, extra].join('#')
@@ -396,8 +441,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   }, [
     formData.oilLevels,
     formData.hydrationLevels,
-    formData.acneType,
-    formData.acneSeverity,
+    formData.acneBreakouts,
     formData.pigmentationType,
     formData.pigmentationSeverity,
     formData.poresType,
@@ -415,15 +459,6 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     (formData as any).sensitivitySeasonal, // age under 20
     (formData as any).sensitivityCleansing, // very dry baseline
   ])
-
-  useEffect(() => {
-    if (formData.acneType && !formData.acneCategory) {
-      const derivedCategory = deriveAcneCategory(formData.acneType);
-      if (derivedCategory) {
-        setFormData(prev => ({ ...prev, acneCategory: derivedCategory }));
-      }
-    }
-  }, [formData.acneType, formData.acneCategory]);
 
   const toggleFollowUpOption = (qid: string, opt: string, multi?: boolean) => {
     setFollowUpLocal(prev => {
@@ -702,8 +737,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         irritatingProducts: prevData.irritatingProducts !== '' ? prevData.irritatingProducts : dummyFormData.irritatingProducts,        // Section D - Main Concerns
         mainConcerns: nextMainConcerns,
         // For dynamic concerns: only fill fields relevant to selected concerns
-        acneType: nextMainConcerns.includes('Acne') && !prevData.acneType ? (dummyFormData.acneType || 'Red pimples (inflamed, sometimes pus-filled)') : prevData.acneType,
-        acneSeverity: prevData.acneSeverity,
+        acneBreakouts: nextMainConcerns.includes('Acne') && (!prevData.acneBreakouts || prevData.acneBreakouts.length === 0)
+          ? (dummyFormData.acneBreakouts || []).map(item => ({ ...item }))
+          : prevData.acneBreakouts,
         acneDuration: prevData.acneDuration, // not asked; do not fabricate
         pigmentationType: nextMainConcerns.includes('Pigmentation') && !prevData.pigmentationType ? (dummyFormData.pigmentationType || 'PIH brown') : prevData.pigmentationType,
         pigmentationSeverity: prevData.pigmentationSeverity,
@@ -922,28 +958,40 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             const val = (formData[key] as string) || '';
             if (!val.trim()) newErrors[key as string] = 'Please select an option';
           } else {
-            const baseMap: Record<string, string> = {
-              'Acne': 'acne',
-              'Pigmentation': 'pigmentation',
-              'Sensitivity': 'sensitivity',
-              'Fine lines & wrinkles': 'wrinkles',
-              'Large pores': 'pores',
-              'Bumpy skin': 'texture',
-            };
-            const base = baseMap[concern] || concern.toLowerCase().replace(/[^a-z]/g, '');
-            const concernsWithType = ['Acne', 'Pigmentation'];
-            let key = '';
-            if (stepType === 'type') {
-              key = base + 'Type';
-            } else if (stepType === 'severity') {
-              if (concernsWithType.includes(concern)) {
-                key = base + 'Severity';
-              } else {
-                key = base + 'Type';
+            if (concern === 'Acne') {
+              const breakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : []
+              if (stepType === 'type') {
+                if (!breakouts.length) newErrors.acneBreakouts = 'Select at least one breakout type';
+              } else if (stepType === 'severity') {
+                if (!breakouts.length) {
+                  newErrors.acneBreakouts = 'Select at least one breakout type';
+                } else if (breakouts.some(item => !String(item.severity || '').trim())) {
+                  newErrors.acneBreakouts = 'Select a severity for each breakout type';
+                }
               }
+            } else {
+              const baseMap: Record<string, string> = {
+                'Pigmentation': 'pigmentation',
+                'Sensitivity': 'sensitivity',
+                'Fine lines & wrinkles': 'wrinkles',
+                'Large pores': 'pores',
+                'Bumpy skin': 'texture',
+              }
+              const base = baseMap[concern] || concern.toLowerCase().replace(/[^a-z]/g, '')
+              const concernsWithType = ['Pigmentation']
+              let key = ''
+              if (stepType === 'type') {
+                key = base + 'Type'
+              } else if (stepType === 'severity') {
+                if (concernsWithType.includes(concern)) {
+                  key = base + 'Severity'
+                } else {
+                  key = base + 'Type'
+                }
+              }
+              const val = (formData[key as keyof UpdatedConsultData] as string) || ''
+              if (!val.trim()) newErrors[key as string] = `${concern} ${stepType === 'severity' ? 'severity' : 'type'} is required`
             }
-            const val = (formData[key as keyof UpdatedConsultData] as string) || '';
-            if (!val.trim()) newErrors[key as string] = `${concern} ${stepType === 'severity' ? 'severity' : 'type'} is required`;
           }
         }
         break;
@@ -1174,52 +1222,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       switch (concern) {
         case 'Acne':
           if (stepType === 'type') {
-            return [
-              'Blackheads (tiny dark dots in pores)',
-              'Whiteheads (small white bumps under the skin)',
-              'Red pimples (inflamed, sometimes pus-filled)',
-              'Large painful bumps (deep cystic acne)',
-              'Mostly around jawline/chin, often before periods (hormonal)'
-            ];
-          } else if (stepType === 'severity') {
-            const acneType = formData.acneType;
-            if (acneType.includes('Blackheads')) {
-              return [
-                'A few, mostly on the nose (≤10) → Blue',
-                'Many in the T-zone (11–30) → Yellow',
-                'Widespread across face (30+) → Red'
-              ];
-            } else if (acneType.includes('Whiteheads')) {
-              return [
-                'A few, small area (≤10) → Blue',
-                'Many in several areas (11–20) → Yellow',
-                'Widespread across face (20+) → Red'
-              ];
-            } else if (acneType.includes('Red pimples')) {
-              return [
-                'A few (1–3), mild → Blue',
-                'Several (4–10), some painful → Yellow',
-                'Many (10+), inflamed/widespread → Red'
-              ];
-            } else if (acneType.includes('Large painful bumps') || acneType.includes('cystic')) {
-              return [
-                'Rare (1 in last 2 weeks) → Blue',
-                'Frequent (1–3 per week) → Yellow',
-                'Persistent (4+ per week or multiple at once) → Red'
-              ];
-            } else if (acneType.includes('jawline') || acneType.includes('hormonal')) {
-              return [
-                'Mild monthly flare (1–3 pimples) → Blue',
-                'Clear monthly flare (several pimples/cyst lasting a week) → Yellow',
-                'Strong monthly flare (multiple cysts lasting >1 week) → Red'
-              ];
-            }
-            // Default fallback
-            return [
-              'Mild (few breakouts) → Blue',
-              'Moderate (several breakouts) → Yellow',
-              'Severe (many breakouts) → Red'
-            ];
+            return ACNE_TYPE_OPTIONS;
           }
           return [];
         case 'Pigmentation':
@@ -1360,24 +1363,170 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       return { fieldKey, title, subtitle };
     };
 
+    const acneBreakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : [];
+    const toggleAcneBreakout = (option: string) => {
+      const exists = acneBreakouts.find(item => item.type === option);
+      if (exists) {
+        updateFormData({ acneBreakouts: acneBreakouts.filter(item => item.type !== option) });
+      } else {
+        const category = (deriveAcneCategory(option) || 'Comedonal acne') as AcneCategory;
+        updateFormData({ acneBreakouts: [...acneBreakouts, { type: option, severity: '', category }] });
+      }
+    };
+
+    if (concern === 'Acne') {
+      if (stepType === 'type') {
+        const { title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
+        const options = ACNE_TYPE_OPTIONS;
+        return (
+          <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
+            <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+              <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
+                <span className="mr-1">{React.cloneElement(getConcernIcon(concern), { className: 'w-4 h-4 text-amber-600' })}</span>
+                {concern}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
+                {getConcernIcon(concern)}
+              </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">{title}</h2>
+              {subtitle && <p className="text-gray-600">{subtitle}</p>}
+            </div>
+            <div className="max-w-2xl mx-auto w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {options.map(option => {
+                  const isSelected = acneBreakouts.some(item => item.type === option);
+                  const category = deriveAcneCategory(option);
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => toggleAcneBreakout(option)}
+                      className={`px-6 py-4 text-left rounded-xl border-2 transition-all duration-300 ${
+                        isSelected
+                          ? 'border-amber-400 bg-amber-50 text-amber-700 shadow-lg'
+                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold">{option}</p>
+                          <p className="text-sm text-amber-600">{category || 'Acne'}</p>
+                        </div>
+                        {isSelected && <CheckCircle className="w-5 h-5 text-amber-500" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {errors.acneBreakouts && <p className="text-red-500 text-sm mt-2">{errors.acneBreakouts}</p>}
+            </div>
+          </div>
+        );
+      }
+
+      if (stepType === 'severity') {
+        const { title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
+        if (!acneBreakouts.length) {
+          return (
+            <div className="space-y-12 flex flex-col justify-center h-full py-8">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
+                  {getConcernIcon(concern)}
+                </div>
+                <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">{title}</h2>
+                <p className="text-gray-600">Select at least one breakout type to continue.</p>
+              </div>
+            </div>
+          );
+        }
+
+        const setSeverity = (index: number, value: string) => {
+          const next = acneBreakouts.map((item, idx) => {
+            if (idx !== index) return item;
+            const category = (deriveAcneCategory(item.type) || item.category) as AcneCategory;
+            return { ...item, severity: value, category };
+          });
+          updateFormData({ acneBreakouts: next });
+        };
+
+        return (
+          <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
+            <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+              <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
+                <span className="mr-1">{React.cloneElement(getConcernIcon(concern), { className: 'w-4 h-4 text-amber-600' })}</span>
+                {concern}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
+                {getConcernIcon(concern)}
+              </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">{title}</h2>
+              {subtitle && <p className="text-gray-600">{subtitle}</p>}
+            </div>
+            <div className="max-w-3xl mx-auto w-full space-y-6">
+              {acneBreakouts.map((item, index) => {
+                const severityOptions = getAcneSeverityOptions(item.type);
+                const badge = getAcneTypeBadge(item.type);
+                return (
+                  <div key={`${item.type}-${index}`} className="bg-white/80 border border-amber-200 rounded-2xl p-6 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                      <div className="flex items-center gap-2">
+                        {badge && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium border border-blue-200">
+                            {badge}
+                          </span>
+                        )}
+                        <span className="text-lg font-semibold text-gray-900">{item.type}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-amber-600">{deriveAcneCategory(item.type)}</span>
+                        <button
+                          type="button"
+                          onClick={() => toggleAcneBreakout(item.type)}
+                          className="text-sm text-amber-500 hover:text-amber-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {severityOptions.map(option => {
+                        const isSelected = item.severity === option;
+                        return (
+                          <button
+                            key={option}
+                            type="button"
+                            onClick={() => setSeverity(index, option)}
+                            className={`px-4 py-3 rounded-xl border-2 text-sm transition-all duration-300 ${
+                              isSelected
+                                ? 'border-amber-400 bg-amber-50 text-amber-700 shadow-lg'
+                                : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
+                            }`}
+                          >
+                            {option}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              {errors.acneBreakouts && <p className="text-red-500 text-sm">{errors.acneBreakouts}</p>}
+            </div>
+          </div>
+        );
+      }
+    }
+
     const { fieldKey, title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
     const fieldValue = (fieldKey ? (formData as any)[fieldKey] : '') as string;
     const options = getConcernOptions(concern, stepType, questionIndex);
     const handleConcernOption = (option: string) => {
       if (!fieldKey) return;
-      const updates: Partial<UpdatedConsultData> = { [fieldKey]: option } as any;
-      if (concern === 'Acne') {
-        if (stepType === 'type') {
-          updates.acneCategory = deriveAcneCategory(option);
-          updates.acneSeverity = '';
-        } else if (stepType === 'severity') {
-          const derived = deriveAcneCategory(formData.acneType);
-          if (derived !== formData.acneCategory) {
-            updates.acneCategory = derived;
-          }
-        }
-      }
-      updateFormData(updates);
+      updateFormData({ [fieldKey]: option } as Partial<UpdatedConsultData>);
     };
 
     return (
@@ -1388,14 +1537,6 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             <span className="mr-1">{React.cloneElement(getConcernIcon(concern), { className: "w-4 h-4 text-amber-600" })}</span>
             {concern}
           </div>
-          
-          {/* Acne Type Badge - only show for Acne severity step */}
-          {concern === 'Acne' && stepType === 'severity' && getAcneTypeBadge(formData.acneType) && (
-            <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium border border-blue-200">
-              <span className="mr-1">{React.cloneElement(getConcernIcon(concern), { className: "w-4 h-4 text-blue-600" })}</span>
-              {getAcneTypeBadge(formData.acneType)}
-            </div>
-          )}
         </div>
 
         <div className="text-center">
@@ -2394,6 +2535,15 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                 <div><span className="font-medium">Texture:</span> {machine.texture || '-'} {machineRaw?.texture !== undefined && <span className="text-gray-500">(val: {String(machineRaw.texture)})</span>}</div>
                 <div><span className="font-medium">Pores:</span> {machine.pores || '-'} {machineRaw?.pores !== undefined && <span className="text-gray-500">(val: {String(machineRaw.pores)})</span>}</div>
                 <div><span className="font-medium">Acne:</span> {machine.acne || '-'} {machineRaw?.acne !== undefined && <span className="text-gray-500">(val: {String(machineRaw.acne)})</span>}</div>
+                {machine.acneDetails?.breakouts?.length ? (
+                  <div className="text-xs text-gray-600 pl-2 space-y-1">
+                    {machine.acneDetails.breakouts.map((entry, idx) => (
+                      <div key={`${entry.type || 'type'}-${idx}`}>
+                        • {entry.type || 'Type'}{entry.severity ? ` — ${entry.severity}` : ''}{entry.category ? ` (${entry.category})` : ''}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 {(() => {
                   const order: any = { green: 0, blue: 1, yellow: 2, red: 3 }
                   const b = machine.pigmentation_brown as any
@@ -2416,7 +2566,20 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                 <div><span className="font-medium">Texture:</span> {effectiveBands?.texture || '-'}</div>
                 <div><span className="font-medium">Pores:</span> {effectiveBands?.pores || '-'}</div>
                 <div><span className="font-medium">Acne:</span> {effectiveBands?.acne || '-'}</div>
-                <div><span className="font-medium">Acne category:</span> {formData.acneCategory || '-'} </div>
+                <div>
+                  <span className="font-medium">Acne categories:</span>{' '}
+                  {(() => {
+                    const breakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : []
+                    const cats = Array.from(
+                      new Set(
+                        breakouts
+                          .map(item => deriveAcneCategory(item.type) || item.category)
+                          .filter(Boolean)
+                      )
+                    )
+                    return cats.length ? cats.join(', ') : '-'
+                  })()}
+                </div>
                 {(() => {
                   const order: any = { green: 0, blue: 1, yellow: 2, red: 3 }
                   const b = effectiveBands?.pigmentation_brown as any
@@ -2460,12 +2623,12 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                       if (wt.includes('yellow') || wt.includes('red')) {
                         extra.push('Follow anti-aging routine.')
                       }
-                      // Add acne category tag to Remarks
-                      const acneType = String((formData as any).acneType || '')
-                      const acneCategoryFromForm = String((formData as any).acneCategory || '').trim()
-                      const effectiveAcneCategory = acneCategoryFromForm || deriveAcneCategory(acneType)
-                      if (effectiveAcneCategory) {
-                        extra.push(effectiveAcneCategory)
+                      // Add acne category tags to Remarks
+                      if (Array.isArray((formData as any).acneBreakouts)) {
+                        const breakoutCategories = ((formData as any).acneBreakouts as any[])
+                          .map(entry => deriveAcneCategory(entry.type) || entry.category)
+                          .filter(Boolean)
+                        breakoutCategories.forEach(cat => extra.push(cat as string))
                       }
                       const all = Array.from(new Set([...fromDecisions, ...extra]))
                       if (all.length === 0) return <span className="text-gray-400">-</span>

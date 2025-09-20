@@ -2,19 +2,7 @@ import { useEffect, useState } from 'react'
 import { getFillingQueue, getSessionProfile } from '../services/newConsultationService'
 import UpdatedConsultForm from './UpdatedConsultForm'
 import { User, Search, Clock, ArrowRight, Phone, Calendar } from 'lucide-react'
-
-type Band = 'green'|'blue'|'yellow'|'red'
-
-type MachineScanBands = {
-  moisture?: Band
-  sebum?: Band
-  texture?: Band
-  pores?: Band
-  acne?: Band
-  pigmentation_brown?: Band
-  pigmentation_red?: Band
-  sensitivity?: Band
-}
+import type { MachineScanBands } from '../lib/decisionEngine'
 
 export default function ChooseProfile({ onBack }: { onBack: () => void }) {
   const [queue, setQueue] = useState<any[]>([])
@@ -148,6 +136,7 @@ export default function ChooseProfile({ onBack }: { onBack: () => void }) {
                         texture: ma.texture_band,
                         pores: ma.pores_band,
                         acne: ma.acne_band,
+                        acneDetails: ma.acne_details ?? undefined,
                         // split UV/brown/red:
                         // - Brown maps from brown_areas_band when present, else fall back to pigmentation_uv_band
                         // - Red (PIE) mapped from redness_band when available (documented proxy)

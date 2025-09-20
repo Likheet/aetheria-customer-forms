@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase'
-import { UpdatedConsultData } from '../types'
+import type { MachineAcneReading, MachineAcneBreakout, Band } from '../lib/decisionEngine'
+import { deriveAcneBandFromTypeSeverity, deriveAcneCategoryLabel } from '../lib/decisionEngine'
+import { UpdatedConsultData, AcneCategory } from '../types'
 
 // Types for the new database structure
 export interface Customer {
@@ -78,7 +80,7 @@ function normalizeValue(value: any): any {
 // Utility function to normalize object properties
 function normalizeObject(obj: any): any {
   if (!obj || typeof obj !== 'object') return obj
-  
+
   const normalized: any = {}
   for (const [key, value] of Object.entries(obj)) {
     normalized[key] = normalizeValue(value)
@@ -86,8 +88,119 @@ function normalizeObject(obj: any): any {
   return normalized
 }
 
+const BAND_ORDER: Band[] = ['green', 'blue', 'yellow', 'red']
+
+const parseBandString = (value: any): Band | undefined => {
+  if (!value) return undefined
+  const t = String(value).trim().toLowerCase()
+  if (!t) return undefined
+  if (t.includes('red')) return 'red'
+  if (t.includes('yellow')) return 'yellow'
+  if (t.includes('blue')) return 'blue'
+  if (t.includes('green')) return 'green'
+  return undefined
+}
+
+const elevateBand = (current?: Band, candidate?: Band): Band | undefined => {
+  if (!candidate) return current
+  if (!current) return candidate
+  return BAND_ORDER.indexOf(candidate) > BAND_ORDER.indexOf(current) ? candidate : current
+}
+
+const ACNE_CATEGORY_VALUES: AcneCategory[] = [
+  'Comedonal acne',
+  'Inflammatory acne',
+  'Cystic acne',
+  'Hormonal acne',
+]
+
+const toAcneCategory = (value?: string): AcneCategory | undefined => {
+  if (!value) return undefined
+  const trimmed = String(value).trim()
+  if (!trimmed) return undefined
+  const direct = ACNE_CATEGORY_VALUES.find(cat => cat.toLowerCase() === trimmed.toLowerCase())
+  if (direct) return direct
+  return deriveAcneCategoryLabel(trimmed)
+}
+
+const normalizeMachineAcneBreakout = (entry: any): MachineAcneBreakout | null => {
+  if (!entry || typeof entry !== 'object') return null
+  const type = 'type' in entry ? String((entry as any).type ?? '') : ''
+  const severity = 'severity' in entry ? String((entry as any).severity ?? '') : ''
+  const categoryRaw = 'category' in entry ? String((entry as any).category ?? '') : ''
+  const category = toAcneCategory(categoryRaw || type)
+  if (!type && !severity && !category) return null
+  const breakout: MachineAcneBreakout = { type, severity }
+  if (category) breakout.category = category
+  return breakout
+}
+
+function normalizeMachineAcneBand(value: any): { band?: Band; details?: MachineAcneReading } {
+  if (value === null || value === undefined) {
+    return { band: undefined, details: undefined }
+  }
+
+  let rawValue: any = value
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) {
+      return { band: undefined, details: undefined }
+    }
+    try {
+      rawValue = JSON.parse(trimmed)
+    } catch {
+      return { band: parseBandString(trimmed), details: undefined }
+    }
+  }
+
+  let band: Band | undefined
+  const breakouts: MachineAcneBreakout[] = []
+
+  const considerBreakoutList = (maybeList: any) => {
+    if (Array.isArray(maybeList)) {
+      for (const item of maybeList) {
+        const normalized = normalizeMachineAcneBreakout(item)
+        if (normalized) breakouts.push(normalized)
+      }
+    }
+  }
+
+  if (Array.isArray(rawValue)) {
+    considerBreakoutList(rawValue)
+  } else if (rawValue && typeof rawValue === 'object') {
+    band = parseBandString((rawValue as any).band ?? (rawValue as any).acne_band)
+    considerBreakoutList((rawValue as any).breakouts)
+    considerBreakoutList((rawValue as any).details)
+    considerBreakoutList((rawValue as any).entries)
+  } else {
+    return { band: parseBandString(rawValue), details: undefined }
+  }
+
+  let derivedBand = band
+  for (const breakout of breakouts) {
+    const breakoutBand = deriveAcneBandFromTypeSeverity(breakout.type, breakout.severity ?? '')
+    derivedBand = elevateBand(derivedBand, breakoutBand)
+  }
+
+  if (!breakouts.length && !derivedBand) {
+    return { band: undefined, details: undefined }
+  }
+
+  const details: MachineAcneReading = {
+    band: derivedBand,
+    breakouts,
+    raw: value,
+  }
+
+  return { band: derivedBand, details }
+}
+
 // Transform form data into normalized structure
 function transformFormData(formData: UpdatedConsultData & { triageOutcomes?: any[] }) {
+  const acneBreakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : []
+  const acneTypeSummary = acneBreakouts.map(item => item.type).filter(Boolean).join(', ')
+  const acneCategorySummary = acneBreakouts.map(item => item.category).filter(Boolean).join(', ')
+
   return {
     skin_profile: {
       skin_type: normalizeValue(formData.skinType),
@@ -97,8 +210,9 @@ function transformFormData(formData: UpdatedConsultData & { triageOutcomes?: any
       sensitivity_triggers: normalizeValue(formData.sensitivityTriggers),
       main_concerns: normalizeValue(formData.mainConcerns),
       // Include concern-specific data
-      acne_type: normalizeValue(formData.acneType),
-      acne_category: normalizeValue(formData.acneCategory),
+      acne_breakouts: normalizeValue(acneBreakouts),
+      acne_type: normalizeValue(acneTypeSummary),
+      acne_category: normalizeValue(acneCategorySummary),
       acne_duration: normalizeValue(formData.acneDuration),
       pigmentation_type: normalizeValue(formData.pigmentationType),
       pigmentation_duration: normalizeValue(formData.pigmentationDuration),
@@ -445,12 +559,21 @@ export async function getSessionProfile(sessionId: string) {
     .maybeSingle()
   if (maErr) throw maErr
 
+  const normalizedAcne = normalizeMachineAcneBand(ma?.acne_band)
+  const metrics = ma
+    ? {
+        ...ma,
+        acne_band: normalizedAcne.band ?? parseBandString(ma.acne_band),
+        acne_details: normalizedAcne.details ?? null,
+      }
+    : null
+
   return {
     session_id: sessionId,
     customer_id: (session as any).customer?.id,
     customer_name: (session as any).customer?.full_name,
     customer_phone: (session as any).customer?.phone_e164,
     scan_id: scanId,
-    metrics: ma || null,
+    metrics,
   }
 }
