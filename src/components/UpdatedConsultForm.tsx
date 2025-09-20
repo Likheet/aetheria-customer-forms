@@ -63,6 +63,7 @@ const initialFormData: UpdatedConsultData = {
   mainConcerns: [],
   acneType: '',
   acneSeverity: '',
+  acneCategory: '',
   acneDuration: '',
   pigmentationType: '',
   pigmentationSeverity: '',
@@ -145,6 +146,7 @@ const dummyFormData: UpdatedConsultData = {
   mainConcerns: ['Acne', 'Pigmentation', 'Large pores'],
   acneType: 'Red pimples (inflamed, sometimes pus-filled)',
   acneSeverity: '',
+  acneCategory: 'Inflammatory acne',
   acneDuration: '',
   pigmentationType: 'Moderate brown spots/patches, noticeable in several areas → Yellow',
   pigmentationSeverity: '',
@@ -189,6 +191,16 @@ const dummyFormData: UpdatedConsultData = {
   allergies: 'No known allergies',
   pregnancyBreastfeeding: 'No',
   medications: 'None',
+};
+
+const deriveAcneCategory = (acneType: string): string => {
+  const normalized = (acneType || '').toLowerCase();
+  if (!normalized) return '';
+  if (normalized.includes('blackheads') || normalized.includes('whiteheads')) return 'Comedonal acne';
+  if (normalized.includes('large painful bumps') || normalized.includes('cystic')) return 'Cystic acne';
+  if (normalized.includes('jawline') || normalized.includes('hormonal')) return 'Hormonal acne';
+  if (normalized.includes('red pimples') || normalized.includes('inflamed')) return 'Inflammatory acne';
+  return '';
 };
 
 const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onComplete, machine, machineRaw, sessionId, prefill }) => {
@@ -403,6 +415,15 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     (formData as any).sensitivitySeasonal, // age under 20
     (formData as any).sensitivityCleansing, // very dry baseline
   ])
+
+  useEffect(() => {
+    if (formData.acneType && !formData.acneCategory) {
+      const derivedCategory = deriveAcneCategory(formData.acneType);
+      if (derivedCategory) {
+        setFormData(prev => ({ ...prev, acneCategory: derivedCategory }));
+      }
+    }
+  }, [formData.acneType, formData.acneCategory]);
 
   const toggleFollowUpOption = (qid: string, opt: string, multi?: boolean) => {
     setFollowUpLocal(prev => {
@@ -1342,6 +1363,22 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     const { fieldKey, title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
     const fieldValue = (fieldKey ? (formData as any)[fieldKey] : '') as string;
     const options = getConcernOptions(concern, stepType, questionIndex);
+    const handleConcernOption = (option: string) => {
+      if (!fieldKey) return;
+      const updates: Partial<UpdatedConsultData> = { [fieldKey]: option } as any;
+      if (concern === 'Acne') {
+        if (stepType === 'type') {
+          updates.acneCategory = deriveAcneCategory(option);
+          updates.acneSeverity = '';
+        } else if (stepType === 'severity') {
+          const derived = deriveAcneCategory(formData.acneType);
+          if (derived !== formData.acneCategory) {
+            updates.acneCategory = derived;
+          }
+        }
+      }
+      updateFormData(updates);
+    };
 
     return (
       <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
@@ -1377,7 +1414,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               <button
                 key={option}
                 type="button"
-                onClick={() => fieldKey && updateFormData({ [fieldKey]: option } as any)}
+                onClick={() => handleConcernOption(option)}
                 className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
                   fieldValue === option
                     ? 'border-amber-400 bg-amber-50 text-amber-700'
@@ -2379,6 +2416,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                 <div><span className="font-medium">Texture:</span> {effectiveBands?.texture || '-'}</div>
                 <div><span className="font-medium">Pores:</span> {effectiveBands?.pores || '-'}</div>
                 <div><span className="font-medium">Acne:</span> {effectiveBands?.acne || '-'}</div>
+                <div><span className="font-medium">Acne category:</span> {formData.acneCategory || '-'} </div>
                 {(() => {
                   const order: any = { green: 0, blue: 1, yellow: 2, red: 3 }
                   const b = effectiveBands?.pigmentation_brown as any
@@ -2422,18 +2460,12 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                       if (wt.includes('yellow') || wt.includes('red')) {
                         extra.push('Follow anti-aging routine.')
                       }
-                      // Add short acne type tag to Remarks (max 2 words)
+                      // Add acne category tag to Remarks
                       const acneType = String((formData as any).acneType || '')
-                      if (acneType) {
-                        const short = (() => {
-                          if (acneType.includes('Blackheads')) return 'Blackheads'
-                          if (acneType.includes('Whiteheads')) return 'Whiteheads'
-                          if (acneType.includes('Red pimples')) return 'Inflamed'
-                          if (acneType.includes('Large painful bumps') || acneType.toLowerCase().includes('cystic')) return 'Cystic'
-                          if (acneType.toLowerCase().includes('jawline') || acneType.toLowerCase().includes('hormonal')) return 'Hormonal'
-                          return ''
-                        })()
-                        if (short) extra.push(short)
+                      const acneCategoryFromForm = String((formData as any).acneCategory || '').trim()
+                      const effectiveAcneCategory = acneCategoryFromForm || deriveAcneCategory(acneType)
+                      if (effectiveAcneCategory) {
+                        extra.push(effectiveAcneCategory)
                       }
                       const all = Array.from(new Set([...fromDecisions, ...extra]))
                       if (all.length === 0) return <span className="text-gray-400">-</span>
