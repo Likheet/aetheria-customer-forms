@@ -4,7 +4,13 @@ import type { UpdatedConsultData } from '../types';
 
 export const GENDER_OPTIONS = ['Male', 'Female', 'Other'] as const;
 
-export const SKIN_TYPE_OPTIONS = ['Normal', 'Oily', 'Dry', 'Combination'] as const;
+export const SKIN_TYPE_OPTIONS = [
+  'Oily – Hydrated', 
+  'Oily – Dehydrated', 
+  'Combination – Hydrated', 
+  'Combination – Dehydrated', 
+  'Dry – Dehydrated'
+] as const;
 
 export const OIL_LEVEL_OPTIONS = [
   'Comfortable, no shine or greasiness \u001a Green',

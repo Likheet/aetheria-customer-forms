@@ -5,6 +5,7 @@ import { saveConsultationData } from '../services/newConsultationService';
 import { deriveSelfBandsFromForm, startSession } from '../lib/decisionEngine';
 import { UpdatedConsultData } from '../types';
 import ProductAutocomplete from './ProductAutocomplete';
+import { SKIN_TYPE_OPTIONS } from '../lib/consultAutoFill';
 
 interface UpdatedConsultFormProps {
   onBack: () => void;
@@ -31,6 +32,7 @@ const initialFormData: UpdatedConsultData = {
   
   // Section A – Skin Basics
   skinType: '',
+  skinTypeFlag: '',
   oilLevels: '',
   hydrationLevels: '',
   sensitivity: '',
@@ -106,7 +108,8 @@ const dummyFormData: UpdatedConsultData = {
   gender: 'Female',
   
   // Section A – Skin Basics
-  skinType: 'Combination',
+  skinType: 'Combination – Hydrated',
+  skinTypeFlag: 'Combination',
   oilLevels: '',
   hydrationLevels: '',
   sensitivity: '',
@@ -177,9 +180,28 @@ const dummyFormData: UpdatedConsultData = {
   medications: 'None',
 };
 
+// Helper function to derive skin type flag from skin type selection
+const deriveSkinTypeFlag = (skinType: string): string => {
+  if (skinType.startsWith('Oily')) return 'Oily';
+  if (skinType.startsWith('Combination')) return 'Combination';
+  if (skinType.startsWith('Dry')) return 'Dry';
+  return '';
+};
+
 const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onComplete, machine, sessionId, prefill }) => {
+  const buildInitialFormData = (): UpdatedConsultData => {
+    const base = { ...initialFormData, ...(prefill || {}) };
+    
+    // Ensure skinTypeFlag is set if skinType is present
+    if (base.skinType && !base.skinTypeFlag) {
+      base.skinTypeFlag = deriveSkinTypeFlag(base.skinType);
+    }
+    
+    return base;
+  };
+
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<UpdatedConsultData>({ ...initialFormData, ...(prefill || {}) });
+  const [formData, setFormData] = useState<UpdatedConsultData>(buildInitialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -201,6 +223,11 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   }, [currentStep]);
 
   const updateFormData = (updates: Partial<UpdatedConsultData>) => {
+    // If skinType is being updated, also update skinTypeFlag
+    if (updates.skinType) {
+      updates.skinTypeFlag = deriveSkinTypeFlag(updates.skinType);
+    }
+    
     setFormData(prev => ({ ...prev, ...updates }));
     // Clear related errors when user starts typing
     Object.keys(updates).forEach(key => {
@@ -1652,8 +1679,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             </div>
 
             <div className="max-w-2xl mx-auto w-full">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {['Normal', 'Oily', 'Dry', 'Combination'].map((option) => (
+              <div className="grid grid-cols-1 gap-4">
+                {SKIN_TYPE_OPTIONS.map((option) => (
                   <button
                     key={option}
                     type="button"

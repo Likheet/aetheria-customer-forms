@@ -14,6 +14,7 @@ import {
 import type { MachineScanBands } from '../lib/decisionEngine';
 import { UpdatedConsultData, AcneCategory } from '../types';
 import ProductAutocomplete from './ProductAutocomplete';
+import { SKIN_TYPE_OPTIONS } from '../lib/consultAutoFill';
 
 interface UpdatedConsultFormProps {
   onBack: () => void;
@@ -42,6 +43,7 @@ const initialFormData: UpdatedConsultData = {
   
   // Section A – Skin Basics
   skinType: '',
+  skinTypeFlag: '',
   oilLevels: '',
   hydrationLevels: '',
   sensitivity: '',
@@ -256,6 +258,14 @@ const getAcneSeverityOptions = (acneType: string): string[] => {
   ];
 };
 
+// Helper function to derive skin type flag from skin type selection
+const deriveSkinTypeFlag = (skinType: string): string => {
+  if (skinType.startsWith('Oily')) return 'Oily';
+  if (skinType.startsWith('Combination')) return 'Combination';
+  if (skinType.startsWith('Dry')) return 'Dry';
+  return '';
+};
+
 const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onComplete, machine, machineRaw, sessionId, prefill }) => {
   const buildInitialFormData = (): UpdatedConsultData => {
     const base: any = { ...initialFormData, ...(prefill || {}) }
@@ -281,6 +291,12 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     delete base.acneType
     delete base.acneSeverity
     delete base.acneCategory
+    
+    // Ensure skinTypeFlag is set if skinType is present
+    if (base.skinType && !base.skinTypeFlag) {
+      base.skinTypeFlag = deriveSkinTypeFlag(base.skinType);
+    }
+    
     return base as UpdatedConsultData
   }
 
@@ -398,6 +414,11 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   }, [currentStep]);
 
   const updateFormData = (updates: Partial<UpdatedConsultData>) => {
+    // If skinType is being updated, also update skinTypeFlag
+    if (updates.skinType) {
+      updates.skinTypeFlag = deriveSkinTypeFlag(updates.skinType);
+    }
+    
     setFormData(prev => ({ ...prev, ...updates }));
     // Clear related errors when user starts typing
     Object.keys(updates).forEach(key => {
@@ -2363,8 +2384,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             </div>
 
             <div className="max-w-2xl mx-auto w-full">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {['Normal', 'Oily', 'Dry', 'Combination'].map((option) => (
+              <div className="grid grid-cols-1 gap-4">
+                {SKIN_TYPE_OPTIONS.map((option) => (
                   <button
                     key={option}
                     type="button"
@@ -2860,13 +2881,16 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                 <div className="pt-2">
                   <div className="text-xs text-gray-600 mb-1">Flags</div>
                   <div className="flex flex-wrap gap-1">
+                    {formData.skinType && (
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs border border-blue-200">{formData.skinType}</span>
+                    )}
                     {Array.from(new Set(decisions.flatMap(d => d.flags || []))).map(f => {
                       const label = f.replace(/^Grease\s*:/i, 'Sebum:')
                       return (
                         <span key={f} className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs border border-amber-200">{label}</span>
                       )
                     })}
-                    {decisions.length === 0 && <span className="text-gray-400">—</span>}
+                    {decisions.length === 0 && !formData.skinType && <span className="text-gray-400">—</span>}
                   </div>
                 </div>
                 <div className="pt-2">

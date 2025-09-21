@@ -27,6 +27,7 @@ export interface UpdatedConsultData {
   
   // Section A – Skin Basics
   skinType: string;
+  skinTypeFlag?: string; // Derived flag from skinType selection (e.g., 'Oily', 'Combination', 'Dry')
   oilLevels: string;
   hydrationLevels: string;
   sensitivity: string;
@@ -85,6 +86,7 @@ export interface UpdatedConsultData {
   routineSteps: string;
   serumComfort: string;
   moisturizerTexture: string;
+  brandPreference: string;
   budget: string;
   
   // Additional fields that might be missing
