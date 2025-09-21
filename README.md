@@ -8,6 +8,18 @@ Below is a reference of every question asked by the Updated Client Consult form 
 - Date of Birth — "What is your date of birth?"
 - Gender — "What is your gender?" (Male / Female / Other)
 
+### Section 0 — Hard Gates
+- Pregnancy Status — "Are you currently pregnant or trying to conceive?" (Yes / No)
+  - If "Yes": Block retinoids, high-dose salicylic (>2%), strong peels, oral tranexamic. Allow azelaic, niacinamide, vitC derivatives (cautious). Set block_retinoids=true.
+- Recent Isotretinoin — "Have you used isotretinoin (Accutane) in the last 6 months?" (Yes / No)
+  - If "Yes": Block retinoid initiation and in-clinic procedures; allow only low-irritant topicals. Set procedural_contraindicated=true.
+- Severe Acne Assessment — "Do you currently have severe cystic acne with deep, painful nodules?" (Yes / No)
+  - If "Yes": Refer to dermatologist. Recommend soothing barrier care + SPF only. Set referral_required=true.
+- Known Allergies — "Do you have any known allergies to skincare ingredients?" (Yes / No)  
+  - If "Yes": Block product SKU; pick replace; set product_allergy_conflict.
+- Skin Barrier Health — "Is your skin currently severely compromised, irritated, or over-exfoliated?" (Yes / No)
+  - If "Yes": Force barrier-first routine (no retinoids/BHA/AHA/BP). Set phase0_required=true.
+
 ### Section A — Skin Basics
  - What do you think your skin type is? (Normal / Oily / Dry / Combination)
 - How would you describe your skin's oil levels? SEBUM
@@ -99,7 +111,6 @@ When a concern is selected the form shows follow-up questions specific to that c
 - How many steps do you want in your skincare routine? (3-step, 4-step, 5+ step)
 - How many serums are you comfortable using? (1, 2, 3)
 - What texture do you prefer for your moisturizer? (Gel, Lotion, Cream, Rich Balm)
-- What type of skincare approach do you prefer? (Natural, Minimal, Tech-driven, Active-based, Luxury)
 
 ### Additional / Misc fields
 - Allergies (free text)

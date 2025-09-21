@@ -3,10 +3,11 @@ import StaffSelectionPage from './components/StaffSelectionPage';
 import FeedbackWelcomePage from './components/FeedbackWelcomePage';
 import ClientSelectionPage from './components/ClientSelectionPage';
 import FeedbackForm from './components/FeedbackForm';
-import Breadcrumb from './components/Breadcrumb';
 import ConsultantInputForm from './components/ConsultantInputForm';
 import ChooseProfile from './components/ChooseProfile';
-
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './components/ui/card';
+import { Button } from './components/ui/button';
+import { Badge } from './components/ui/badge';
 // Add interface for consultation sessions (for feedback)
 interface ConsultationSession {
   session_id: string;
@@ -15,7 +16,7 @@ interface ConsultationSession {
   customer_phone: string;
   created_at: string;
   location?: string;
-  answers?: any;
+  answers?: unknown;
 }
 
 type AppFlow =
@@ -70,7 +71,7 @@ function App() {
   };
 
   const handleSelectFeedback = () => {
-    transitionWithOverlay('linear-gradient(135deg, #64748b 0%, #475569 100%)', () => {
+    transitionWithOverlay('linear-gradient(135deg, #d6c49e 0%, #8e7cc3 100%)', () => {
       setCurrentFlow('feedback');
       setShowFeedbackWelcome(true);
       setSelectedClient(null);
@@ -78,13 +79,13 @@ function App() {
   };
 
   const handleSelectConsultantInput = () => {
-    transitionWithOverlay('linear-gradient(135deg, #667eea 0%, #764ba2 100%)', () => {
+    transitionWithOverlay('linear-gradient(135deg, #c4b2ff 0%, #5b64d3 100%)', () => {
       setCurrentFlow('consultant-input');
     });
   };
 
   const handleSelectUpdatedConsult = () => {
-    transitionWithOverlay('linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', () => {
+    transitionWithOverlay('linear-gradient(135deg, #f0c892 0%, #caa45d 100%)', () => {
       setCurrentFlow('updated-consult');
     });
   };
@@ -109,7 +110,7 @@ function App() {
   };
 
   const handleStartFeedback = () => {
-    transitionWithOverlay('linear-gradient(135deg, #64748b 0%, #475569 100%)', () => {
+    transitionWithOverlay('linear-gradient(135deg, #d6c49e 0%, #8e7cc3 100%)', () => {
       setShowFeedbackWelcome(false);
       setCurrentFlow('client-selection');
     });
@@ -163,56 +164,33 @@ function App() {
     }
 
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        {/* Same background as consultation */}
-        <div
-          className="absolute inset-0 opacity-95"
-          style={{
-            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 30%, #ff6b6b 70%, #f093fb 100%)',
-            backgroundSize: '200% 200%',
-            animation: 'gradientShift 8s ease-in-out infinite alternate'
-          }}
-        />
+      <div className="luxury-shell">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-16 top-32 h-72 w-72 rounded-full bg-gradient-to-br from-[hsla(40,58%,62%,0.18)] to-transparent blur-[160px]" />
+          <div className="absolute right-8 top-16 h-80 w-80 rounded-full bg-gradient-to-br from-[hsla(266,32%,26%,0.22)] to-transparent blur-[200px]" />
+          <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[rgba(12,14,20,0.78)] to-transparent" />
+        </div>
 
-        <div className="relative z-10 min-h-screen flex flex-col">
-          {/* Header with Breadcrumb */}
-          <div className="text-center py-4 px-8">
-            <Breadcrumb
-              items={[
-                { label: 'Staff Portal', onClick: handleGoHome },
-                { label: 'Feedback Form', active: true }
-              ]}
-            />
-
-            <h1 className="text-3xl font-light text-white mb-1 tracking-wide text-center">
-              <span className="bg-gradient-to-r from-white via-pink-100 to-white bg-clip-text text-transparent font-extralight tracking-wider">
-                Feedback
-              </span>
-              <span className="text-white/90 font-thin ml-2">
-                Collection
-              </span>
-            </h1>
-          </div>
-
-          {/* Feedback Form Content */}
-          <div className="flex-1 flex items-center justify-center px-8 pb-4">
-            <div className="w-full max-w-4xl">
-              <div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 p-8 text-center">
-                <h2 className="text-2xl font-light text-white mb-4">
-                  Feedback Form Coming Soon
-                </h2>
-                <p className="text-white/80 mb-6">
-                  The feedback collection system will be implemented here.
-                </p>
-                <button
-                  onClick={handleGoHome}
-                  className="px-8 py-3 bg-gradient-to-r from-white/20 to-pink-200/20 text-white rounded-xl hover:from-white/30 hover:to-pink-200/30 transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl font-medium"
-                >
-                  Back to Staff Portal
-                </button>
-              </div>
-            </div>
-          </div>
+        <div className="luxury-page items-center justify-center text-center">
+          <Badge className="bg-primary/15 text-primary" variant="primary">
+            Experience Update
+          </Badge>
+          <Card className="relative z-10 mt-6 max-w-3xl border-border/50 bg-surface/80 text-center">
+            <CardHeader className="gap-4">
+              <CardTitle className="text-3xl text-gradient-gold">Feedback atelier in progress</CardTitle>
+              <CardDescription className="text-muted-foreground/80">
+                We are polishing an elevated reflection ritual to match the new luxury experience.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm text-muted-foreground/75">
+              <p>Return to the lounge or review the guest roster while we craft the finishing touches.</p>
+              <p className="text-muted-foreground/60">Notifications will appear here once the module is live.</p>
+            </CardContent>
+            <CardFooter className="flex flex-wrap items-center justify-center gap-4">
+              <Button variant="ghost" onClick={handleGoHome}>Back to lounge</Button>
+              <Button onClick={handleStartFeedback}>Open client roster</Button>
+            </CardFooter>
+          </Card>
         </div>
       </div>
     );
@@ -222,3 +200,4 @@ function App() {
 }
 
 export default App;
+

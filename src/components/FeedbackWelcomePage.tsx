@@ -1,5 +1,8 @@
 import React from 'react';
-import { Star, Heart } from 'lucide-react';
+import { Quote, Sparkles, Clock } from 'lucide-react';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Card, CardContent } from './ui/card';
 
 interface FeedbackWelcomePageProps {
   onStart: () => void;
@@ -7,113 +10,61 @@ interface FeedbackWelcomePageProps {
 
 const FeedbackWelcomePage: React.FC<FeedbackWelcomePageProps> = ({ onStart }) => {
   return (
-    <div className="min-h-screen relative overflow-hidden flex flex-col justify-center items-center">
-      {/* Animated Background */}
-      <div 
-        className="absolute inset-0 opacity-90"
-        style={{
-          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 30%, #ff6b6b 70%, #f093fb 100%)',
-          backgroundSize: '200% 200%',
-          animation: 'gradientShift 8s ease-in-out infinite alternate'
-        }}
-      />
-      
-      {/* Floating Geometric Shapes */}
-      <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-r from-white/20 to-pink-200/20 rounded-full animate-float-slow blur-xl" />
-      <div className="absolute top-40 right-20 w-20 h-20 bg-gradient-to-r from-rose-200/20 to-pink-300/20 rounded-full animate-float-medium blur-lg" />
-      <div className="absolute bottom-32 left-1/4 w-24 h-24 bg-gradient-to-r from-red-200/20 to-pink-200/20 rounded-full animate-float-fast blur-xl" />
-      <div className="absolute top-1/3 right-1/3 w-16 h-16 bg-gradient-to-r from-pink-200/20 to-rose-200/20 rounded-full animate-spin-slow blur-lg" />
-      
-      {/* Hero Section - 60% of viewport */}
-      <div className="flex-1 flex items-center justify-center px-8 relative z-10">
-        <div className="text-center max-w-2xl mx-auto space-y-8">
-          {/* Logo */}
-          <div className="mb-8">
-            <div className="inline-flex items-center justify-center w-32 h-32 bg-white/10 backdrop-blur-xl rounded-full shadow-2xl border border-white/20">
-              <div className="relative">
-                <Star className="w-16 h-16 text-white" />
-                <Heart className="w-8 h-8 text-white absolute -top-2 -right-2" />
-              </div>
-            </div>
-          </div>
-          
-          {/* Welcome Text */}
-          <div className="space-y-6">
-            <h1 
-              className="text-5xl md:text-6xl font-bold text-white leading-tight animate-fade-in-up"
-              style={{ 
-                textShadow: '0 4px 20px rgba(0,0,0,0.3)',
-                animationDelay: '0.5s',
-                opacity: 0,
-                animationFillMode: 'forwards'
-              }}
-            >
-              How was your{' '}
-              <span className="bg-gradient-to-r from-white to-pink-100 bg-clip-text text-transparent">
-                experience?
-              </span>
-            </h1>
-            
-            <p 
-              className="text-xl md:text-2xl text-white/90 font-light animate-fade-in-up"
-              style={{ 
-                animationDelay: '1s',
-                opacity: 0,
-                animationFillMode: 'forwards'
-              }}
-            >
-              Your feedback helps us serve you better
-            </p>
-            
-            <p 
-              className="text-lg text-white/80 font-light max-w-lg mx-auto leading-relaxed animate-fade-in-up"
-              style={{ 
-                animationDelay: '1.5s',
-                opacity: 0,
-                animationFillMode: 'forwards'
-              }}
-            >
-              Share your thoughts about today's treatment and help us continue providing exceptional beauty services.
-            </p>
+    <div className="luxury-shell">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-10 top-32 h-64 w-64 rounded-full bg-gradient-to-br from-[hsla(40,58%,62%,0.18)] to-transparent blur-[120px]" />
+        <div className="absolute right-12 top-24 h-72 w-72 rounded-full bg-gradient-to-br from-[hsla(266,32%,26%,0.22)] to-transparent blur-[140px]" />
+        <div className="absolute inset-x-0 bottom-0 h-80 bg-gradient-to-t from-[rgba(8,9,13,0.75)] to-transparent" />
+      </div>
+
+      <div className="luxury-page items-center text-center">
+        <Badge className="bg-primary/15 text-primary" variant="primary">
+          Guest Reflections
+        </Badge>
+        <h1 className="text-gradient-gold">Thank you for choosing Aetheria</h1>
+        <p className="max-w-2xl text-base text-muted-foreground/85 md:text-lg">
+          We cherish your perspective. Share the moments that delighted you so we can continue elevating every ritual.
+        </p>
+
+        <div className="grid w-full gap-6 pt-6 md:grid-cols-3">
+          {[{
+            title: 'Two blissful minutes',
+            description: 'A refined set of prompts curated to respect your time.'
+          }, {
+            title: 'Attentive listening',
+            description: 'Your words flow directly to the specialists who cared for you.'
+          }, {
+            title: 'Elegant privacy',
+            description: 'Securely captured, never shared beyond your trusted consultant.'
+          }].map((item) => (
+            <Card key={item.title} className="border-border/40 bg-surface/70">
+              <CardContent className="flex h-full flex-col gap-3 px-6 py-6 text-left">
+                <div className="flex items-center gap-3 text-primary">
+                  <Sparkles className="h-4 w-4" />
+                  <span className="text-xs uppercase tracking-[0.28em] text-muted-foreground/80">Aetheria Promise</span>
+                </div>
+                <h3 className="font-serif text-[20px] text-foreground/90">{item.title}</h3>
+                <p className="text-sm text-muted-foreground/85">{item.description}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="flex flex-col items-center gap-4 pt-10">
+          <Button onClick={onStart} size="lg" className="px-12">
+            Begin The Reflection
+          </Button>
+          <div className="flex items-center gap-3 text-xs uppercase tracking-[0.32em] text-muted-foreground/70">
+            <Clock className="h-3.5 w-3.5" />
+            <span>Approximately 2 minutes</span>
           </div>
         </div>
+
+        <blockquote className="mt-12 max-w-xl text-sm text-muted-foreground/75">
+          <Quote className="mx-auto mb-4 h-6 w-6 text-primary" />
+          "Luxury is in the details. Thank you for helping us keep every detail inspired."
+        </blockquote>
       </div>
-      
-      {/* Call-to-Action Button - 20% of viewport */}
-      <div className="flex items-center justify-center px-8 relative z-10">
-        <button
-          onClick={onStart}
-          className="group relative px-12 py-4 bg-white/10 backdrop-blur-xl border-2 border-white/20 rounded-full text-white font-semibold text-lg transition-all duration-500 hover:bg-white/20 hover:scale-105 hover:shadow-2xl animate-fade-in-up"
-          style={{ 
-            animationDelay: '2s',
-            opacity: 0,
-            animationFillMode: 'forwards'
-          }}
-        >
-          <span className="relative z-10">Share Your Feedback</span>
-          <div className="absolute inset-0 bg-white/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <div className="absolute inset-0 bg-white/5 rounded-full animate-pulse opacity-50" />
-        </button>
-      </div>
-      
-      {/* Footer Section - 20% of viewport */}
-      <div className="flex items-center justify-center px-8 pb-8 relative z-10">
-        <p 
-          className="text-white/70 text-sm font-light animate-fade-in"
-          style={{ 
-            animationDelay: '2.5s',
-            opacity: 0,
-            animationFillMode: 'forwards'
-          }}
-        >
-          Your feedback is valuable to us • 2-minute survey
-        </p>
-      </div>
-      
-      {/* Additional floating elements for depth */}
-      <div className="absolute top-1/4 left-1/6 w-2 h-2 bg-white/40 rounded-full animate-ping" />
-      <div className="absolute bottom-1/3 right-1/5 w-1 h-1 bg-white/60 rounded-full animate-pulse" />
-      <div className="absolute top-2/3 left-1/3 w-3 h-3 bg-white/30 rounded-full animate-bounce" />
     </div>
   );
 };

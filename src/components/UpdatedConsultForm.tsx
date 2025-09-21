@@ -32,6 +32,14 @@ const initialFormData: UpdatedConsultData = {
   dateOfBirth: '',
   gender: '',
   
+  // Gate Questions (Safety Screening)
+  pregnancy: '',
+  recentIsotretinoin: '',
+  severeCysticAcne: '',
+  allergyConflict: '',
+  barrierStressHigh: '',
+  gateActions: '',
+  
   // Section A – Skin Basics
   skinType: '',
   oilLevels: '',
@@ -108,6 +116,14 @@ const dummyFormData: UpdatedConsultData = {
   phoneNumber: '9876543210',
   dateOfBirth: '1995-03-15',
   gender: 'Female',
+  
+  // Gate Questions (Safety Screening)
+  pregnancy: '',
+  recentIsotretinoin: '',
+  severeCysticAcne: '',
+  allergyConflict: '',
+  barrierStressHigh: '',
+  gateActions: '',
   
   // Section A – Skin Basics
   skinType: 'Combination',
@@ -288,6 +304,53 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const [effectiveBands, setEffectiveBands] = useState<any>(machine || {});
   const [computedSensitivity, setComputedSensitivity] = useState<{ score: number; tier: string; band: string; remark: string } | null>(null);
   const [decisions, setDecisions] = useState<any[]>([]);
+  const [gateRemarks, setGateRemarks] = useState<string[]>([]);
+
+  // Gate questions logic
+  const gateQuestions = [
+    {
+      field: 'pregnancy',
+      question: 'Are you currently pregnant or breastfeeding?',
+      action: 'Pregnancy detected — avoiding retinoids. Block retinoids, high-dose salicylic (>2%), strong peels, oral tranexamic. Allow azelaic, niacinamide, vitC derivatives (cautious). Set block_retinoids=true.'
+    },
+    {
+      field: 'recentIsotretinoin',
+      question: 'Have you used isotretinoin (Accutane) in the last 6 months?',
+      action: 'Recent isotretinoin use — avoiding irritants. Block retinoid initiation and in-clinic procedures; allow only low-irritant topicals. Set procedural_contraindicated=true.'
+    },
+    {
+      field: 'severeCysticAcne',
+      question: 'Do you have severe or cystic acne that is painful or scarring?',
+      action: 'Severe cystic acne detected — dermatologist referral required. Recommend soothing barrier care + SPF only. Set referral_required=true.'
+    },
+    {
+      field: 'allergyConflict',
+      question: 'Do you have any known allergies to skincare ingredients?',
+      action: 'Allergy conflict detected — product modifications needed. Block product SKU; pick replace; set product_allergy_conflict.'
+    },
+    {
+      field: 'barrierStressHigh',
+      question: 'Is your skin currently very irritated, inflamed, or compromised?',
+      action: 'High barrier stress detected — barrier-first protocol required. Force barrier-first routine (no retinoids/BHA/AHA/BP). Set phase0_required=true.'
+    }
+  ];
+
+  const handleGateChange = (field: string, value: string, action: string) => {
+    updateFormData({ [field]: value });
+    
+    if (value === 'Yes') {
+      // Add remark if not already present
+      setGateRemarks(prev => {
+        if (!prev.includes(action)) {
+          return [...prev, action];
+        }
+        return prev;
+      });
+    } else {
+      // Remove remark if present
+      setGateRemarks(prev => prev.filter(remark => remark !== action));
+    }
+  };
 
   // Per-concern readiness: allow follow-ups for a category once that concern's Section-D is done
   const isCategoryReady = (category: string, dimension?: 'brown' | 'red') => {
@@ -675,14 +738,14 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             </div>
           )}
         </div>
-        <p className="text-xs text-gray-400 mt-2">Press Enter, comma or Tab to add a product.</p>
+        <p className="text-xs text-gray-400 mt-2">Separate product names with commas or new lines.</p>
       </div>
     );
   };
 
   const getTotalSteps = (concerns: string[] = formData.mainConcerns) => {
-    // Base steps: 4 (personal info) + 4 (skin basics) + 3 (history) + 3 (routine) = 14  
-    let totalSteps = 14;
+    // Base steps: 4 (personal info) + 5 (gates) + 4 (skin basics) + 3 (history) + 3 (routine) = 19  
+    let totalSteps = 19;
     
     // Add dynamic steps for each selected concern
     concerns.forEach(concern => {
@@ -828,10 +891,10 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   };
 
   const getCurrentConcernStep = () => {
-    if (currentStep <= 14) return null; // Main concerns is at step 14
+    if (currentStep <= 19) return null; // Main concerns is at step 19
     
     const concernSteps = getConcernSteps();
-    const lifestyleStartStep = 15 + concernSteps.length; // Start after main concerns and concern follow-ups
+    const lifestyleStartStep = 20 + concernSteps.length; // Start after main concerns and concern follow-ups
     
     // Individual lifestyle questions (5 questions)
     if (currentStep === lifestyleStartStep) return 'diet';
@@ -847,7 +910,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     if (currentStep === preferenceStartStep + 2) return 'moisturizer-texture';
     if (currentStep === preferenceStartStep + 3) return 'brand-preference';
     
-    const concernIndex = currentStep - 15; // Start after main concerns step (14)
+    const concernIndex = currentStep - 20; // Start after main concerns step (19)
     return concernSteps[concernIndex] || null;
   };
 
@@ -879,28 +942,44 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       case 4: // Gender
         if (!formData.gender.trim()) newErrors.gender = 'Gender is required';
         break;
+      // Gate Questions (Safety Screening)
+      case 5: // Pregnancy Gate
+        if (!formData.pregnancy || formData.pregnancy.trim() === '') newErrors.pregnancy = 'Please answer the pregnancy question';
+        break;
+      case 6: // Isotretinoin Gate
+        if (!formData.recentIsotretinoin || formData.recentIsotretinoin.trim() === '') newErrors.recentIsotretinoin = 'Please answer the isotretinoin question';
+        break;
+      case 7: // Severe Acne Gate
+        if (!formData.severeCysticAcne || formData.severeCysticAcne.trim() === '') newErrors.severeCysticAcne = 'Please answer the severe acne question';
+        break;
+      case 8: // Allergies Gate
+        if (!formData.allergyConflict || formData.allergyConflict.trim() === '') newErrors.allergyConflict = 'Please answer the allergies question';
+        break;
+      case 9: // Barrier Stress Gate
+        if (!formData.barrierStressHigh || formData.barrierStressHigh.trim() === '') newErrors.barrierStressHigh = 'Please answer the barrier stress question';
+        break;
       // Section A - Skin Basics
-      case 5: // Skin Type
+      case 10: // Skin Type
         if (!formData.skinType.trim()) newErrors.skinType = 'Skin type is required';
         break;
-      case 6: // Oil Levels
+      case 11: // Oil Levels
         if (!formData.oilLevels.trim()) newErrors.oilLevels = 'Oil level description is required';
         break;
-      case 7: // Hydration Levels
+      case 12: // Hydration Levels
         if (!formData.hydrationLevels.trim()) newErrors.hydrationLevels = 'Hydration level description is required';
         break;
-      case 8: // Sensitivity
+      case 13: // Sensitivity
         if (!formData.sensitivity.trim()) newErrors.sensitivity = 'Sensitivity information is required';
         break;
       // Section B - Current Skin History
-      case 9: // Diagnosed Conditions - Optional
+      case 14: // Diagnosed Conditions - Optional
         break;
-      case 10: // Prescription Treatments - Optional
+      case 15: // Prescription Treatments - Optional
         break;
-      case 11: // Professional Treatments - Optional
+      case 16: // Professional Treatments - Optional
         break;
       // Section C - Current Routine
-      case 12: // Current Products
+      case 17: // Current Products
         if (!formData.currentProductsList || formData.currentProductsList.length === 0) {
           newErrors.currentProductsList = 'Please add at least one product';
         } else {
@@ -912,10 +991,10 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           }
         }
         break;
-      case 13: // Irritating Products - Optional
+      case 18: // Irritating Products - Optional
         break;
       // Section D - Main Concerns
-      case 14: // Main Concerns
+      case 19: // Main Concerns
         if (formData.mainConcerns.length === 0) newErrors.mainConcerns = 'Select at least one main concern';
         if (formData.mainConcerns.length > 3) newErrors.mainConcerns = 'Please select a maximum of 3 main concerns';
         break;
@@ -1102,7 +1181,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const handleEnterAdvance = (e: React.KeyboardEvent) => {
     if (e.key !== 'Enter') return;
     // If we're on the irritating products step, let the local TagInput handle Enter
-    if (currentStep === 13) return;
+    if (currentStep === 18) return;
     const target = e.target as HTMLElement | null;
     const tag = target?.tagName?.toLowerCase();
     if (tag === 'textarea') return; // keep newline behavior in textareas
@@ -2084,8 +2163,194 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           </div>
         );
 
-      // Section A - Skin Basics
-      case 5: // Skin Type
+      // Section 0 - Gates (Steps 5-9)
+      case 5: // Pregnancy
+        return (
+          <div className="space-y-12 flex flex-col justify-center h-full py-8">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-6">
+                <Shield className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
+                Safety Gate: Pregnancy
+              </h2>
+              <p className="text-gray-600">Are you currently pregnant or breastfeeding?</p>
+            </div>
+
+            <div className="max-w-2xl mx-auto w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {['Yes', 'No'].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => handleGateChange('pregnancy', option, gateQuestions[0].action)}
+                    className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
+                      formData.pregnancy === option
+                        ? option === 'Yes' 
+                          ? 'border-red-400 bg-red-50 text-red-700'
+                          : 'border-green-400 bg-green-50 text-green-700'
+                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+              {errors.pregnancy && <p className="text-red-500 text-sm mt-2">{errors.pregnancy}</p>}
+            </div>
+          </div>
+        );
+
+      case 6: // Recent Isotretinoin
+        return (
+          <div className="space-y-12 flex flex-col justify-center h-full py-8">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-6">
+                <Shield className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
+                Safety Gate: Recent Medication
+              </h2>
+              <p className="text-gray-600">Have you used isotretinoin (Accutane) in the last 6 months?</p>
+            </div>
+
+            <div className="max-w-2xl mx-auto w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {['Yes', 'No'].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => handleGateChange('recentIsotretinoin', option, gateQuestions[1].action)}
+                    className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
+                      formData.recentIsotretinoin === option
+                        ? option === 'Yes' 
+                          ? 'border-red-400 bg-red-50 text-red-700'
+                          : 'border-green-400 bg-green-50 text-green-700'
+                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+              {errors.recentIsotretinoin && <p className="text-red-500 text-sm mt-2">{errors.recentIsotretinoin}</p>}
+            </div>
+          </div>
+        );
+
+      case 7: // Severe Cystic Acne
+        return (
+          <div className="space-y-12 flex flex-col justify-center h-full py-8">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-6">
+                <Shield className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
+                Safety Gate: Severe Acne
+              </h2>
+              <p className="text-gray-600">Do you have severe or cystic acne that is painful or scarring?</p>
+            </div>
+
+            <div className="max-w-2xl mx-auto w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {['Yes', 'No'].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => handleGateChange('severeCysticAcne', option, gateQuestions[2].action)}
+                    className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
+                      formData.severeCysticAcne === option
+                        ? option === 'Yes' 
+                          ? 'border-red-400 bg-red-50 text-red-700'
+                          : 'border-green-400 bg-green-50 text-green-700'
+                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+              {errors.severeCysticAcne && <p className="text-red-500 text-sm mt-2">{errors.severeCysticAcne}</p>}
+            </div>
+          </div>
+        );
+
+      case 8: // Allergy Conflict
+        return (
+          <div className="space-y-12 flex flex-col justify-center h-full py-8">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-6">
+                <Shield className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
+                Safety Gate: Allergies
+              </h2>
+              <p className="text-gray-600">Do you have any known allergies to skincare ingredients?</p>
+            </div>
+
+            <div className="max-w-2xl mx-auto w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {['Yes', 'No'].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => handleGateChange('allergyConflict', option, gateQuestions[3].action)}
+                    className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
+                      formData.allergyConflict === option
+                        ? option === 'Yes' 
+                          ? 'border-red-400 bg-red-50 text-red-700'
+                          : 'border-green-400 bg-green-50 text-green-700'
+                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+              {errors.allergyConflict && <p className="text-red-500 text-sm mt-2">{errors.allergyConflict}</p>}
+            </div>
+          </div>
+        );
+
+      case 9: // Barrier Stress High
+        return (
+          <div className="space-y-12 flex flex-col justify-center h-full py-8">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-6">
+                <Shield className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
+                Safety Gate: Barrier Function
+              </h2>
+              <p className="text-gray-600">Is your skin currently very irritated, inflamed, or compromised?</p>
+            </div>
+
+            <div className="max-w-2xl mx-auto w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {['Yes', 'No'].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => handleGateChange('barrierStressHigh', option, gateQuestions[4].action)}
+                    className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
+                      formData.barrierStressHigh === option
+                        ? option === 'Yes' 
+                          ? 'border-red-400 bg-red-50 text-red-700'
+                          : 'border-green-400 bg-green-50 text-green-700'
+                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+              {errors.barrierStressHigh && <p className="text-red-500 text-sm mt-2">{errors.barrierStressHigh}</p>}
+            </div>
+          </div>
+        );
+
+      // Section A - Skin Basics (now starts at step 10)
+      case 10: // Skin Type
         return (
           <div className="space-y-12 flex flex-col justify-center h-full py-8">
             <div className="text-center">
@@ -2119,7 +2384,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           </div>
         );
 
-      case 6: // Oil Levels
+      case 11: // Oil Levels
         return (
           <div className="space-y-12 flex flex-col justify-center h-full py-8">
             <div className="text-center">
@@ -2158,7 +2423,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           </div>
         );
 
-      case 7: // Hydration Levels
+      case 12: // Hydration Levels
         return (
           <div className="space-y-12 flex flex-col justify-center h-full py-8">
             <div className="text-center">
@@ -2197,7 +2462,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           </div>
         );
 
-      case 8: // Sensitivity
+      case 13: // Sensitivity
         return (
           <div className="space-y-12 flex flex-col justify-center h-full py-8">
             <div className="text-center">
@@ -2246,7 +2511,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         );
 
       // Section B - Current Skin History
-      case 9: // Diagnosed Skin Conditions
+      case 14: // Diagnosed Skin Conditions
         return (
           <div className="space-y-12 flex flex-col justify-center h-full py-8">
             <div className="text-center">
@@ -2273,7 +2538,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           </div>
         );
 
-      case 10: // Prescription Treatments
+      case 15: // Prescription Treatments
         return (
           <div className="space-y-12 flex flex-col justify-center h-full py-8">
             <div className="text-center">
@@ -2300,7 +2565,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           </div>
         );
 
-      case 11: // Professional Treatments
+      case 16: // Professional Treatments
         return (
           <div className="space-y-12 flex flex-col justify-center h-full py-8">
             <div className="text-center">
@@ -2327,7 +2592,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         );
 
       // Section C - Current Skincare Routine
-      case 12: // Current Products
+      case 17: // Current Products
         return (
           <div className="space-y-12 flex flex-col justify-center h-full py-8">
             <div className="text-center">
@@ -2418,7 +2683,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           </div>
         );
 
-      case 13: // Irritating Products
+      case 18: // Irritating Products
         return (
           <div className="space-y-12 flex flex-col justify-center h-full py-8">
             <div className="text-center">
@@ -2435,7 +2700,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               <TagInput
                 value={(formData as any).productReactionsList || (formData.irritatingProducts ? formData.irritatingProducts.split(',').map(s=>s.trim()).filter(Boolean) : [])}
                 onChange={(list) => updateFormData({ irritatingProducts: list.join(', '), productReactionsList: list } as any)}
-                placeholder="Type a product and press Enter, comma or Tab"
+                placeholder="Type a product, then use a comma or newline"
               />
               {errors.irritatingProducts && <p className="text-red-500 text-sm mt-2">{errors.irritatingProducts}</p>}
             </div>
@@ -2443,7 +2708,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         );
 
       // Section D - Main Concerns
-      case 14: // Main Concerns
+      case 19: // Main Concerns
         return (
           <div className="space-y-12 flex flex-col justify-center h-full py-8">
             <div className="text-center">
@@ -2526,7 +2791,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       <div className="container mx-auto px-4 py-8">
         {/* Dev: Machine Bands Box */}
         {machine && (
-          <div className="fixed top-24 right-6 w-80 z-50 space-y-4">
+          <div className="fixed top-24 right-6 w-80 z-50 space-y-4 max-h-[calc(100vh-8rem)] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#CBD5E1 #F1F5F9' }}>
             <div className="bg-white/95 border border-gray-200 rounded-xl shadow-xl overflow-hidden">
               <div className="px-4 py-2 bg-gray-800 text-white text-sm font-semibold">Machine Bands (Dev)</div>
               <div className="p-4 text-sm text-gray-800 space-y-1">
@@ -2630,11 +2895,17 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                           .filter(Boolean)
                         breakoutCategories.forEach(cat => extra.push(cat as string))
                       }
+                      // Add gate remarks
+                      gateRemarks.forEach(remark => extra.push(remark))
                       const all = Array.from(new Set([...fromDecisions, ...extra]))
                       if (all.length === 0) return <span className="text-gray-400">-</span>
-                      return all.map(r => (
-                        <div key={r} className="text-gray-700 text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1">{r}</div>
-                      ))
+                      return (
+                        <div className="space-y-1">
+                          {all.map(r => (
+                            <div key={r} className="text-gray-700 text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1">{r}</div>
+                          ))}
+                        </div>
+                      )
                     })()}
                   </div>
                 </div>

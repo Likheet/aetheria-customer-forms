@@ -1,12 +1,221 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap');
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap');
-/* Import Poppins font */
-/* CoreUI styles were removed (legacy form). Importing the package caused build failures on Vercel
-  because @coreui/coreui is not installed. If you need CoreUI in the future, add it to
-  package.json dependencies and run `pnpm install`.
-*/
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Custom calendar styling */
+:root {
+  --background: 228 33% 6%;
+  --surface: 229 32% 10%;
+  --foreground: 37 38% 96%;
+  --muted: 228 22% 16%;
+  --muted-foreground: 35 18% 72%;
+  --accent: 266 32% 26%;
+  --accent-foreground: 34 100% 92%;
+  --primary: 40 58% 62%;
+  --primary-foreground: 235 48% 12%;
+  --secondary: 230 24% 18%;
+  --secondary-foreground: 40 33% 92%;
+  --tertiary: 284 16% 22%;
+  --tertiary-foreground: 40 23% 90%;
+  --destructive: 0 65% 52%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 230 18% 26%;
+  --input: 230 20% 20%;
+  --ring: 35 60% 68%;
+  --radius: 28px;
+}
+
+* {
+  font-family: inherit;
+  font-feature-settings: 'liga' on, 'kern' on;
+}
+
+body {
+  font-family: 'Manrope', 'Inter', 'Segoe UI', sans-serif;
+  background: radial-gradient(circle at 20% 20%, rgba(217, 196, 157, 0.18), transparent 55%),
+    radial-gradient(circle at 80% 10%, rgba(114, 119, 189, 0.16), transparent 60%),
+    linear-gradient(135deg, #05060b 0%, #0f1118 45%, #18120b 100%);
+  color: hsl(var(--foreground));
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  background-image: linear-gradient(120deg, rgba(208, 186, 130, 0.18), transparent 55%),
+    linear-gradient(300deg, rgba(88, 104, 199, 0.12), transparent 45%);
+  opacity: 0.85;
+  z-index: -1;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: 'Playfair Display', 'Times New Roman', serif;
+    letter-spacing: 0.02em;
+  }
+
+  h1 {
+    font-size: clamp(2.5rem, 3vw, 4rem);
+    font-weight: 600;
+  }
+
+  h2 {
+    font-size: clamp(1.75rem, 2vw, 2.75rem);
+    font-weight: 500;
+  }
+
+  h3 {
+    font-size: clamp(1.35rem, 1.6vw, 2rem);
+    font-weight: 500;
+  }
+
+  h4 {
+    font-size: clamp(1.1rem, 1.2vw, 1.5rem);
+    font-weight: 500;
+  }
+
+  a {
+    color: hsl(var(--primary));
+    text-decoration: none;
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+  }
+
+  a:hover {
+    color: hsl(var(--foreground));
+    text-decoration: underline;
+    text-decoration-color: hsl(var(--primary));
+  }
+}
+
+@layer components {
+  .luxury-shell {
+    @apply relative flex min-h-screen flex-col bg-transparent text-foreground;
+  }
+
+  .luxury-shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top left, rgba(217, 196, 157, 0.22), transparent 65%);
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .luxury-page {
+    @apply relative mx-auto flex w-full max-w-[1100px] flex-1 flex-col gap-12 px-6 pb-16 pt-12 md:px-10 lg:px-12;
+  }
+
+  .luxury-section {
+    @apply rounded-[32px] border border-border/40 bg-surface/80 p-10 shadow-luxury backdrop-blur-xl;
+  }
+
+  .luxury-glow {
+    @apply relative overflow-hidden;
+  }
+
+  .luxury-glow::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.08), transparent 60%);
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
+  .luxury-divider {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-foreground/20 to-transparent;
+  }
+}
+
+@layer utilities {
+  .text-gradient-gold {
+    background: linear-gradient(110deg, #cdb890 0%, #f0e0b8 45%, #cdb890 90%);
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .shadow-glow {
+    box-shadow: 0 30px 80px -40px rgba(208, 186, 130, 0.55);
+  }
+
+  .card-outline {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-18px);
+  }
+}
+
+@keyframes sheen {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.luxury-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.luxury-sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.45) 45%, transparent 65%);
+  transform: translateX(-120%);
+  animation: sheen 8s ease-in-out infinite;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(18, 20, 28, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(206, 186, 142, 0.45);
+  border-radius: 999px;
+  border: 2px solid rgba(18, 20, 28, 0.8);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(206, 186, 142, 0.65);
+}
+
+/* Legacy experience-specific refinements preserved for functional components */`n/* Custom calendar styling */
 .calendar-wrapper {
   font-family: inherit;
   max-width: 100%;
@@ -114,19 +323,19 @@
 }
 
 .calendar-wrapper .calendar .calendar-nav [aria-label="Previous year"]::before {
-  content: "«";
+  content: "┬½";
   font-size: 1rem;
 }
 .calendar-wrapper .calendar .calendar-nav [aria-label="Previous month"]::before {
-  content: "‹";
+  content: "ΓÇ╣";
   font-size: 1rem;
 }
 .calendar-wrapper .calendar .calendar-nav [aria-label="Next month"]::before {
-  content: "›";
+  content: "ΓÇ║";
   font-size: 1rem;
 }
 .calendar-wrapper .calendar .calendar-nav [aria-label="Next year"]::before {
-  content: "»";
+  content: "┬╗";
   font-size: 1rem;
 }
 
@@ -356,3 +565,4 @@ kbd {
 .staff-card:hover {
   box-shadow: 0 20px 40px rgba(0,0,0,0.15);
 }
+

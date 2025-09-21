@@ -14,6 +14,9 @@ import HairFallSeverity from './steps/consultant/HairFallSeverity';
 import DensityObservation from './steps/consultant/DensityObservation';
 import TextureAndEnds from './steps/consultant/TextureAndEnds';
 import { CheckCircle } from 'lucide-react';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 
 interface ConsultantInputFormProps {
   onBack: () => void;
@@ -114,7 +117,9 @@ const ConsultantInputForm: React.FC<ConsultantInputFormProps> = ({ onBack, onCom
     setIsSubmitting(false);
   };
 
-  const evaluationSteps = treatmentType === 'Skin Only' ? 6 : (treatmentType === 'Hair Only' ? 5 : (treatmentType === 'Both' ? 10 : 0));
+  const evaluationSteps = treatmentType === 'Skin Only' ? 6 : treatmentType === 'Hair Only' ? 5 : treatmentType === 'Both' ? 10 : 0;
+  const showProgress = currentStep > 2 && Boolean(treatmentType) && evaluationSteps > 0;
+  const progressPercent = showProgress ? Math.min(100, Math.max(0, ((currentStep - 2) / evaluationSteps) * 100)) : 0;
 
   const renderStep = () => {
     const stepProps = {
@@ -167,80 +172,93 @@ const ConsultantInputForm: React.FC<ConsultantInputFormProps> = ({ onBack, onCom
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-6">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
-            <CheckCircle className="w-8 h-8 text-green-600" />
-          </div>
-          <h1 className="text-2xl font-semibold text-gray-900 mb-4">Thank You!</h1>
-          <p className="text-gray-600 mb-6">Consultant input has been submitted successfully.</p>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-500">You may now return to the staff portal.</p>
-          </div>
-          <button
-            onClick={onComplete}
-            className="mt-6 px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-semibold transition-all duration-300 shadow-lg hover:from-blue-700 hover:to-indigo-700"
-          >
-            Back to Staff Portal
-          </button>
+      <div className="luxury-shell">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-32 top-24 h-64 w-64 rounded-full bg-gradient-to-br from-[hsla(40,58%,62%,0.2)] to-transparent blur-[120px]" />
+          <div className="absolute right-24 top-40 h-52 w-52 rounded-full bg-gradient-to-br from-[hsla(266,32%,26%,0.22)] to-transparent blur-[130px]" />
+        </div>
+        <div className="luxury-page items-center justify-center">
+          <Card className="max-w-xl border-border/50 bg-surface/80 text-center">
+            <CardHeader className="items-center gap-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary">
+                <CheckCircle className="h-8 w-8" />
+              </div>
+              <CardTitle className="text-2xl text-gradient-gold">Submission received</CardTitle>
+              <CardDescription className="text-muted-foreground/80">
+                Thank you for capturing your expertise. This record is now with the concierge team.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-4 pt-0">
+              <p className="text-sm text-muted-foreground/75">
+                You may return to the lounge for your next consultation.
+              </p>
+              <Button size="lg" onClick={onComplete}>
+                Back to staff lounge
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="min-h-screen flex flex-col">
-        {/* Header */}
-        <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
-          <div className="max-w-4xl mx-auto px-6 py-6">
-            <div className="text-center">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Consultant Input Form</h1>
+    <div className="luxury-shell">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-24 top-24 h-72 w-72 rounded-full bg-gradient-to-br from-[hsla(40,58%,62%,0.18)] to-transparent blur-[150px]" />
+        <div className="absolute right-0 top-10 h-80 w-80 rounded-full bg-gradient-to-br from-[hsla(266,32%,26%,0.2)] to-transparent blur-[170px]" />
+        <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[rgba(8,9,13,0.75)] to-transparent" />
+      </div>
+
+      <div className="luxury-page">
+        <header className="relative z-10 flex flex-col gap-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-3">
+              <Badge className="w-fit bg-primary/15 text-primary" variant="primary">
+                Consultant Atelier
+              </Badge>
+              <h1 className="text-gradient-gold">Capture your expertise</h1>
+              <p className="max-w-2xl text-sm text-muted-foreground/85 md:text-base">
+                Translate diagnostics into a refined narrative of care and progress for each guest.
+              </p>
             </div>
-            {treatmentType && currentStep > 2 && (
-              <div className="text-center mt-4">
-                <span className="bg-blue-100 text-blue-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded-full">
-                  {treatmentType}
-                </span>
+            {treatmentType && currentStep > 2 ? (
+              <div className="self-start rounded-full border border-border/40 bg-surface/70 px-5 py-2 text-xs uppercase tracking-[0.32em] text-muted-foreground/70">
+                {treatmentType}
               </div>
-            )}
-            {/* Progress Bar */}
-            {currentStep > 2 && treatmentType && (
-              <div className="mt-6">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-600">Step {currentStep - 2} of {evaluationSteps}</span>
-                  <span className="text-sm text-gray-500">{Math.round(((currentStep - 2) / evaluationSteps) * 100)}% Complete</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 relative">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${((currentStep - 2) / evaluationSteps) * 100}%` }}
-                  />
-                  {treatmentType === 'Both' && (
-                    <div
-                      className="absolute top-0 h-full w-0.5 bg-white"
-                      style={{ left: '50%' }}
-                      title="Skin | Hair"
-                    ></div>
-                  )}
-                </div>
-              </div>
-            )}
+            ) : null}
           </div>
+
+          {showProgress ? (
+            <div className="rounded-[24px] border border-border/50 bg-surface/70 p-6 shadow-luxury backdrop-blur">
+              <div className="flex items-center justify-between text-xs uppercase tracking-[0.28em] text-muted-foreground/70">
+                <span>Step {Math.max(1, currentStep - 2)} of {evaluationSteps}</span>
+                <span>{Math.round(progressPercent)}% curated</span>
+              </div>
+              <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-border/40">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[hsla(40,58%,62%,0.75)] via-[hsla(40,58%,62%,1)] to-[hsla(266,32%,26%,0.85)] transition-all duration-500 ease-out"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+          ) : null}
         </header>
-        {/* Main Content */}
-        <main className="flex-1 px-6 py-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
-              {renderStep()}
-            </div>
-          </div>
-        </main>
-        {/* Navigation */}
-        {/* Removed footer navigation buttons to avoid duplication. */}
+
+        <section className="relative z-10">
+          <Card className="border-border/50 bg-surface/85">
+            <CardContent className="p-8">{renderStep()}</CardContent>
+          </Card>
+        </section>
+
+        <footer className="relative z-10 flex flex-col gap-1 text-xs uppercase tracking-[0.28em] text-muted-foreground/70 md:flex-row md:items-center md:justify-between">
+          <span>Return to lounge from the top navigation</span>
+          <span>Submissions archive automatically</span>
+        </footer>
       </div>
     </div>
   );
 };
 
-export default ConsultantInputForm; 
+export default ConsultantInputForm;
+

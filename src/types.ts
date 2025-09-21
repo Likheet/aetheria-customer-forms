@@ -17,6 +17,14 @@ export interface UpdatedConsultData {
   dateOfBirth: string;
   gender: string;
   
+  // Section 0 - Gates
+  pregnancy: string;
+  recentIsotretinoin: string;
+  severeCysticAcne: string;
+  allergyConflict: string;
+  barrierStressHigh: string;
+  gateActions: string; // Stores all triggered gate actions
+  
   // Section A – Skin Basics
   skinType: string;
   oilLevels: string;
@@ -77,7 +85,6 @@ export interface UpdatedConsultData {
   routineSteps: string;
   serumComfort: string;
   moisturizerTexture: string;
-  brandPreference: string;
   budget: string;
   
   // Additional fields that might be missing
