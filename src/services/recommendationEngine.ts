@@ -2,6 +2,8 @@
 // Maps form data and decision engine outputs to product recommendations
 
 import { PRODUCT_DATABASE, getProductByTier, formatProductName } from '../data/productDatabase';
+import { buildWeeklyPlan } from './scheduler';
+import { pairCompatibility, serumKeyToTag } from './ingredientInteractions';
 
 export interface ProductRecommendation {
   cleanser: string;
@@ -9,6 +11,18 @@ export interface ProductRecommendation {
   secondarySerum: string;
   moisturizer: string;
   sunscreen: string;
+  // Internal metadata to aid scheduling (non-UI)
+  _keys?: {
+    cleanserType?: string;
+    core?: string;
+    secondary?: string;
+    moisturizerType?: string;
+  };
+  _flags?: {
+    vc_form?: 'laa'|'derivative';
+    core_acid_strength?: 'low'|'medium'|'high';
+    secondary_acid_strength?: 'low'|'medium'|'high';
+  };
 }
 
 export interface RecommendationContext {
@@ -78,22 +92,52 @@ function createBasicRoutine(context: RecommendationContext, options: {
   const priceTier = getPriceTier(context);
   
   const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser[options.cleanserType] || PRODUCT_DATABASE.cleanser['gentle-foaming'], priceTier);
-  const coreSerum = getProductByTier(PRODUCT_DATABASE.serum[options.coreSerum] || PRODUCT_DATABASE.serum['niacinamide'], priceTier);
+  // core serum selection handled below as 'core'
   const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer[options.moisturizerType] || PRODUCT_DATABASE.moisturizer['gel-cream'], priceTier);
   const sunscreen = getProductByTier(PRODUCT_DATABASE.sunscreen['general'], priceTier);
   
+  // Build serum selections with compatibility enforcement
+  const coreKey = options.coreSerum;
+  const core = getProductByTier(PRODUCT_DATABASE.serum[coreKey] || PRODUCT_DATABASE.serum['niacinamide'], priceTier);
+  const coreTag = serumKeyToTag(coreKey);
   let secondarySerum = "";
   if (options.secondarySerum) {
-    const secondary = getProductByTier(PRODUCT_DATABASE.serum[options.secondarySerum] || PRODUCT_DATABASE.serum['niacinamide'], priceTier);
-    secondarySerum = formatProductName(secondary);
+    const secKey = options.secondarySerum;
+    const secTag = serumKeyToTag(secKey);
+    // Default allow unless pair is disallowed
+    let ok = true;
+    if (coreTag && secTag) {
+      const cmp = pairCompatibility(coreTag, secTag);
+      if (cmp === 'disallow') ok = false;
+    }
+    if (ok) {
+      const secondary = getProductByTier(PRODUCT_DATABASE.serum[secKey] || PRODUCT_DATABASE.serum['niacinamide'], priceTier);
+      secondarySerum = formatProductName(secondary);
+    } else {
+      // Conflict: drop secondary to avoid unsafe layering now; scheduling rules can suggest AM/PM split later
+      secondarySerum = "";
+    }
   }
   
   return {
     cleanser: formatProductName(cleanser),
-    coreSerum: formatProductName(coreSerum),
+    coreSerum: formatProductName(core),
     secondarySerum,
     moisturizer: formatProductName(moisturizer),
-    sunscreen: formatProductName(sunscreen)
+    sunscreen: formatProductName(sunscreen),
+    _keys: {
+      cleanserType: options.cleanserType,
+      core: coreKey,
+      secondary: options.secondarySerum,
+      moisturizerType: options.moisturizerType,
+    },
+    _flags: {
+      // Treat vitamin-c as LAA unless otherwise specified
+      vc_form: coreKey === 'vitamin-c' ? 'laa' : (options.secondarySerum === 'vitamin-c' ? 'laa' : undefined),
+      // Unknown acid strengths treated as high for safety
+      core_acid_strength: 'high',
+      secondary_acid_strength: 'high',
+    }
   };
 }
 
@@ -579,6 +623,16 @@ export interface EnhancedRecommendation extends ProductRecommendation {
   rationale?: string;
   serumCount: number;
   additionalSerums?: string[];
+  schedule?: {
+    am: Array<{step:number;label:string;product:string}>;
+    pmByDay: Record<'mon'|'tue'|'wed'|'thu'|'fri'|'sat'|'sun', Array<{step:number;label:string;product:string}>>;
+    warnings: string[];
+    customerView: {
+      am: Array<{step:number;label:string;product:string}>;
+      pm: Array<{step:number;label:string;product:string}>;
+      notes: string[];
+    }
+  }
 }
 
 // Helper function to determine how many serums to recommend
@@ -587,7 +641,12 @@ function determineSerumCount(context: RecommendationContext, activeConcerns: Con
   additionalSerums: string[] 
 } {
   const serumComfort = parseInt(context.formData.serumComfort || '1');
+  const sensBand = (context.effectiveBands?.sensitivity || 'green').toLowerCase();
   const additionalSerums: string[] = [];
+  // Hard caps for higher sensitivity to align with irritation budget
+  if (sensBand === 'red' || sensBand === 'yellow') {
+    return { serumCount: 1, additionalSerums };
+  }
   
   // If user only wants 1 serum or only has 1 concern, use just the core serum
   if (serumComfort === 1 || activeConcerns.length <= 1) {
@@ -798,7 +857,7 @@ export function generateRecommendations(context: RecommendationContext): Enhance
     ? `${concernName.charAt(0).toUpperCase() + concernName.slice(1)} (${bandColor})`
     : concernName.charAt(0).toUpperCase() + concernName.slice(1);
   
-  return {
+  const result = {
     ...recommendation,
     primaryConcern: primaryConcernLabel,
     concernBand: bandColor,
@@ -807,5 +866,34 @@ export function generateRecommendations(context: RecommendationContext): Enhance
     rationale: activeConcerns.length > 1 
       ? `Primary concern selected using worst-wins logic. Other concerns: ${activeConcerns.filter(c => c !== primaryConcern).map(c => `${c.concern} (${c.band})`).join(', ')}`
       : undefined
-  };
+  } as EnhancedRecommendation;
+
+  // Build schedule (AM/PM weekly + customerView) using internal metadata when available
+  try {
+    const keys = (result as ProductRecommendation)._keys || {} as any
+    const flags = (result as ProductRecommendation)._flags || {} as any
+    if (keys.core) {
+      const { plan, customerView } = buildWeeklyPlan({
+        cleanser: result.cleanser,
+        coreSerumKey: keys.core,
+        secondarySerumKey: keys.secondary,
+        moisturizer: result.moisturizer,
+        sunscreen: result.sunscreen,
+        flags: {
+          vc_form: flags.vc_form,
+          core_acid_strength: flags.core_acid_strength,
+          secondary_acid_strength: flags.secondary_acid_strength,
+          pregnancy: context.formData.pregnancy === 'Yes' || (context.formData.pregnancyBreastfeeding || '').toLowerCase().includes('pregnant'),
+          sensitivity: isSensitive(context),
+          sensitivityBand: (context.effectiveBands?.sensitivity || 'green').toLowerCase() as 'green'|'blue'|'yellow'|'red',
+          serumComfort: parseInt(context.formData.serumComfort || '1'),
+        }
+      })
+      result.schedule = { ...plan, customerView }
+    }
+  } catch (e) {
+    console.warn('Failed to build schedule:', e)
+  }
+
+  return result;
 }

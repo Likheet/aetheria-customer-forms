@@ -1,5 +1,5 @@
 import React from "react";
-import { Droplets, Sparkles, FlaskRound, Shield, Sun, Target, Info } from "lucide-react";
+import { Droplets, Sparkles, FlaskRound, Shield, Sun, Target, Info, CalendarDays, Moon, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { EnhancedRecommendation } from "../services/recommendationEngine";
@@ -69,6 +69,34 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({ recommend
     const product = recommendation[step.id] as string;
     return { ...step, product: product?.trim() }; 
   });
+  const schedule = recommendation.schedule;
+
+  const DAY_LABELS: Record<string, string> = {
+    mon: 'Mon',
+    tue: 'Tue',
+    wed: 'Wed',
+    thu: 'Thu',
+    fri: 'Fri',
+    sat: 'Sat',
+    sun: 'Sun'
+  };
+
+  const hasSerum = (steps: Array<{label:string;product:string}>) => steps.some(s => s.label === 'Serum');
+  const DAY_ORDER: Array<keyof typeof schedule.pmByDay> = ['mon','tue','wed','thu','fri','sat','sun'];
+  const stepsEqual = (a: Array<{step:number;label:string;product?:string}>, b: Array<{step:number;label:string;product?:string}>) => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      const x = a[i], y = b[i];
+      if (x.step !== y.step) return false;
+      if (x.label !== y.label) return false;
+      if ((x.product || '') !== (y.product || '')) return false;
+    }
+    return true;
+  };
+  const pmFirst = schedule?.pmByDay ? schedule.pmByDay[DAY_ORDER[0]] : undefined;
+  const pmUniform = schedule?.pmByDay && pmFirst
+    ? DAY_ORDER.every((d) => stepsEqual(schedule.pmByDay[d], pmFirst))
+    : false;
 
   return (
     <div className="space-y-10">
@@ -130,6 +158,122 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({ recommend
           </Card>
         ))}
       </div>
+
+      {schedule && (
+        <Card className="border-border/60 bg-surface/90">
+          <CardHeader className="gap-2">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-5 h-5 text-primary" />
+              <CardTitle className="text-sm uppercase tracking-[0.3em] text-muted-foreground/60">Routine Summary</CardTitle>
+            </div>
+            <CardDescription className="text-muted-foreground/70">
+              {pmUniform
+                ? 'Your AM and PM steps are consistent day-to-day.'
+                : 'Your AM is daily; PM alternates through the week to respect sensitivity and irritation budget.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-5 lg:grid-cols-2">
+              {/* AM — always daily */}
+              <Card className="border-border/50 bg-surface">
+                <CardHeader className="gap-2">
+                  <div className="flex items-center gap-2">
+                    <Sun className="w-4 h-4 text-primary" />
+                    <CardTitle className="text-sm uppercase tracking-[0.3em] text-muted-foreground/60">AM (Daily)</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ol className="space-y-2 text-sm text-muted-foreground/80">
+                    {schedule.am.map((s, idx) => (
+                      <li key={idx} className="flex items-start gap-3">
+                        <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">{s.step}</span>
+                        <div>
+                          <span className="text-foreground/90 font-medium">{s.label}</span>
+                          {s.product && <span className="text-muted-foreground/70">: {s.product}</span>}
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </CardContent>
+              </Card>
+
+              {/* PM — daily or weekly */}
+              <Card className="border-border/50 bg-surface">
+                <CardHeader className="gap-2">
+                  <div className="flex items-center gap-2">
+                    <Moon className="w-4 h-4 text-primary" />
+                    <CardTitle className="text-sm uppercase tracking-[0.3em] text-muted-foreground/60">{pmUniform ? 'PM (Daily)' : 'PM (By Day)'}</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {pmUniform && pmFirst ? (
+                    <ol className="space-y-2 text-sm text-muted-foreground/80">
+                      {pmFirst.map((s, idx) => (
+                        <li key={idx} className="flex items-start gap-3">
+                          <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted/40 text-xs text-muted-foreground">{s.step}</span>
+                          <div>
+                            <span className="text-foreground/90 font-medium">{s.label}</span>
+                            {s.product && <span className="text-muted-foreground/70">: {s.product}</span>}
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {DAY_ORDER.map((key) => {
+                        const steps = schedule.pmByDay[key];
+                        const serumNight = hasSerum(steps);
+                        return (
+                          <div key={String(key)} className={`rounded-[18px] border px-4 py-3 ${serumNight ? 'border-border/40 bg-surface/70' : 'border-amber-200 bg-amber-50/60'}`}>
+                            <div className="mb-2 flex items-center justify-between">
+                              <span className="text-xs font-semibold tracking-wide text-muted-foreground/80">{DAY_LABELS[String(key)]}</span>
+                              {!serumNight && (
+                                <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 border border-amber-200 rounded-full px-2 py-0.5">Rest night</span>
+                              )}
+                            </div>
+                            <ol className="space-y-1 text-sm">
+                              {steps.map((s, idx) => (
+                                <li key={idx} className="flex items-start gap-2 text-muted-foreground/80">
+                                  <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted/40 text-xs text-muted-foreground">{s.step}</span>
+                                  <div>
+                                    <span className="text-foreground/90 font-medium">{s.label}</span>
+                                    {s.product && <span className="text-muted-foreground/70">: {s.product}</span>}
+                                  </div>
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {schedule.customerView?.notes?.length > 0 && (
+              <div className="mt-5">
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardHeader className="gap-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-primary" />
+                      <CardTitle className="text-sm uppercase tracking-[0.3em] text-primary/80">Why this plan</CardTitle>
+                    </div>
+                    <CardDescription className="text-muted-foreground/70">Key constraints from your sensitivity and safety profile.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground/80">
+                      {schedule.customerView.notes.map((n, i) => (
+                        <li key={i}>{n}</li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Additional Serums Section */}
       {recommendation.additionalSerums && recommendation.additionalSerums.length > 0 && (

@@ -62,7 +62,7 @@ export default function ChooseProfile({ onBack }: { onBack: () => void }) {
     return (
       <UpdatedConsultForm
         onBack={() => setSelected(null)}
-        onComplete={() => setSelected(null)}
+        onComplete={() => onBack()}
         machine={selected.machine}
         machineRaw={selected.metrics}
         sessionId={selected.session_id}

@@ -172,6 +172,8 @@ const dummyFormData: UpdatedConsultData = {
   wrinklesDuration: '',
   poresType: 'Clearly visible on multiple zones (nose, cheeks, forehead) → Yellow',
   poresDuration: '',
+  textureType: '',
+  textureDuration: '',
   oilinessType: '',
   oilinessDuration: '',
   drynessType: '',
@@ -320,8 +322,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const [followUpLocal, setFollowUpLocal] = useState<Record<string, string | string[]>>({});
   // Drafts store in-progress answers for each follow-up (not yet submitted)
   const [followUpDrafts, setFollowUpDrafts] = useState<Record<string, Record<string, string | string[]>>>({});
-  // Track order of applied follow-up decisions to support undo on Back
-  const [appliedFollowUps, setAppliedFollowUps] = useState<string[]>([]);
+  // Track order of applied follow-up decisions to support undo on Back (removed for now)
   const [effectiveBands, setEffectiveBands] = useState<any>(machine || {});
   const [computedSensitivity, setComputedSensitivity] = useState<{ score: number; tier: string; band: string; remark: string } | null>(null);
   const [decisions, setDecisions] = useState<any[]>([]);
@@ -375,7 +376,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
   // Per-concern readiness: allow follow-ups for a category only if the concern is selected
   // and prerequisite fields for that concern are answered. Moisture/Grease remain global.
-  const isCategoryReady = (category: string, dimension?: 'brown' | 'red') => {
+  const isCategoryReady = (category: string, _dimension?: 'brown' | 'red') => {
     const concerns: string[] = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : []
     const acneBreakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : []
     switch (category) {
@@ -722,8 +723,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       
       // Compute updated answers synchronously for next-step selection
       const updatedAnswers = { ...followUpAnswers, [ruleId]: followUpLocal } as Record<string, Record<string, string | string[]>>;
-      recomputeEngine(updatedAnswers);
-      setAppliedFollowUps(prev => [...prev, ruleId]);
+  recomputeEngine(updatedAnswers);
       setActiveFollowUp(null);
       // Clear any saved draft once submitted
       setFollowUpDrafts(prev => {
@@ -927,8 +927,6 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         totalSteps += 2; // Type + Severity
       } else if (concern === 'Acne') {
         totalSteps += 2; // Type + Severity
-      } else if (concern === 'Redness/Sensitivity') {
-        totalSteps += 7; // 7 sensitivity questions
       } else {
         totalSteps += 1; // Just severity
       }
@@ -949,6 +947,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       // Determine concerns to base dynamic answers on (existing or dummy fallback)
       const nextMainConcerns = prevData.mainConcerns.length > 0 ? prevData.mainConcerns : dummyFormData.mainConcerns;
       return ({
+        ...prevData,
         // Personal Information - only fill if empty
         name: prevData.name.trim() !== '' ? prevData.name : dummyFormData.name,
         phoneNumber: prevData.phoneNumber.trim() !== '' ? prevData.phoneNumber : dummyFormData.phoneNumber,
@@ -994,24 +993,14 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         drynessType: nextMainConcerns.includes('Dryness') && !prevData.drynessType ? (dummyFormData.drynessType || 'Tight/rough') : prevData.drynessType,
         drynessDuration: prevData.drynessDuration, // not asked; do not fabricate
       
-      // Sensitivity questions
-        ...(nextMainConcerns.includes('Sensitivity') ? {
-          sensitivityRedness: prevData.sensitivityRedness || dummyFormData.sensitivityRedness,
-          sensitivityDiagnosis: prevData.sensitivityDiagnosis || dummyFormData.sensitivityDiagnosis,
-          sensitivityCleansing: prevData.sensitivityCleansing || dummyFormData.sensitivityCleansing,
-          sensitivityProducts: prevData.sensitivityProducts || dummyFormData.sensitivityProducts,
-          sensitivitySun: prevData.sensitivitySun || dummyFormData.sensitivitySun,
-          sensitivityCapillaries: prevData.sensitivityCapillaries || dummyFormData.sensitivityCapillaries,
-          sensitivitySeasonal: prevData.sensitivitySeasonal || dummyFormData.sensitivitySeasonal,
-        } : {
-          sensitivityRedness: prevData.sensitivityRedness || '',
-          sensitivityDiagnosis: prevData.sensitivityDiagnosis || '',
-          sensitivityCleansing: prevData.sensitivityCleansing || '',
-          sensitivityProducts: prevData.sensitivityProducts || '',
-          sensitivitySun: prevData.sensitivitySun || '',
-          sensitivityCapillaries: prevData.sensitivityCapillaries || '',
-          sensitivitySeasonal: prevData.sensitivitySeasonal || '',
-        }),
+      // Sensitivity screening (universal) - always set defaults if missing
+      sensitivityRedness: prevData.sensitivityRedness || dummyFormData.sensitivityRedness,
+      sensitivityDiagnosis: prevData.sensitivityDiagnosis || dummyFormData.sensitivityDiagnosis,
+      sensitivityCleansing: prevData.sensitivityCleansing || dummyFormData.sensitivityCleansing,
+      sensitivityProducts: prevData.sensitivityProducts || dummyFormData.sensitivityProducts,
+      sensitivitySun: prevData.sensitivitySun || dummyFormData.sensitivitySun,
+      sensitivityCapillaries: prevData.sensitivityCapillaries || dummyFormData.sensitivityCapillaries,
+      sensitivitySeasonal: prevData.sensitivitySeasonal || dummyFormData.sensitivitySeasonal,
       
       // Section E - Lifestyle Inputs
       diet: prevData.diet !== '' ? prevData.diet : dummyFormData.diet,
@@ -1051,11 +1040,6 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       } else if (concern === 'Acne') {
         concernSteps.push({concern, step: 'type'});
         concernSteps.push({concern, step: 'severity'});
-      } else if (concern === 'Sensitivity') {
-        // Add 7 sensitivity questions
-        for (let i = 0; i < 7; i++) {
-          concernSteps.push({concern, step: 'sensitivity-question', questionIndex: i});
-        }
       } else {
         concernSteps.push({concern, step: 'severity'});
       }
@@ -1065,7 +1049,6 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   };
 
   const getCurrentConcernStep = () => {
-    if (currentStep <= 19) return null; // Main concerns is at step 19
     
     const concernSteps = getConcernSteps();
     const lifestyleStartStep = 20 + concernSteps.length; // Start after main concerns and concern follow-ups
@@ -1143,8 +1126,22 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       case 12: // Hydration Levels
         if (!formData.hydrationLevels.trim()) newErrors.hydrationLevels = 'Hydration level description is required';
         break;
-      case 13: // Sensitivity
-        if (!formData.sensitivity.trim()) newErrors.sensitivity = 'Sensitivity information is required';
+      case 13: // Sensitivity Screening (everyone answers 7)
+        {
+          const sensitivityFields = [
+            'sensitivityRedness',
+            'sensitivityDiagnosis',
+            'sensitivityCleansing',
+            'sensitivityProducts',
+            'sensitivitySun',
+            'sensitivityCapillaries',
+            'sensitivitySeasonal'
+          ] as const;
+          sensitivityFields.forEach((key) => {
+            const val = (formData as any)[key] as string;
+            if (!val || !val.trim()) newErrors[key] = 'Please select an option';
+          });
+        }
         break;
       // Section B - Current Skin History
       case 14: // Diagnosed Conditions - Optional
@@ -1226,7 +1223,6 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             } else {
               const baseMap: Record<string, string> = {
                 'Pigmentation': 'pigmentation',
-                'Sensitivity': 'sensitivity',
                 'Fine lines & wrinkles': 'wrinkles',
                 'Large pores': 'pores',
                 'Bumpy skin': 'texture',
@@ -1469,19 +1465,102 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   }
 
   const renderConcernFollowUp = (concern: string, stepType: 'type' | 'severity' | 'sensitivity-question', questionIndex?: number) => {
-    const concernBaseKey = (c: string): string | null => {
-      switch (c) {
-        case 'Acne': return 'acne';
-        case 'Pigmentation': return 'pigmentation';
-        case 'Sensitivity': return null; // handled separately
-        case 'Fine lines & wrinkles': return 'wrinkles';
-        case 'Large pores': return 'pores';
-        case 'Bumpy skin': return 'texture';
-        case 'Oiliness': return 'oiliness';
-        case 'Dryness': return 'dryness';
-        default: return c.toLowerCase().replace(/[^a-z]/g, '') || null;
+    // Maps a follow-up step to the form field key and UI copy
+    const getFieldInfo = (
+      c: string,
+      s: 'type' | 'severity' | 'sensitivity-question',
+      qIdx?: number
+    ): { fieldKey: string | null; title: string; subtitle?: string } => {
+      // Sensitivity universal screening (rarely routed here, but supported)
+      if (s === 'sensitivity-question') {
+        const sensitivityFields = [
+          'sensitivityRedness',
+          'sensitivityDiagnosis',
+          'sensitivityCleansing',
+          'sensitivityProducts',
+          'sensitivitySun',
+          'sensitivityCapillaries',
+          'sensitivitySeasonal'
+        ] as const;
+        const titles = [
+          'Do you flush or turn red easily?',
+          'Have you been told by a professional you have “sensitive skin” or rosacea?',
+          'Does your skin sting/burn when cleansing?',
+          'Do many new products irritate your skin?',
+          'Does sun exposure make your skin red or itchy?',
+          'Do you see visible capillaries or broken veins?',
+          'Is your skin more reactive in certain seasons?'
+        ];
+        const idx = typeof qIdx === 'number' ? qIdx : 0;
+        const fieldKey = sensitivityFields[idx] ?? sensitivityFields[0];
+        const title = titles[idx] ?? titles[0];
+        return { fieldKey, title, subtitle: 'Choose Yes or No' };
       }
+
+      // Helper to normalize base key
+      const baseMap: Record<string, string> = {
+        'Acne': 'acne',
+        'Pigmentation': 'pigmentation',
+        'Fine lines & wrinkles': 'wrinkles',
+        'Large pores': 'pores',
+        'Bumpy skin': 'texture',
+        'Oiliness': 'oiliness',
+        'Dryness': 'dryness',
+      };
+      const base = baseMap[c] || c.toLowerCase().replace(/[^a-z]/g, '');
+
+      // Acne has custom UI (array-based); we only need headings
+      if (c === 'Acne') {
+        if (s === 'type') {
+          return {
+            fieldKey: null,
+            title: 'What kinds of breakouts do you get?',
+            subtitle: 'Pick all that apply'
+          };
+        }
+        return {
+          fieldKey: null,
+          title: 'How noticeable are those breakouts?',
+          subtitle: 'Choose a severity for each breakout type'
+        };
+      }
+
+      // Pigmentation has a true type + severity
+      if (c === 'Pigmentation') {
+        if (s === 'type') {
+          return {
+            fieldKey: `${base}Type`,
+            title: 'What kind of pigmentation is your main concern?',
+            subtitle: 'Pick the option that best matches (Red vs Brown)'
+          };
+        }
+        return {
+          fieldKey: `${base}Severity`,
+          title: 'How noticeable is the pigmentation?',
+          subtitle: 'Choose the description closest to what you see'
+        };
+      }
+
+      // Other concerns only persist into a single *Type* field, even on a “severity” page
+      const fieldKey = `${base}Type`;
+      let title = 'Tell us a bit more';
+      let subtitle: string | undefined = 'Pick the description that fits you best';
+
+      if (c === 'Fine lines & wrinkles') {
+        title = 'How noticeable are your lines or sagging?';
+      } else if (c === 'Large pores') {
+        title = 'How noticeable are your pores?';
+      } else if (c === 'Bumpy skin') {
+        title = 'How noticeable is the uneven texture?';
+      } else if (c === 'Oiliness') {
+        title = 'How noticeable is the oiliness?';
+      } else if (c === 'Dryness') {
+        title = 'How noticeable is the dryness?';
+      }
+
+      return { fieldKey, title, subtitle };
     };
+    // concernBaseKey not used
     const getAcneTypeBadge = (acneType: string) => {
       if (!acneType) return null;
       
@@ -1498,7 +1577,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       switch (concern) {
         case 'Acne': return <Shield className="w-8 h-8 text-amber-600" />;
         case 'Pigmentation': return <Sun className="w-8 h-8 text-amber-600" />;
-        case 'Sensitivity': return <Heart className="w-8 h-8 text-amber-600" />;
+  // 'Sensitivity' removed from main concerns; handled via universal screening
+  case 'Sensitivity': return <FileText className="w-8 h-8 text-amber-600" />;
         case 'Fine lines & wrinkles': return <Clock className="w-8 h-8 text-amber-600" />;
         case 'Large pores': return <Droplets className="w-8 h-8 text-amber-600" />;
         case 'Bumpy skin': return <Sparkles className="w-8 h-8 text-amber-600" />;
@@ -1510,44 +1590,23 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
     const getConcernOptions = (concern: string, stepType: 'type' | 'severity' | 'sensitivity-question', questionIndex?: number) => {
       if (stepType === 'sensitivity-question' && questionIndex !== undefined) {
-        const sensitivityQuestions = [
-          ['Yes', 'No'],
-          ['Yes', 'No'],
-          ['Yes', 'No'],
-          ['Yes', 'No'],
-          ['Yes', 'No'],
-          ['Yes', 'No'],
-          ['Yes', 'No']
-        ];
-        return sensitivityQuestions[questionIndex] || ['Yes', 'No'];
+        return ['Yes', 'No'];
       }
-
       switch (concern) {
         case 'Acne':
-          if (stepType === 'type') {
-            return ACNE_TYPE_OPTIONS;
-          }
-          return [];
-        case 'Pigmentation':
-          if (stepType === 'type') {
-            return ['Red', 'Brown'];
-          } else if (stepType === 'severity') {
-            // Check if pigmentationType contains "Red" or "Brown" to determine which severity options to show
-            const currentType = formData.pigmentationType;
-            if (currentType === 'Red' || currentType.includes('red') || currentType.includes('Red') || currentType.includes('redness')) {
+          return stepType === 'type' ? ACNE_TYPE_OPTIONS : [];
+        case 'Pigmentation': {
+          if (stepType === 'type') return ['Red', 'Brown'];
+          if (stepType === 'severity') {
+            const currentType = formData.pigmentationType || '';
+            const isRed = /\bred\b|redness/i.test(currentType);
+            if (isRed) {
               return [
                 'Light red, only in a small area → Blue',
                 'Moderate red, noticeable in several zones → Yellow',
                 'Bright or deep red, widespread across the face → Red'
               ];
-            } else if (currentType === 'Brown' || currentType.includes('brown') || currentType.includes('Brown') || currentType.includes('pigmentation')) {
-              return [
-                'Light brown patches, visible up close but small in size → Blue',
-                'Moderate brown spots/patches, noticeable in several areas → Yellow',
-                'Dark brown patches, large or widespread across the face → Red'
-              ];
             }
-            // Default to brown options if type is not clearly determined
             return [
               'Light brown patches, visible up close but small in size → Blue',
               'Moderate brown spots/patches, noticeable in several areas → Yellow',
@@ -1555,115 +1614,34 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             ];
           }
           return [];
+        }
         case 'Fine lines & wrinkles':
-          if (stepType === 'severity') {
-            return [
-              'A few fine lines or slight looseness in some spots → Blue',
-              'Wrinkles or sagging you can see in several areas → Yellow',
-              'Deep wrinkles or sagging that\'s easy to notice → Red'
-            ];
-          }
-          return [];
+          return stepType === 'severity'
+            ? [
+                'A few fine lines or slight looseness in some spots → Blue',
+                'Wrinkles or sagging you can see in several areas → Yellow',
+                "Deep wrinkles or sagging that's easy to notice → Red",
+              ]
+            : [];
         case 'Large pores':
-          if (stepType === 'severity') {
-            return [
-              'Noticeable near the nose or small areas on close inspection → Blue',
-              'Clearly visible on multiple zones (nose, cheeks, forehead) → Yellow',
-              'Large, obvious pores across much of the face, visible from a distance → Red'
-            ];
-          }
-          return [];
+          return stepType === 'severity'
+            ? [
+                'Noticeable near the nose or small areas on close inspection → Blue',
+                'Clearly visible on multiple zones (nose, cheeks, forehead) → Yellow',
+                'Large, obvious pores across much of the face, visible from a distance → Red',
+              ]
+            : [];
         case 'Bumpy skin':
-          if (stepType === 'severity') {
-            return [
-              'A few small areas with bumps or rough patches (like nose or chin) → Blue',
-              'Noticeable bumps or uneven texture in several areas of the face → Yellow',
-              'Rough or bumpy texture across most of the face → Red'
-            ];
-          }
-          return [];
-        case 'Dullness':
-          if (stepType === 'severity') {
-            return [
-              'Occasional dullness that comes and goes → Blue',
-              'Frequently dull skin that needs regular brightening → Yellow',
-              'Persistent dullness across the face → Red'
-            ];
-          }
-          return [];
+          return stepType === 'severity'
+            ? [
+                'A few small areas with bumps or rough patches (like nose or chin) → Blue',
+                'Noticeable bumps or uneven texture in several areas of the face → Yellow',
+                'Rough or bumpy texture across most of the face → Red',
+              ]
+            : [];
         default:
           return [];
       }
-    };
-
-    const getFieldInfo = (concern: string, stepType: 'type' | 'severity' | 'sensitivity-question', questionIndex?: number) => {
-      if (stepType === 'sensitivity-question' && questionIndex !== undefined) {
-        const sensitivityFields = [
-          'sensitivityRedness',
-          'sensitivityDiagnosis',
-          'sensitivityCleansing',
-          'sensitivityProducts',
-          'sensitivitySun',
-          'sensitivityCapillaries',
-          'sensitivitySeasonal'
-        ];
-        const sensitivityTitles = [
-            'Do you often experience redness, burning, or stinging when using skincare products?',
-            'Have you ever been diagnosed with sensitive skin, rosacea, or eczema?',
-            'Would you describe your skin baseline as very dry (tight, flaky, rough)?',
-            'Have you noticed breakouts or irritation when using active ingredients (Vitamin C, AHAs, Niacinamide, Retinoids, etc.)?',
-            'Does your skin get easily irritated by sun, heat, wind, or pollution?',
-            'Do you have visible broken capillaries or flushing on your skin (cheeks, nose, etc.)?',
-            'Are you under 20 years of age?'
-          ];
-        return {
-          fieldKey: sensitivityFields[questionIndex],
-          title: sensitivityTitles[questionIndex],
-          subtitle: 'Please select the option that best describes you'
-        };
-      }
-
-      const base = concernBaseKey(concern);
-      const concernsWithType = ['Acne', 'Pigmentation'];
-      let title = '';
-      let subtitle = '';
-
-      if (stepType === 'type') {
-        if (concern === 'Pigmentation') {
-          title = 'What type do you experience?';
-        } else if (concern === 'Acne') {
-          title = 'What kind of breakouts do you usually notice?';
-        } else {
-          title = 'What type do you experience?';
-        }
-      } else if (stepType === 'severity') {
-        if (concern === 'Pigmentation') {
-          title = 'How would you describe the severity?';
-        } else if (concern === 'Acne') {
-          title = 'How would you describe the severity?';
-        } else if (concern === 'Fine lines & wrinkles') {
-          title = 'How would you describe the severity?';
-        } else if (concern === 'Large pores') {
-          title = 'How would you describe the severity?';
-        } else if (concern === 'Bumpy skin') {
-          title = 'Do you notice small clogged pores, rough patches, or tiny bumps under the skin that make it feel uneven?';
-        } else {
-          title = 'What type do you experience?';
-        }
-      }
-
-      let fieldKey = '';
-      if (stepType === 'type') {
-        fieldKey = base + 'Type';
-      } else if (stepType === 'severity') {
-        if (concernsWithType.includes(concern)) {
-          fieldKey = base + 'Severity';
-        } else {
-          fieldKey = base + 'Type';
-        }
-      }
-      
-      return { fieldKey, title, subtitle };
     };
 
     const acneBreakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : [];
@@ -1685,7 +1663,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
             <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
               <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
-                <span className="mr-1">{React.cloneElement(getConcernIcon(concern), { className: 'w-4 h-4 text-amber-600' })}</span>
+                <span className="mr-1">{React.cloneElement(getConcernIcon(concern) as React.ReactElement, { className: 'w-4 h-4 text-amber-600' })}</span>
                 {concern}
               </div>
             </div>
@@ -1758,7 +1736,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
             <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
               <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
-                <span className="mr-1">{React.cloneElement(getConcernIcon(concern), { className: 'w-4 h-4 text-amber-600' })}</span>
+                <span className="mr-1">{React.cloneElement(getConcernIcon(concern) as React.ReactElement, { className: 'w-4 h-4 text-amber-600' })}</span>
                 {concern}
               </div>
             </div>
@@ -1837,7 +1815,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         {/* Concern Badge */}
         <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
           <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
-            <span className="mr-1">{React.cloneElement(getConcernIcon(concern), { className: "w-4 h-4 text-amber-600" })}</span>
+            <span className="mr-1">{React.cloneElement(getConcernIcon(concern) as React.ReactElement, { className: "w-4 h-4 text-amber-600" })}</span>
             {concern}
           </div>
         </div>
@@ -1869,7 +1847,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               </button>
             ))}
           </div>
-          {errors[fieldKey] && <p className="text-red-500 text-sm mt-2">{errors[fieldKey]}</p>}
+          {fieldKey && errors[fieldKey] && <p className="text-red-500 text-sm mt-2">{errors[fieldKey]}</p>}
         </div>
       </div>
     );
@@ -2694,50 +2672,57 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           </div>
         );
 
-      case 13: // Sensitivity
+      case 13: // Sensitivity screening (7 questions for everyone)
         return (
           <div className="space-y-12 flex flex-col justify-center h-full py-8">
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-                <Shield className="w-8 h-8 text-amber-600" />
+                <Heart className="w-8 h-8 text-amber-600" />
               </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                Do you experience sensitivity?
+              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-2">
+                Sensitivity screening
               </h2>
+              <p className="text-gray-600">Please answer the following about your skin.</p>
             </div>
 
-            <div className="max-w-2xl mx-auto w-full">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {['Yes', 'No', 'Sometimes'].map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => updateFormData({ sensitivity: option })}
-                    className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
-                      formData.sensitivity === option
-                        ? 'border-amber-400 bg-amber-50 text-amber-700'
-                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-              {formData.sensitivity === 'Sometimes' && (
-                <div className="max-w-2xl mx-auto w-full mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Specify triggers (sun, actives, fragrance, pollution):
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.sensitivityTriggers || ''}
-                    onChange={(e) => updateFormData({ sensitivityTriggers: e.target.value })}
-                    placeholder="e.g., sun, fragrance, harsh products..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  />
+            <div className="max-w-3xl mx-auto w-full space-y-4">
+              {[
+                {
+                  key: 'sensitivityRedness',
+                  label: 'Do you often experience redness, burning, or stinging when using skincare products?'
+                },
+                { key: 'sensitivityDiagnosis', label: 'Have you ever been diagnosed with sensitive skin, rosacea, or eczema?' },
+                { key: 'sensitivityCleansing', label: 'Would you describe your skin baseline as very dry (tight, flaky, rough)?' },
+                { key: 'sensitivityProducts', label: 'Have you noticed breakouts or irritation with actives (Vitamin C, AHAs, Niacinamide, Retinoids, etc.)?' },
+                { key: 'sensitivitySun', label: 'Does your skin get easily irritated by sun, heat, wind, or pollution?' },
+                { key: 'sensitivityCapillaries', label: 'Do you have visible broken capillaries or flushing (cheeks, nose, etc.)?' },
+                { key: 'sensitivitySeasonal', label: 'Are you under 20 years of age?' }
+              ].map((q) => (
+                <div key={q.key} className="bg-white/80 border border-amber-200 rounded-2xl p-4">
+                  <div className="flex flex-col gap-3">
+                    <label className="text-gray-800 font-medium">{q.label}</label>
+                    <div className="flex gap-3">
+                      {['Yes', 'No'].map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => updateFormData({ [q.key]: opt } as any)}
+                          className={`px-4 py-2 rounded-lg border-2 text-sm transition-all ${
+                            ((formData as any)[q.key] || '') === opt
+                              ? 'border-amber-400 bg-amber-50 text-amber-700'
+                              : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                    {(errors as any)[q.key] && (
+                      <p className="text-red-500 text-xs">{(errors as any)[q.key]}</p>
+                    )}
+                  </div>
                 </div>
-              )}
-              {errors.sensitivity && <p className="text-red-500 text-sm mt-2">{errors.sensitivity}</p>}
+              ))}
             </div>
           </div>
         );
@@ -2758,7 +2743,6 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
             <div className="max-w-2xl mx-auto w-full">
               <textarea
-                ref={currentStep === 9 ? firstTextareaRef : undefined}
                 value={formData.diagnosedConditions}
                 onChange={(e) => updateFormData({ diagnosedConditions: e.target.value })}
                 placeholder="Please describe any diagnosed skin conditions or type 'None' if not applicable..."
@@ -2785,7 +2769,6 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
             <div className="max-w-2xl mx-auto w-full">
               <textarea
-                ref={currentStep === 10 ? firstTextareaRef : undefined}
                 value={formData.prescriptionTreatments}
                 onChange={(e) => updateFormData({ prescriptionTreatments: e.target.value })}
                 placeholder="Please describe any prescription treatments you've used or type 'None' if not applicable..."
@@ -2958,7 +2941,6 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                 {[
                   'Acne',
                   'Pigmentation', 
-                  'Sensitivity',
                   'Fine lines & wrinkles',
                   'Large pores',
                   'Bumpy skin'

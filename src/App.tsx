@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import StaffSelectionPage from './components/StaffSelectionPage';
 import FeedbackWelcomePage from './components/FeedbackWelcomePage';
 import ClientSelectionPage from './components/ClientSelectionPage';
@@ -65,9 +65,12 @@ function App() {
   };
 
   const handleGoHome = () => {
+    // Reset to staff portal and clear session-scoped state so the portal mounts fresh
     setCurrentFlow('staff-selection');
     setShowFeedbackWelcome(false);
     setSelectedClient(null);
+    // Optional: clear any local draft caches if added in future
+    // localStorage.removeItem('aetheria-followup-drafts');
   };
 
   const handleSelectFeedback = () => {

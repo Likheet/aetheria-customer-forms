@@ -32,8 +32,14 @@ Below is a reference of every question asked by the Updated Client Consult form 
   - Slight tightness or occasional dryness → Blue
   - Often feels tight, rough, or flaky → Yellow
   - Always feels very tight, itchy, or cracks/peels → Red
-- Do you experience sensitivity? (Yes / No / Sometimes)
-  - If "Sometimes": "Specify triggers (sun, actives, fragrance, pollution):" (text input)
+ - Sensitivity screening (everyone answers):
+   1. Do you often experience redness, burning, or stinging when using skincare products? (Yes/No)
+   2. Have you ever been diagnosed with sensitive skin, rosacea, or eczema? (Yes/No)
+   3. Would you describe your skin baseline as very dry (tight, flaky, rough)? (Yes/No)
+   4. Have you noticed breakouts or irritation when using active ingredients (Vitamin C, AHAs, Niacinamide, Retinoids, etc.)? (Yes/No)
+   5. Does your skin get easily irritated by sun, heat, wind, or pollution? (Yes/No)
+   6. Do you have visible broken capillaries or flushing on your skin (cheeks, nose, etc.)? (Yes/No)
+   7. Are you under 20 years of age? (Yes/No)
 
 ### Section B — Current Skin History
 - Do you have any diagnosed skin conditions? (textarea)
@@ -49,7 +55,6 @@ Below is a reference of every question asked by the Updated Client Consult form 
 - Main concerns list (choose up to 3): MARK EMPTY IF ANY CONCERN NOT CHOSEN
 	- Acne ACNE 
 	- Pigmentation PIGMENTATION_UV
-	- Sensitivity SENSITIVITY
 	- Fine lines & wrinkles (aging) TEXTURE but no value updation
 	- Bumpy skin TEXTURE
 	- Large pores PORES
@@ -78,15 +83,7 @@ When a concern is selected the form shows follow-up questions specific to that c
 		- Moderate brown spots/patches, noticeable in several areas → Yellow 
 		- Dark brown patches, large or widespread across the face → Red 
 
-- Sensitivity
-	- Follow-up: Seven sensitivity questions (each is a choice, typically Yes/No):
-	1. Do you often experience redness, burning, or stinging when using skincare products?
-	2. Have you ever been diagnosed with sensitive skin, rosacea, or eczema?
-	3. Does your skin get easily irritated by sun, heat, wind, or pollution?
-	4. Have you noticed breakouts or irritation when using active ingredients (Vitamin C, AHAs, Niacinamide, Retinoids, etc.)?
-	5. Do you have visible broken capillaries or flushing on your skin (cheeks, nose, etc.)?
-	6. Are you under 20 years of age?
-	7. Would you describe your skin baseline as very dry (tight, flaky, rough)?
+<!-- Sensitivity is now a universal screening in Section A and not a selectable main concern. -->
 
 
 - Fine lines & wrinkles
@@ -119,7 +116,7 @@ When a concern is selected the form shows follow-up questions specific to that c
 
 Notes
 - The "Irritating Products" field is implemented as a tag/chip input with autocomplete suggestions. Enter, comma, or Tab will create tags; tags can be removed by the × button.
-- The Main Concerns selection dynamically injects follow-up steps. Pigmentation adds a "type" and "duration" step. Redness/Sensitivity injects the seven sensitivity questions. Other concerns add a single "type" step.
+- The Main Concerns selection dynamically injects follow-up steps. Pigmentation adds a "type" and a severity step. Other concerns add a single severity step. Sensitivity screening happens for everyone earlier in Section A.
 
 
 # Rule Based Questions:
