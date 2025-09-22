@@ -15,6 +15,8 @@ import type { MachineScanBands } from '../lib/decisionEngine';
 import { UpdatedConsultData, AcneCategory } from '../types';
 import ProductAutocomplete from './ProductAutocomplete';
 import { SKIN_TYPE_OPTIONS } from '../lib/consultAutoFill';
+import { generateRecommendations, RecommendationContext } from '../services/recommendationEngine';
+import RecommendationDisplay from './RecommendationDisplay';
 
 interface UpdatedConsultFormProps {
   onBack: () => void;
@@ -259,10 +261,12 @@ const getAcneSeverityOptions = (acneType: string): string[] => {
 };
 
 // Helper function to derive skin type flag from skin type selection
-const deriveSkinTypeFlag = (skinType: string): string => {
-  if (skinType.startsWith('Oily')) return 'Oily';
-  if (skinType.startsWith('Combination')) return 'Combination';
-  if (skinType.startsWith('Dry')) return 'Dry';
+const deriveSkinTypeFlag = (skinType: string | null | undefined): string => {
+  if (!skinType) return '';
+  const type = String(skinType);
+  if (type.startsWith('Oily')) return 'Oily';
+  if (type.startsWith('Combination')) return 'Combination';
+  if (type.startsWith('Dry')) return 'Dry';
   return '';
 };
 
@@ -304,6 +308,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const [formData, setFormData] = useState<UpdatedConsultData>(buildInitialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [recommendation, setRecommendation] = useState<any>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   // RULE_SPECS runtime state
   const [runtimeSelf, setRuntimeSelf] = useState<any>({});
@@ -312,9 +317,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   // active follow-up currently being displayed
   const [activeFollowUp, setActiveFollowUp] = useState<null | { ruleId: string; category: string; dimension?: 'brown'|'red'; questions: Array<{ id: string; prompt: string; options: string[]; multi?: boolean }> }>(null);
   const [followUpAnswers, setFollowUpAnswers] = useState<Record<string, Record<string, string | string[]>>>({});
-  // Tracks a dependency signature per rule when it was answered, so we can invalidate answers if base inputs change
-  const [followUpKeys, setFollowUpKeys] = useState<Record<string, string>>({});
   const [followUpLocal, setFollowUpLocal] = useState<Record<string, string | string[]>>({});
+  // Drafts store in-progress answers for each follow-up (not yet submitted)
+  const [followUpDrafts, setFollowUpDrafts] = useState<Record<string, Record<string, string | string[]>>>({});
   // Track order of applied follow-up decisions to support undo on Back
   const [appliedFollowUps, setAppliedFollowUps] = useState<string[]>([]);
   const [effectiveBands, setEffectiveBands] = useState<any>(machine || {});
@@ -434,17 +439,17 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
   // Recompute engine outputs from base answers + stored follow-up answers
   const recomputeEngine = (answersByRuleId: Record<string, Record<string, string | string[]>>) => {
-    const ctx = { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any
-    const m = (machine || {}) as any
-    const self = deriveSelfBandsRt(formData as any, ctx)
-    setRuntimeSelf(self)
-    // Build follow-ups, then filter per category readiness
-    const qsets = getFollowUpsRt(m, self).filter(q => isCategoryReady(q.category as any, q.dimension as any))
-    const applicable = new Set(qsets.map(q => q.ruleId))
-    // Build per-rule dependency keys (category + machine/self bands + key form fields)
-    const keysNow: Record<string, string> = {}
-    const norm = (s: any) => String(s ?? '').toLowerCase().trim()
-    const mcKey = (Array.isArray(formData.mainConcerns) ? [...formData.mainConcerns].sort().join('|') : '')
+    try {
+      const ctx = { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any;
+      const m = (machine || {}) as any;
+      const self = deriveSelfBandsRt(formData as any, ctx);
+      setRuntimeSelf(self);
+      // Build follow-ups, then filter per category readiness
+      const qsets = getFollowUpsRt(m, self).filter(q => isCategoryReady(q.category as any, q.dimension as any));
+      const applicable = new Set(qsets.map(q => q.ruleId));
+      // Build per-rule dependency keys (category + machine/self bands + key form fields)
+      const keysNow: Record<string, string> = {};
+      const norm = (s: any) => String(s ?? '').toLowerCase().trim();
     for (const r of qsets) {
       let cat = r.category || ''
       let dim = r.dimension || ''
@@ -468,22 +473,38 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             .map((item) => `${norm(item.type)}|${norm(item.severity)}`)
             .join(',')
         : ''
-      const extra = [
-        norm(formData.textureType),
-        norm(formData.wrinklesType),
-        acneKey,
-        norm(formData.poresType),
-        norm(formData.pigmentationType),
-        norm(formData.pigmentationSeverity),
-        mcKey,
-      ].join('~')
+      
+      // Build category-specific extra fields - only include fields that would actually invalidate this follow-up
+      let extra = ''
+      switch (cat) {
+        case 'Acne':
+          extra = [acneKey].join('~') // Acne follow-ups depend on acne breakouts, not necessarily main concerns
+          break
+        case 'Texture':
+          extra = [norm(formData.textureType), norm(formData.wrinklesType)].join('~')
+          break
+        case 'Pores':
+          extra = [norm(formData.poresType)].join('~')
+          break
+        case 'Pigmentation':
+          extra = [norm(formData.pigmentationType), norm(formData.pigmentationSeverity)].join('~')
+          break
+        case 'Moisture':
+        case 'Grease':
+        default:
+          // For categories that don't have specific form fields, use minimal dependency
+          extra = ''
+          break
+      }
       keysNow[r.ruleId] = [cat, dim, mBand, sBand, extra].join('#')
     }
-    // Filter stale answered rules
+    // Keep ALL follow-up answers that are still applicable (don't filter by dependency key changes)
+    // This preserves answers when users navigate back and forth
     const filteredAnswers: Record<string, Record<string, string | string[]>> = {}
     for (const [rid, ans] of Object.entries(answersByRuleId || {})) {
-      // Only keep if still applicable and dependency key hasn't changed
-      if (applicable.has(rid) && keysNow[rid] && (!followUpKeys[rid] || keysNow[rid] === followUpKeys[rid])) {
+      // Only check if the rule is still applicable, don't invalidate based on key changes
+      // This allows answers to persist when users go back and change earlier answers
+      if (applicable.has(rid)) {
         filteredAnswers[rid] = ans
       }
     }
@@ -505,17 +526,45 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         updates = mergeBandsRt(updates, d.updates || {}) as any
       }
     }
-    // Determine next unanswered follow-up (first with questions and no stored answers)
-    const next = qsets.find(q => q.questions && q.questions.length && !filteredAnswers[q.ruleId]) || null
-    setFollowUp(next ? { ruleId: next.ruleId, category: next.category as any, dimension: next.dimension as any, questions: next.questions || [] } : null)
-    if (next) setFollowUpLocal(filteredAnswers[next.ruleId] || {})
+    // Determine which follow-up to show based on priority and current state
+    // Priority: show unanswered follow-ups for categories that need them most
+    let next = null
+    
+    // First, try to find an unanswered follow-up with high priority (red/yellow bands)
+    const highPriorityNext = qsets.find(q => {
+      if (!q.questions || !q.questions.length || filteredAnswers[q.ruleId]) return false
+      const cat = q.category || ''
+      const dim = q.dimension || ''
+      let bandValue = ''
+      switch (cat) {
+        case 'Acne': bandValue = norm(m.acne) || norm(self.acne); break
+        case 'Texture': bandValue = norm(m.texture) || norm(self.texture); break
+        case 'Pores': bandValue = norm(m.pores) || norm(self.pores); break
+        case 'Pigmentation':
+          if (dim === 'red') bandValue = norm(m.pigmentation_red) || norm(self.pigmentation_red)
+          else bandValue = norm(m.pigmentation_brown) || norm(self.pigmentation_brown)
+          break
+        default: break
+      }
+      return bandValue === 'red' || bandValue === 'yellow'
+    })
+    
+    // If no high priority, find any unanswered follow-up
+    next = highPriorityNext || qsets.find(q => q.questions && q.questions.length && !filteredAnswers[q.ruleId]) || null
+    
+  setFollowUp(next ? { ruleId: next.ruleId, category: next.category as any, dimension: next.dimension as any, questions: next.questions || [] } : null)
+  if (next) setFollowUpLocal(followUpDrafts[next.ruleId] || filteredAnswers[next.ruleId] || {})
     setDecisions(newDecisions)
     // Compute sensitivity band from form inputs and merge into effective bands
     const sens = computeSensitivityFromForm(formData as any, ctx)
     setComputedSensitivity(sens as any)
     setEffectiveBands({ ...m, ...updates, sensitivity: sens.band })
     setFollowUpAnswers(filteredAnswers)
-    setFollowUpKeys(keysNow)
+    } catch (error) {
+      console.error('Failed to recompute engine:', error);
+      // Set fallback state to prevent crashes
+      setEffectiveBands(machine || {});
+    }
   }
 
   // Trigger recompute when base answers change
@@ -561,28 +610,53 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
   const handleSubmitFollowUp = () => {
     if (!activeFollowUp) return;
-    // Ensure all questions answered
-    const allAnswered = (activeFollowUp.questions || []).every(q => followUpLocal[q.id] !== undefined && (Array.isArray(followUpLocal[q.id]) ? (followUpLocal[q.id] as any[]).length > 0 : String(followUpLocal[q.id]).length > 0))
-    if (!allAnswered) return; // required
-    const ruleId = activeFollowUp.ruleId
-    const decision = decideBandRt(ruleId, followUpLocal, { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any) || { updates: {} };
-    setDecisions(prev => [...prev, { ruleId, ...decision, decidedAt: new Date().toISOString(), specVersion: 'live' }]);
-    setEffectiveBands((prev: any) => ({ ...prev, ...(decision.updates || {}) }));
-    // Route handling: if rule indicates routing to Acne, ensure Acne follow-ups appear by injecting concern
-    const flags: string[] = Array.isArray((decision as any).flags) ? (decision as any).flags as string[] : []
-    if (flags.some(f => /route:acne/i.test(f))) {
-      setFormData(prev => {
-        const mc = Array.isArray(prev.mainConcerns) ? prev.mainConcerns : []
-        if (mc.includes('Acne') || mc.length >= 3) return prev
-        return { ...prev, mainConcerns: [...mc, 'Acne'] }
-      })
+    
+    try {
+      // Ensure all questions answered
+      const allAnswered = (activeFollowUp.questions || []).every(q => 
+        followUpLocal[q.id] !== undefined && 
+        (Array.isArray(followUpLocal[q.id]) 
+          ? (followUpLocal[q.id] as any[]).length > 0 
+          : String(followUpLocal[q.id]).length > 0
+        )
+      );
+      if (!allAnswered) return; // required
+      
+      const ruleId = activeFollowUp.ruleId;
+      const decision = decideBandRt(ruleId, followUpLocal, { 
+        dateOfBirth: formData.dateOfBirth, 
+        pregnancyBreastfeeding: formData.pregnancyBreastfeeding 
+      } as any) || { updates: {} };
+      
+      setDecisions(prev => [...prev, { ruleId, ...decision, decidedAt: new Date().toISOString(), specVersion: 'live' }]);
+      setEffectiveBands((prev: any) => ({ ...prev, ...(decision.updates || {}) }));
+      
+      // Route handling: if rule indicates routing to Acne, ensure Acne follow-ups appear by injecting concern
+      const flags: string[] = Array.isArray((decision as any).flags) ? (decision as any).flags as string[] : [];
+      if (flags.some(f => /route:acne/i.test(f))) {
+        setFormData(prev => {
+          const mc = Array.isArray(prev.mainConcerns) ? prev.mainConcerns : [];
+          if (mc.includes('Acne') || mc.length >= 3) return prev;
+          return { ...prev, mainConcerns: [...mc, 'Acne'] };
+        });
+      }
+      
+      // Compute updated answers synchronously for next-step selection
+      const updatedAnswers = { ...followUpAnswers, [ruleId]: followUpLocal } as Record<string, Record<string, string | string[]>>;
+      recomputeEngine(updatedAnswers);
+      setAppliedFollowUps(prev => [...prev, ruleId]);
+      setActiveFollowUp(null);
+      // Clear any saved draft once submitted
+      setFollowUpDrafts(prev => {
+        const next = { ...prev };
+        delete next[ruleId];
+        return next;
+      });
+    } catch (error) {
+      console.error('Failed to submit follow-up:', error);
+      // Don't prevent the user from continuing, but log the error
     }
-    // Compute updated answers synchronously for next-step selection
-    const updatedAnswers = { ...followUpAnswers, [ruleId]: followUpLocal } as Record<string, Record<string, string | string[]>>
-    recomputeEngine(updatedAnswers)
-    setAppliedFollowUps(prev => [...prev, ruleId])
-    setActiveFollowUp(null)
-  }
+  };
 
   // Small tag/chip input component used for irritating products
   const TagInput: React.FC<{
@@ -936,8 +1010,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   };
 
   const validateStep = (step: number): boolean => {
-    const newErrors: Record<string, string> = {};
-    const currentConcernStep = getCurrentConcernStep();
+    try {
+      const newErrors: Record<string, string> = {};
+      const currentConcernStep = getCurrentConcernStep();
 
     switch (step) {
       case 1: // Name
@@ -1099,6 +1174,11 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+    } catch (error) {
+      console.error('Error in validateStep:', error);
+      // Return false to prevent advancing if validation fails due to error
+      return false;
+    }
   };
 
   const handleNext = () => {
@@ -1111,12 +1191,12 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     // If a follow-up is queued (and not currently shown), open it instead of advancing
     if (followUp) {
       setActiveFollowUp(followUp)
-      setFollowUpLocal(followUpAnswers[followUp.ruleId] || {})
+      setFollowUpLocal(followUpDrafts[followUp.ruleId] || followUpAnswers[followUp.ruleId] || {})
       return;
     }
     if (validateStep(currentStep)) {
       if (currentStep < getTotalSteps()) {
-        setCurrentStep(currentStep + 1);
+        setCurrentStep(prev => prev + 1);
       } else {
         handleSubmit();
       }
@@ -1126,20 +1206,32 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const handleBack = () => {
     // If a follow-up page is active, exit it first
     if (activeFollowUp) {
+      // Preserve any in-progress answers as a draft before closing
+      try {
+        if (activeFollowUp && followUpLocal && Object.keys(followUpLocal).length > 0) {
+          setFollowUpDrafts(prev => ({ ...prev, [activeFollowUp.ruleId]: followUpLocal }));
+        }
+      } catch {}
       setActiveFollowUp(null)
+      // And also navigate back a step
+      if (currentStep > 1) {
+        setCurrentStep(prev => prev - 1)
+      } else {
+        try { onBack(); } catch (e) { console.warn('onBack handler failed:', e) }
+      }
       return
     }
-    // If there is an applied follow-up, undo the last one
-    if (appliedFollowUps.length > 0) {
-      const lastRuleId = appliedFollowUps[appliedFollowUps.length - 1]
-      const newAnswers = { ...followUpAnswers }
-      delete newAnswers[lastRuleId]
-      setAppliedFollowUps(prev => prev.slice(0, -1))
-      recomputeEngine(newAnswers)
-      return
-    }
+    // Do NOT clear previously answered follow-ups on Back.
+    // Back should simply navigate steps (or exit form on step 1) while preserving answers.
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      setCurrentStep(prev => prev - 1);
+      return
+    }
+    // At the first step, delegate to external back handler (if any)
+    try {
+      onBack();
+    } catch (e) {
+      console.warn('onBack handler failed:', e)
     }
   };
 
@@ -1189,6 +1281,37 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       console.log('Submitting consultation data:', payload);
       const createdSessionId = await saveConsultationData(payload, { sessionId });
       console.log('Consultation saved successfully with session ID:', createdSessionId);
+      
+      // Generate recommendations based on submitted data
+      try {
+        const recommendationContext: RecommendationContext = {
+          skinType: formData.skinType,
+          effectiveBands: decisionAudit.effectiveBands || {},
+          acneCategories: [], // Add if available from formData
+          decisions: [], // Add if available from decisionAudit
+          formData: {
+            name: formData.name,
+            skinType: formData.skinType,
+            mainConcerns: formData.mainConcerns || [],
+            pregnancy: formData.pregnancy,
+            pregnancyBreastfeeding: formData.pregnancyBreastfeeding,
+            sensitivity: formData.sensitivity,
+            pigmentationType: formData.pigmentationType,
+            serumComfort: formData.serumComfort,
+            routineSteps: formData.routineSteps,
+            moisturizerTexture: formData.moisturizerTexture,
+            dateOfBirth: formData.dateOfBirth,
+            gender: formData.gender,
+            recentIsotretinoin: formData.recentIsotretinoin,
+            severeCysticAcne: formData.severeCysticAcne
+          }
+        };
+        const recommendationResult = generateRecommendations(recommendationContext);
+        setRecommendation(recommendationResult);
+      } catch (error) {
+        console.error('Failed to generate recommendations:', error);
+      }
+      
       setIsSubmitted(true);
     } catch (error) {
       console.error('Failed to submit consultation:', error);
@@ -1243,23 +1366,24 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   };
 
   if (isSubmitted) {
+    if (recommendation) {
+      return (
+        <RecommendationDisplay 
+          recommendation={recommendation}
+          onComplete={onComplete}
+        />
+      );
+    }
+    
+    // Loading state while generating recommendations
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
-            <CheckCircle className="w-8 h-8 text-green-600" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-6">
+            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
-          <h1 className="text-2xl font-semibold text-gray-900 mb-4">Questionnaire Complete!</h1>
-          <p className="text-gray-600 mb-6">Customer questionnaire has been submitted successfully.</p>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-500">You may now return to the staff portal.</p>
-          </div>
-          <button
-            onClick={onComplete}
-            className="mt-6 px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold transition-all duration-300 shadow-lg hover:from-green-700 hover:to-emerald-700"
-          >
-            Back to Staff Portal
-          </button>
+          <h1 className="text-2xl font-semibold text-gray-900 mb-4">Generating Your Skincare Routine...</h1>
+          <p className="text-gray-600">Please wait while we create personalized recommendations for you.</p>
         </div>
       </div>
     );
@@ -2085,7 +2209,15 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                   
                   <DatePicker
                     defaultDate={new Date(2005, 0, 1)}
-                    value={formData.dateOfBirth ? new Date(formData.dateOfBirth + 'T00:00:00') : null}
+                    value={formData.dateOfBirth ? (() => {
+                      try {
+                        const dateStr = formData.dateOfBirth.includes('T') ? formData.dateOfBirth : formData.dateOfBirth + 'T00:00:00';
+                        const date = new Date(dateStr);
+                        return isNaN(date.getTime()) ? null : date;
+                      } catch {
+                        return null;
+                      }
+                    })() : null}
                     onChange={(val) => {
                       let d: any = val as any;
                       if (Array.isArray(d)) {
@@ -2788,20 +2920,24 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const totalSteps = getTotalSteps();
 
   if (isSubmitted) {
+    if (recommendation) {
+      return (
+        <RecommendationDisplay 
+          recommendation={recommendation}
+          onComplete={onComplete}
+        />
+      );
+    }
+    
+    // Loading state while generating recommendations
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
-            <CheckCircle className="w-8 h-8 text-green-600" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-6">
+            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
-          <h1 className="text-2xl font-semibold text-gray-900 mb-4">Consultation Complete!</h1>
-          <p className="text-gray-600 mb-6">The consultation has been submitted successfully.</p>
-          <button
-            onClick={onComplete}
-            className="mt-6 px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold transition-all duration-300 shadow-lg hover:from-green-700 hover:to-emerald-700"
-          >
-            Back to Profile Selection
-          </button>
+          <h1 className="text-2xl font-semibold text-gray-900 mb-4">Generating Your Skincare Routine...</h1>
+          <p className="text-gray-600">Please wait while we create personalized recommendations for you.</p>
         </div>
       </div>
     );
@@ -3053,8 +3189,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                   </div>
                 </div>
               </div>
-            )}
-          </div>
+            )}          </div>
 
           {/* Navigation */}
           <div className="flex justify-between items-center p-8 pt-0">

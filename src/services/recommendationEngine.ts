@@ -1,6 +1,8 @@
 // Skin Recommendation Engine
 // Maps form data and decision engine outputs to product recommendations
 
+import { PRODUCT_DATABASE, getProductByTier, formatProductName } from '../data/productDatabase';
+
 export interface ProductRecommendation {
   cleanser: string;
   coreSerum: string;
@@ -43,15 +45,6 @@ function isSensitive(context: RecommendationContext): boolean {
          context.formData.sensitivity === 'Yes';
 }
 
-// Helper function to determine sensitivity level
-function getSensitivityLevel(context: RecommendationContext): 'none' | 'mild' | 'high' {
-  if (!isSensitive(context)) return 'none';
-  
-  const sensitivityBand = context.effectiveBands?.sensitivity?.toLowerCase();
-  if (sensitivityBand === 'red') return 'high';
-  return 'mild';
-}
-
 // Helper function to check if pregnancy-safe products are needed
 function isPregnancySafe(context: RecommendationContext): boolean {
   return context.formData.pregnancy === 'Yes' || 
@@ -68,58 +61,115 @@ function getPrimarySkinType(skinType: string | string[]): 'Dry' | 'Combo' | 'Oil
   return 'Normal';
 }
 
+// Helper function to determine price preference tier
+function getPriceTier(_context: RecommendationContext): 'affordable' | 'mid-range' | 'premium' {
+  // You could extend this logic based on form data if you collect budget preference
+  // For now, defaulting to mid-range as a balanced option
+  return 'mid-range';
+}
+
+// Helper function to create a basic routine with specific products
+function createBasicRoutine(context: RecommendationContext, options: {
+  cleanserType: string;
+  coreSerum: string;
+  secondarySerum?: string;
+  moisturizerType: string;
+}): ProductRecommendation {
+  const priceTier = getPriceTier(context);
+  
+  const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser[options.cleanserType] || PRODUCT_DATABASE.cleanser['gentle-foaming'], priceTier);
+  const coreSerum = getProductByTier(PRODUCT_DATABASE.serum[options.coreSerum] || PRODUCT_DATABASE.serum['niacinamide'], priceTier);
+  const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer[options.moisturizerType] || PRODUCT_DATABASE.moisturizer['gel-cream'], priceTier);
+  const sunscreen = getProductByTier(PRODUCT_DATABASE.sunscreen['general'], priceTier);
+  
+  let secondarySerum = "";
+  if (options.secondarySerum) {
+    const secondary = getProductByTier(PRODUCT_DATABASE.serum[options.secondarySerum] || PRODUCT_DATABASE.serum['niacinamide'], priceTier);
+    secondarySerum = formatProductName(secondary);
+  }
+  
+  return {
+    cleanser: formatProductName(cleanser),
+    coreSerum: formatProductName(coreSerum),
+    secondarySerum,
+    moisturizer: formatProductName(moisturizer),
+    sunscreen: formatProductName(sunscreen)
+  };
+}
+
 // Skin type specific recommendations
 function getSkinTypeRecommendation(context: RecommendationContext): ProductRecommendation | null {
   const skinTypeString = Array.isArray(context.skinType) ? context.skinType.join(' ') : (context.skinType || '');
   const skinType = skinTypeString.toLowerCase();
+  const priceTier = getPriceTier(context);
   
   if (skinType.includes('oily') && skinType.includes('dehydrated')) {
+    const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['gentle-foaming'], priceTier);
+    const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['barrier-oily-combination'], priceTier);
+    const sunscreen = getProductByTier(PRODUCT_DATABASE.sunscreen['general'], priceTier);
+    
     return {
-      cleanser: "Gentle foaming",
+      cleanser: formatProductName(cleanser),
       coreSerum: "",
       secondarySerum: "",
-      moisturizer: "Gel-cream with ceramides",
-      sunscreen: "Oil-free gel SPF"
+      moisturizer: formatProductName(moisturizer),
+      sunscreen: formatProductName(sunscreen)
     };
   }
   
   if (skinType.includes('oily') && skinType.includes('hydrated')) {
+    const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['foaming-gel'], priceTier);
+    const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['gel'], priceTier);
+    const sunscreen = getProductByTier(PRODUCT_DATABASE.sunscreen['general'], priceTier);
+    
     return {
-      cleanser: "Foaming / mild SA",
+      cleanser: formatProductName(cleanser),
       coreSerum: "",
       secondarySerum: "",
-      moisturizer: "Lightweight gel/lotion",
-      sunscreen: "Matte SPF 50"
+      moisturizer: formatProductName(moisturizer),
+      sunscreen: formatProductName(sunscreen)
     };
   }
   
   if (skinType.includes('combination') && skinType.includes('dehydrated')) {
+    const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['hydrating'], priceTier);
+    const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['barrier-oily-combination'], priceTier);
+    const sunscreen = getProductByTier(PRODUCT_DATABASE.sunscreen['general'], priceTier);
+    
     return {
-      cleanser: "Gentle gel / cream cleanser",
+      cleanser: formatProductName(cleanser),
       coreSerum: "",
       secondarySerum: "",
-      moisturizer: "Gel-cream, barrier supportive",
-      sunscreen: "Non-comedogenic hybrid SPF"
+      moisturizer: formatProductName(moisturizer),
+      sunscreen: formatProductName(sunscreen)
     };
   }
   
   if (skinType.includes('combination') && skinType.includes('hydrated')) {
+    const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['foaming-gel'], priceTier);
+    const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['gel-cream'], priceTier);
+    const sunscreen = getProductByTier(PRODUCT_DATABASE.sunscreen['general'], priceTier);
+    
     return {
-      cleanser: "Foaming gel",
+      cleanser: formatProductName(cleanser),
       coreSerum: "",
       secondarySerum: "",
-      moisturizer: "Gel-cream, oil-free",
-      sunscreen: "Lightweight SPF 50"
+      moisturizer: formatProductName(moisturizer),
+      sunscreen: formatProductName(sunscreen)
     };
   }
   
   if (skinType.includes('dry') && skinType.includes('dehydrated')) {
+    const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['hydrating'], priceTier);
+    const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['barrier-dry'], priceTier);
+    const sunscreen = getProductByTier(PRODUCT_DATABASE.sunscreen['general'], priceTier);
+    
     return {
-      cleanser: "Cream cleanser",
+      cleanser: formatProductName(cleanser),
       coreSerum: "",
       secondarySerum: "",
-      moisturizer: "Rich cream with occlusives + ceramides",
-      sunscreen: "Moisturizing cream SPF"
+      moisturizer: formatProductName(moisturizer),
+      sunscreen: formatProductName(sunscreen)
     };
   }
   
@@ -131,56 +181,80 @@ function getSebumRecommendation(context: RecommendationContext): ProductRecommen
   const sebumBand = context.effectiveBands?.sebum?.toLowerCase();
   const primarySkinType = getPrimarySkinType(context.skinType);
   const sensitive = isSensitive(context);
+  const priceTier = getPriceTier(context);
   
   if (sebumBand === 'yellow') {
+    const niacinamide = getProductByTier(PRODUCT_DATABASE.serum['niacinamide'], priceTier);
+    const sunscreen = getProductByTier(PRODUCT_DATABASE.sunscreen['general'], priceTier);
+    
     if (sensitive) {
+      const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['gentle-foaming'], priceTier);
+      const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['gel'], priceTier);
+      
       return {
-        cleanser: "Gel-based",
-        coreSerum: "Niacinamide",
+        cleanser: formatProductName(cleanser),
+        coreSerum: formatProductName(niacinamide),
         secondarySerum: "",
-        moisturizer: "Oil-free gel-cream",
-        sunscreen: "SPF 50, non-comedogenic"
+        moisturizer: formatProductName(moisturizer),
+        sunscreen: formatProductName(sunscreen)
       };
     }
     
     if (primarySkinType === 'Oily') {
+      const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['salicylic-acid'], priceTier);
+      const secondarySerum = getProductByTier(PRODUCT_DATABASE.serum['salicylic-acid'], priceTier);
+      const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['gel'], priceTier);
+      
       return {
-        cleanser: "SA or foaming cleanser",
-        coreSerum: "Niacinamide",
-        secondarySerum: "Salicylic acid 2%",
-        moisturizer: "Oil-free gel",
-        sunscreen: "Matte SPF 50"
+        cleanser: formatProductName(cleanser),
+        coreSerum: formatProductName(niacinamide),
+        secondarySerum: formatProductName(secondarySerum),
+        moisturizer: formatProductName(moisturizer),
+        sunscreen: formatProductName(sunscreen)
       };
     }
     
     // Combo/Normal
+    const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['foaming-gel'], priceTier);
+    const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['gel-cream'], priceTier);
+    
     return {
-      cleanser: "Gel-based",
-      coreSerum: "Niacinamide",
+      cleanser: formatProductName(cleanser),
+      coreSerum: formatProductName(niacinamide),
       secondarySerum: "",
-      moisturizer: "Oil-free gel-cream",
-      sunscreen: "SPF 50, non-comedogenic"
+      moisturizer: formatProductName(moisturizer),
+      sunscreen: formatProductName(sunscreen)
     };
   }
   
   if (sebumBand === 'red') {
+    const niacinamide = getProductByTier(PRODUCT_DATABASE.serum['niacinamide'], priceTier);
+    const sunscreen = getProductByTier(PRODUCT_DATABASE.sunscreen['general'], priceTier);
+    
     if (sensitive) {
+      const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['gentle-foaming'], priceTier);
+      const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['gel'], priceTier);
+      
       return {
-        cleanser: "Gel-based",
-        coreSerum: "Niacinamide",
+        cleanser: formatProductName(cleanser),
+        coreSerum: formatProductName(niacinamide),
         secondarySerum: "",
-        moisturizer: "Oil-free gel-cream",
-        sunscreen: "SPF 50, non-comedogenic"
+        moisturizer: formatProductName(moisturizer),
+        sunscreen: formatProductName(sunscreen)
       };
     }
     
     // Oily
+    const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['salicylic-acid'], priceTier);
+    const secondarySerum = getProductByTier(PRODUCT_DATABASE.serum['salicylic-acid'], priceTier);
+    const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['gel'], priceTier);
+    
     return {
-      cleanser: "SA or foaming cleanser",
-      coreSerum: "Niacinamide",
-      secondarySerum: "Salicylic acid 2%",
-      moisturizer: "Very light gel",
-      sunscreen: "Matte SPF 50"
+      cleanser: formatProductName(cleanser),
+      coreSerum: formatProductName(niacinamide),
+      secondarySerum: formatProductName(secondarySerum),
+      moisturizer: formatProductName(moisturizer),
+      sunscreen: formatProductName(sunscreen)
     };
   }
   
@@ -194,15 +268,22 @@ function getAcneRecommendation(context: RecommendationContext): ProductRecommend
   const sensitive = isSensitive(context);
   const isPregnant = isPregnancySafe(context);
   const acneCategories = context.acneCategories;
+  const priceTier = getPriceTier(context);
   
   // Pregnancy-safe acne
   if (isPregnant && (acneBand === 'blue' || acneBand === 'yellow' || acneBand === 'red')) {
+    const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['gentle-foaming'], priceTier);
+    const azelaic = getProductByTier(PRODUCT_DATABASE.serum['azelaic-acid'], priceTier);
+    const niacinamide = getProductByTier(PRODUCT_DATABASE.serum['niacinamide'], priceTier);
+    const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['barrier-oily-combination'], priceTier);
+    const sunscreen = getProductByTier(PRODUCT_DATABASE.sunscreen['general'], priceTier);
+    
     return {
-      cleanser: "Gentle cleanser",
-      coreSerum: "Azelaic acid 10–15%",
-      secondarySerum: "Niacinamide",
-      moisturizer: "Barrier cream",
-      sunscreen: "Mineral SPF"
+      cleanser: formatProductName(cleanser),
+      coreSerum: formatProductName(azelaic),
+      secondarySerum: formatProductName(niacinamide),
+      moisturizer: formatProductName(moisturizer),
+      sunscreen: formatProductName(sunscreen)
     };
   }
   
@@ -219,43 +300,65 @@ function getAcneRecommendation(context: RecommendationContext): ProductRecommend
   
   // Mild acne (Blue)
   if (acneBand === 'blue') {
+    const sunscreen = getProductByTier(PRODUCT_DATABASE.sunscreen['general'], priceTier);
+    
     if (sensitive) {
+      const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['gentle-foaming'], priceTier);
+      const azelaic = getProductByTier(PRODUCT_DATABASE.serum['azelaic-acid'], priceTier);
+      const niacinamide = getProductByTier(PRODUCT_DATABASE.serum['niacinamide'], priceTier);
+      const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['gel-cream'], priceTier);
+      
       return {
-        cleanser: "Gentle gel",
-        coreSerum: "10% Azelaic Acid",
-        secondarySerum: "5% Niacinamide",
-        moisturizer: "Gel-cream",
-        sunscreen: "SPF 50"
+        cleanser: formatProductName(cleanser),
+        coreSerum: formatProductName(azelaic),
+        secondarySerum: formatProductName(niacinamide),
+        moisturizer: formatProductName(moisturizer),
+        sunscreen: formatProductName(sunscreen)
       };
     }
     
     if (primarySkinType === 'Dry') {
+      const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['hydrating'], priceTier);
+      const azelaic = getProductByTier(PRODUCT_DATABASE.serum['azelaic-acid'], priceTier);
+      const niacinamide = getProductByTier(PRODUCT_DATABASE.serum['niacinamide'], priceTier);
+      const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['ceramide-peptide-dry'], priceTier);
+      
       return {
-        cleanser: "Cream cleanser",
-        coreSerum: "Azelaic 10% (anti-inflammatory + PIH)",
-        secondarySerum: "5% Niacinamide",
-        moisturizer: "Ceramide cream",
-        sunscreen: "Hydrating SPF50"
+        cleanser: formatProductName(cleanser),
+        coreSerum: formatProductName(azelaic),
+        secondarySerum: formatProductName(niacinamide),
+        moisturizer: formatProductName(moisturizer),
+        sunscreen: formatProductName(sunscreen)
       };
     }
     
     if (primarySkinType === 'Oily') {
+      const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['gentle-foaming'], priceTier);
+      const adapalene = getProductByTier(PRODUCT_DATABASE.serum['adapalene'], priceTier);
+      const azelaic = getProductByTier(PRODUCT_DATABASE.serum['azelaic-acid'], priceTier);
+      const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['gel'], priceTier);
+      
       return {
-        cleanser: "Gentle gel",
-        coreSerum: "Adapalene 0.1% PM",
-        secondarySerum: "10% Azelaic Acid",
-        moisturizer: "Oil-free gel",
-        sunscreen: "Matte SPF50"
+        cleanser: formatProductName(cleanser),
+        coreSerum: formatProductName(adapalene),
+        secondarySerum: formatProductName(azelaic),
+        moisturizer: formatProductName(moisturizer),
+        sunscreen: formatProductName(sunscreen)
       };
     }
     
     // Combination/Normal
+    const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['gentle-foaming'], priceTier);
+    const adapalene = getProductByTier(PRODUCT_DATABASE.serum['adapalene'], priceTier);
+    const azelaic = getProductByTier(PRODUCT_DATABASE.serum['azelaic-acid'], priceTier);
+    const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['gel-cream'], priceTier);
+    
     return {
-      cleanser: "Gentle gel",
-      coreSerum: "Adapalene 0.1% PM",
-      secondarySerum: "10% Azelaic Acid",
-      moisturizer: "Gel-cream",
-      sunscreen: "Non-comedogenic SPF50"
+      cleanser: formatProductName(cleanser),
+      coreSerum: formatProductName(adapalene),
+      secondarySerum: formatProductName(azelaic),
+      moisturizer: formatProductName(moisturizer),
+      sunscreen: formatProductName(sunscreen)
     };
   }
   
@@ -385,79 +488,22 @@ function getAcneRecommendation(context: RecommendationContext): ProductRecommend
 // Pores-based recommendations
 function getPoresRecommendation(context: RecommendationContext): ProductRecommendation | null {
   const poresBand = context.effectiveBands?.pores?.toLowerCase();
-  const primarySkinType = getPrimarySkinType(context.skinType);
-  const sensitivityLevel = getSensitivityLevel(context);
   
   if (poresBand === 'blue') {
-    if (sensitivityLevel !== 'none') {
-      return {
-        cleanser: "Gentle foaming",
-        coreSerum: "Niacinamide 5%",
-        secondarySerum: "",
-        moisturizer: "Gel-cream",
-        sunscreen: "SPF 50"
-      };
-    }
-    
-    if (primarySkinType === 'Oily') {
-      return {
-        cleanser: "Foaming / SA",
-        coreSerum: "Niacinamide",
-        secondarySerum: "",
-        moisturizer: "Oil-free gel",
-        sunscreen: "Matte SPF"
-      };
-    }
-    
-    // Combo/Normal
-    return {
-      cleanser: "Gentle foaming",
-      coreSerum: "Niacinamide 5%",
-      secondarySerum: "",
-      moisturizer: "Gel-cream",
-      sunscreen: "SPF 50"
-    };
+    return createBasicRoutine(context, {
+      cleanserType: 'gentle-foaming',
+      coreSerum: 'niacinamide',
+      moisturizerType: 'gel-cream'
+    });
   }
   
   if (poresBand === 'yellow' || poresBand === 'red') {
-    if (sensitivityLevel === 'high') {
-      return {
-        cleanser: "Gentle foaming",
-        coreSerum: "Niacinamide 5%",
-        secondarySerum: "Clay mask",
-        moisturizer: "Barrier cream",
-        sunscreen: "SPF 50"
-      };
-    }
-    
-    if (sensitivityLevel === 'mild') {
-      return {
-        cleanser: "SA cleanser",
-        coreSerum: "Niacinamide 5%",
-        secondarySerum: "Clay mask",
-        moisturizer: "Gel-cream",
-        sunscreen: "SPF 50"
-      };
-    }
-    
-    if (primarySkinType === 'Oily') {
-      return {
-        cleanser: "SA cleanser",
-        coreSerum: "Salicylic acid",
-        secondarySerum: "Niacinamide",
-        moisturizer: "Oil-free gel",
-        sunscreen: "Matte SPF"
-      };
-    }
-    
-    // Combo
-    return {
-      cleanser: "Gentle foaming",
-      coreSerum: "Salicylic acid",
-      secondarySerum: "Niacinamide",
-      moisturizer: "Gel-cream",
-      sunscreen: "SPF 50"
-    };
+    return createBasicRoutine(context, {
+      cleanserType: 'salicylic-acid',
+      coreSerum: 'niacinamide',
+      secondarySerum: 'salicylic-acid',
+      moisturizerType: 'gel'
+    });
   }
   
   return null;
@@ -466,103 +512,26 @@ function getPoresRecommendation(context: RecommendationContext): ProductRecommen
 // Texture-based recommendations
 function getTextureRecommendation(context: RecommendationContext): ProductRecommendation | null {
   const textureBand = context.effectiveBands?.texture?.toLowerCase();
-  const primarySkinType = getPrimarySkinType(context.skinType);
-  const sensitivityLevel = getSensitivityLevel(context);
   
-  // Aging concerns
   if (textureBand === 'yellow' || textureBand === 'red') {
     // Check if this is bumpy skin vs aging
     const isBumpySkin = context.formData.mainConcerns?.includes('Bumpy skin');
     
     if (isBumpySkin) {
-      if (sensitivityLevel === 'mild') {
-        return {
-          cleanser: "Cream cleanser",
-          coreSerum: "Niacinamide",
-          secondarySerum: "",
-          moisturizer: "CeraVe SA Lotion for Rough & Bumpy Skin",
-          sunscreen: "SPF 50"
-        };
-      }
-      
-      if (primarySkinType === 'Dry') {
-        return {
-          cleanser: "Cream cleanser",
-          coreSerum: "Adapalene",
-          secondarySerum: "Lactic acid",
-          moisturizer: "Barrier cream",
-          sunscreen: "SPF 50"
-        };
-      }
-      
-      if (primarySkinType === 'Oily') {
-        return {
-          cleanser: "Gentle foaming",
-          coreSerum: "Adapalene",
-          secondarySerum: "Salicylic acid",
-          moisturizer: "Oil-free gel",
-          sunscreen: "Matte SPF"
-        };
-      }
-      
-      // Combo
-      return {
-        cleanser: "Gentle foaming",
-        coreSerum: "Adapalene",
-        secondarySerum: "Salicylic acid",
-        moisturizer: "Gel-cream",
-        sunscreen: "SPF 50"
-      };
+      return createBasicRoutine(context, {
+        cleanserType: 'bumpy-skin',
+        coreSerum: 'salicylic-acid',
+        secondarySerum: 'lactic-acid',
+        moisturizerType: 'gel-cream'
+      });
     } else {
-      // Aging concerns
-      if (sensitivityLevel === 'high') {
-        return {
-          cleanser: "Cream cleanser",
-          coreSerum: "Bakuchiol/peptides",
-          secondarySerum: "Niacinamide",
-          moisturizer: "Barrier cream",
-          sunscreen: "SPF 50"
-        };
-      }
-      
-      if (sensitivityLevel === 'mild') {
-        return {
-          cleanser: "Cream cleanser",
-          coreSerum: "Bakuchiol/peptides",
-          secondarySerum: "Vitamin C (Not L-AA)",
-          moisturizer: "Barrier cream",
-          sunscreen: "SPF 50"
-        };
-      }
-      
-      if (primarySkinType === 'Dry') {
-        return {
-          cleanser: "Cream cleanser",
-          coreSerum: "Retinol / Peptides",
-          secondarySerum: "Vitamin C",
-          moisturizer: "Rich cream w/ ceramides",
-          sunscreen: "SPF 50"
-        };
-      }
-      
-      if (primarySkinType === 'Oily') {
-        return {
-          cleanser: "Foaming",
-          coreSerum: "Retinol (encapsulated/light)",
-          secondarySerum: "Vitamin C",
-          moisturizer: "Oil-free gel",
-          sunscreen: "SPF 50 matte"
-        };
-      }
-      
-      // Combo
-      return {
-        cleanser: "Gentle foaming",
-        coreSerum: "Retinol",
-        secondarySerum: "Vitamin C",
-        moisturizer: "Gel-cream",
-        sunscreen: "SPF 50"
-      };
+      // Aging texture concerns
+      return createBasicRoutine(context, {
+        cleanserType: 'gentle-foaming',
+        coreSerum: 'retinol',
+        secondarySerum: 'peptides',
+        moisturizerType: 'rich-cream'
+      });
     }
   }
   
@@ -572,8 +541,6 @@ function getTextureRecommendation(context: RecommendationContext): ProductRecomm
 // Pigmentation-based recommendations
 function getPigmentationRecommendation(context: RecommendationContext): ProductRecommendation | null {
   const pigmentationBand = context.effectiveBands?.pigmentation?.toLowerCase();
-  const primarySkinType = getPrimarySkinType(context.skinType);
-  const sensitive = isSensitive(context);
   
   if (pigmentationBand === 'yellow' || pigmentationBand === 'red') {
     // Determine if it's PIE (red) or PIH (brown) pigmentation
@@ -581,128 +548,264 @@ function getPigmentationRecommendation(context: RecommendationContext): ProductR
     const isRedPigmentation = pigmentationType.includes('red');
     const isBrownPigmentation = pigmentationType.includes('brown');
     
-    // PIE (red pigmentation)
+    // For now, use basic product recommendations for pigmentation
     if (isRedPigmentation) {
-      if (sensitive) {
-        return {
-          cleanser: "Gentle cleanser",
-          coreSerum: "Azelaic acid",
-          secondarySerum: "Niacinamide",
-          moisturizer: "Barrier cream",
-          sunscreen: "SPF 50"
-        };
-      }
-      
-      if (primarySkinType === 'Dry') {
-        return {
-          cleanser: "Gentle cleanser",
-          coreSerum: "Azelaic acid",
-          secondarySerum: "Niacinamide",
-          moisturizer: "Barrier cream",
-          sunscreen: "SPF 50"
-        };
-      }
-      
-      if (primarySkinType === 'Oily') {
-        return {
-          cleanser: "Foaming",
-          coreSerum: "Azelaic acid",
-          secondarySerum: "Niacinamide",
-          moisturizer: "Oil-free gel",
-          sunscreen: "Matte SPF"
-        };
-      }
-      
-      // Combo
-      return {
-        cleanser: "Foaming",
-        coreSerum: "Azelaic acid",
-        secondarySerum: "Niacinamide",
-        moisturizer: "Gel-cream",
-        sunscreen: "SPF 50"
-      };
+      return createBasicRoutine(context, {
+        cleanserType: 'gentle-foaming',
+        coreSerum: 'azelaic-acid',
+        secondarySerum: 'niacinamide',
+        moisturizerType: 'barrier-oily-combination'
+      });
     }
     
-    // PIH (brown pigmentation)
-    if (isBrownPigmentation) {
-      if (sensitive) {
-        return {
-          cleanser: "Gentle cleanser",
-          coreSerum: "Azelaic acid",
-          secondarySerum: "Niacinamide",
-          moisturizer: "Barrier cream",
-          sunscreen: "SPF 50"
-        };
-      }
-      
-      if (primarySkinType === 'Dry') {
-        return {
-          cleanser: "Gentle cleanser",
-          coreSerum: "Tranexamic acid",
-          secondarySerum: "Vitamin C",
-          moisturizer: "Barrier cream",
-          sunscreen: "SPF 50"
-        };
-      }
-      
-      if (primarySkinType === 'Oily') {
-        return {
-          cleanser: "SA or foaming",
-          coreSerum: "Tranexamic acid",
-          secondarySerum: "Vitamin C",
-          moisturizer: "Oil-free gel",
-          sunscreen: "Matte SPF"
-        };
-      }
-      
-      // Combo
-      return {
-        cleanser: "Foaming",
-        coreSerum: "Tranexamic acid",
-        secondarySerum: "Vitamin C",
-        moisturizer: "Gel-cream",
-        sunscreen: "SPF 50"
-      };
+    // PIH (brown pigmentation) 
+    if (isBrownPigmentation || !isRedPigmentation) {
+      return createBasicRoutine(context, {
+        cleanserType: 'gentle-foaming',
+        coreSerum: 'vitamin-c',
+        secondarySerum: 'alpha-arbutin',
+        moisturizerType: 'gel-cream'
+      });
     }
   }
   
   return null;
 }
 
-// Main recommendation function that prioritizes concerns
-export function generateRecommendations(context: RecommendationContext): ProductRecommendation {
-  // Priority order: Acne > Sebum > Pigmentation > Texture > Pores > Skin Type
+// Enhanced recommendation result with additional metadata
+export interface EnhancedRecommendation extends ProductRecommendation {
+  primaryConcern: string;
+  concernBand: string;
+  rationale?: string;
+  serumCount: number;
+  additionalSerums?: string[];
+}
+
+// Helper function to determine how many serums to recommend
+function determineSerumCount(context: RecommendationContext, activeConcerns: ConcernWithBand[]): { 
+  serumCount: number; 
+  additionalSerums: string[] 
+} {
+  const serumComfort = parseInt(context.formData.serumComfort || '1');
+  const additionalSerums: string[] = [];
   
-  // Check for acne recommendations first (highest priority)
-  const acneRec = getAcneRecommendation(context);
-  if (acneRec) return acneRec;
+  // If user only wants 1 serum or only has 1 concern, use just the core serum
+  if (serumComfort === 1 || activeConcerns.length <= 1) {
+    return { serumCount: 1, additionalSerums };
+  }
   
-  // Check sebum-related recommendations
-  const sebumRec = getSebumRecommendation(context);
-  if (sebumRec) return sebumRec;
+  // If user is comfortable with multiple serums and has multiple concerns,
+  // add core serums from other concerns as additional options
+  const otherConcerns = activeConcerns.slice(1); // Skip primary concern
   
-  // Check pigmentation recommendations
-  const pigmentationRec = getPigmentationRecommendation(context);
-  if (pigmentationRec) return pigmentationRec;
+  for (let i = 0; i < Math.min(otherConcerns.length, serumComfort - 1); i++) {
+    const concern = otherConcerns[i];
+    const additionalSerum = getCoreSerumForConcern(concern, context);
+    if (additionalSerum) {
+      additionalSerums.push(additionalSerum);
+    }
+  }
   
-  // Check texture recommendations
-  const textureRec = getTextureRecommendation(context);
-  if (textureRec) return textureRec;
+  return { 
+    serumCount: Math.min(serumComfort, 1 + additionalSerums.length), 
+    additionalSerums 
+  };
+}
+
+// Helper to get core serum for a specific concern
+function getCoreSerumForConcern(concern: ConcernWithBand, context: RecommendationContext): string | null {
+  const sensitive = isSensitive(context);
   
-  // Check pores recommendations
-  const poresRec = getPoresRecommendation(context);
-  if (poresRec) return poresRec;
+  switch (concern.concern) {
+    case 'acne':
+      if (concern.band === 'blue') return sensitive ? '10% Azelaic Acid' : 'Adapalene 0.1% PM';
+      if (concern.band === 'yellow' || concern.band === 'red') return 'BPO 2.5%';
+      break;
+    case 'sebum':
+      return 'Niacinamide';
+    case 'pigmentation':
+      return 'Azelaic acid';
+    case 'texture':
+      return sensitive ? 'Bakuchiol/peptides' : 'Retinol';
+    case 'pores':
+      return 'Niacinamide 5%';
+  }
   
-  // Fall back to skin type recommendations
-  const skinTypeRec = getSkinTypeRecommendation(context);
-  if (skinTypeRec) return skinTypeRec;
+  return null;
+}
+
+// Band priority mapping (worst-wins: Red > Yellow > Blue > Green)
+const BAND_PRIORITY: Record<string, number> = {
+  red: 1,
+  yellow: 2, 
+  blue: 3,
+  green: 4
+};
+
+// Concern priority for tie-breaking (Acne → Sebum → Pigmentation → Texture → Pores)
+const CONCERN_PRIORITY: Record<string, number> = {
+  acne: 1,
+  sebum: 2,
+  pigmentation: 3,
+  texture: 4,
+  pores: 5
+};
+
+interface ConcernWithBand {
+  concern: string;
+  band: string;
+  priority: number;
+}
+
+// Extract active concerns with their band colors from form data
+function extractActiveConcerns(context: RecommendationContext): ConcernWithBand[] {
+  const concerns: ConcernWithBand[] = [];
+  const mainConcerns = context.formData.mainConcerns || [];
   
-  // Default fallback recommendation
+  // Check each concern type and map to effective bands
+  if (mainConcerns.includes('Acne Management')) {
+    const band = context.effectiveBands?.acne?.toLowerCase() || 'green';
+    concerns.push({
+      concern: 'acne',
+      band,
+      priority: CONCERN_PRIORITY.acne
+    });
+  }
+  
+  if (mainConcerns.includes('Sebum Control')) {
+    const band = context.effectiveBands?.sebum?.toLowerCase() || 'green';
+    concerns.push({
+      concern: 'sebum', 
+      band,
+      priority: CONCERN_PRIORITY.sebum
+    });
+  }
+  
+  if (mainConcerns.includes('Hyperpigmentation')) {
+    // Check both red and brown pigmentation, take the worse one
+    const redBand = context.effectiveBands?.pigmentation_red?.toLowerCase() || 'green';
+    const brownBand = context.effectiveBands?.pigmentation_brown?.toLowerCase() || 'green';
+    const worseBand = BAND_PRIORITY[redBand] <= BAND_PRIORITY[brownBand] ? redBand : brownBand;
+    
+    concerns.push({
+      concern: 'pigmentation',
+      band: worseBand,
+      priority: CONCERN_PRIORITY.pigmentation
+    });
+  }
+  
+  if (mainConcerns.includes('Texture Improvement')) {
+    const band = context.effectiveBands?.texture?.toLowerCase() || 'green';
+    concerns.push({
+      concern: 'texture',
+      band,
+      priority: CONCERN_PRIORITY.texture
+    });
+  }
+  
+  if (mainConcerns.includes('Pore Refinement')) {
+    const band = context.effectiveBands?.pores?.toLowerCase() || 'green';
+    concerns.push({
+      concern: 'pores',
+      band,
+      priority: CONCERN_PRIORITY.pores
+    });
+  }
+  
+  return concerns;
+}
+
+// Find the primary concern using worst-wins logic
+function findPrimaryConcern(concerns: ConcernWithBand[]): ConcernWithBand | null {
+  if (concerns.length === 0) return null;
+  
+  // Sort by band priority first (worst wins), then by concern priority for tie-breaking
+  const sorted = concerns.sort((a, b) => {
+    const bandComparison = BAND_PRIORITY[a.band] - BAND_PRIORITY[b.band];
+    if (bandComparison !== 0) return bandComparison;
+    
+    // If bands are the same, use concern priority
+    return a.priority - b.priority;
+  });
+  
+  return sorted[0];
+}
+
+// Main recommendation function with worst-wins logic
+export function generateRecommendations(context: RecommendationContext): EnhancedRecommendation {
+  // Extract active concerns from the user's selections
+  const activeConcerns = extractActiveConcerns(context);
+  const primaryConcern = findPrimaryConcern(activeConcerns);
+  
+  let recommendation: ProductRecommendation | null = null;
+  let concernName = '';
+  let bandColor = '';
+  
+  if (primaryConcern) {
+    // Generate recommendation based on primary concern using worst-wins logic
+    concernName = primaryConcern.concern;
+    bandColor = primaryConcern.band;
+    
+    switch (primaryConcern.concern) {
+      case 'acne':
+        recommendation = getAcneRecommendation(context);
+        break;
+      case 'sebum':
+        recommendation = getSebumRecommendation(context);
+        break;
+      case 'pigmentation':
+        recommendation = getPigmentationRecommendation(context);
+        break;
+      case 'texture':
+        recommendation = getTextureRecommendation(context);
+        break;
+      case 'pores':
+        recommendation = getPoresRecommendation(context);
+        break;
+    }
+  }
+  
+  // Fall back to skin type recommendations if no concern-based match
+  if (!recommendation) {
+    recommendation = getSkinTypeRecommendation(context);
+    concernName = 'Skin Type';
+    bandColor = '';
+  }
+  
+  // Final fallback
+  if (!recommendation) {
+    const priceTier = getPriceTier(context);
+    const cleanser = getProductByTier(PRODUCT_DATABASE.cleanser['gentle-foaming'], priceTier);
+    const niacinamide = getProductByTier(PRODUCT_DATABASE.serum['niacinamide'], priceTier);
+    const moisturizer = getProductByTier(PRODUCT_DATABASE.moisturizer['gel-cream'], priceTier);
+    const sunscreen = getProductByTier(PRODUCT_DATABASE.sunscreen['general'], priceTier);
+    
+    recommendation = {
+      cleanser: formatProductName(cleanser),
+      coreSerum: formatProductName(niacinamide),
+      secondarySerum: "",
+      moisturizer: formatProductName(moisturizer),
+      sunscreen: formatProductName(sunscreen)
+    };
+    concernName = 'General Care';
+    bandColor = '';
+  }
+  
+  // Determine serum count and additional serums
+  const serumLogic = determineSerumCount(context, activeConcerns);
+  
+  const primaryConcernLabel = bandColor 
+    ? `${concernName.charAt(0).toUpperCase() + concernName.slice(1)} (${bandColor})`
+    : concernName.charAt(0).toUpperCase() + concernName.slice(1);
+  
   return {
-    cleanser: "Gentle cleanser",
-    coreSerum: "Niacinamide",
-    secondarySerum: "",
-    moisturizer: "Gel-cream",
-    sunscreen: "SPF 50"
+    ...recommendation,
+    primaryConcern: primaryConcernLabel,
+    concernBand: bandColor,
+    serumCount: serumLogic.serumCount,
+    additionalSerums: serumLogic.additionalSerums,
+    rationale: activeConcerns.length > 1 
+      ? `Primary concern selected using worst-wins logic. Other concerns: ${activeConcerns.filter(c => c !== primaryConcern).map(c => `${c.concern} (${c.band})`).join(', ')}`
+      : undefined
   };
 }
