@@ -46,6 +46,7 @@ function step(label: string, product: string, index: number): RoutineStep {
 
 function decideAMSerum(key: string | undefined, flags: SchedulerInput['flags']): string | undefined {
   if (!key) return undefined
+  if (flags?.sensitivityBand === 'red') return undefined
   const tag = serumKeyToTag(key)
   const vcForm = flags?.vc_form || (key === 'vitamin-c' ? 'laa' : undefined)
   // Retinoids: never AM
@@ -73,7 +74,7 @@ function emptyPM(cleanser: string, moisturizer: string): RoutineStep[] {
 // Very lightweight first pass scheduler that obeys key acceptance checks.
 export function buildWeeklyPlan(input: SchedulerInput, timeZone = 'Asia/Kolkata'): { plan: WeeklyPlan, customerView: CustomerView } {
   const warnings: string[] = []
-  const serumComfort = Math.max(1, Math.min(2, input.flags?.serumComfort ?? 2))
+  const serumComfort = (input.flags?.sensitivityBand === 'red') ? 0 : Math.max(1, Math.min(2, input.flags?.serumComfort ?? 2))
   const sensitive = !!input.flags?.sensitivity
   const pregnant = !!input.flags?.pregnancy
   const sensBand = input.flags?.sensitivityBand || (sensitive ? 'yellow' : 'green')
@@ -249,20 +250,21 @@ function budgetFromSensitivityBand(band: 'green'|'blue'|'yellow'|'red'): { night
       return { nightlyCap: 70, minRestNights: 3 }
     case 'red':
     default:
-      return { nightlyCap: 30, minRestNights: 4 }
+      return { nightlyCap: 0, minRestNights: 4 }
   }
 }
 
 function tagCost(tag: ReturnType<typeof serumKeyToTag>): number {
   switch (tag) {
     case 'retinoids': return 60
-    case 'benzoyl_peroxide': return 40
-    case 'aha': return 30
-    case 'bha': return 30
+    case 'benzoyl_peroxide': return 50
+    case 'aha': return 60
+    case 'bha': return 60
     case 'vitamin_c_ascorbic': return 25
-    case 'azelaic': return 20
+    case 'tranexamic': return 20
+    case 'azelaic': return 30
     case 'niacinamide': return 10
-    case 'peptides': return 5
+    case 'peptides': return 0
     default: return 0
   }
 }

@@ -11,6 +11,7 @@ export type IngredientTag =
   | 'azelaic'
   | 'benzoyl_peroxide'
   | 'peptides'
+  | 'tranexamic'
   | 'ceramides'
   | 'sunscreen'
 
@@ -74,8 +75,8 @@ export function serumKeyToTag(key?: string): IngredientTag | null {
       return 'azelaic'
     case 'alpha-arbutin':
     case 'tranexamic-acid':
-      // Safe with most
-      return null
+      // Safe with most; treat tranexamic as distinct tag for budgeting
+      return key === 'tranexamic-acid' ? 'tranexamic' : null
     case 'benzoyl-peroxide':
       return 'benzoyl_peroxide'
     case 'peptides':

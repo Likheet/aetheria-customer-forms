@@ -52,6 +52,56 @@ export interface RecommendationContext {
   };
 }
 
+// ---- Gate helpers ----
+function hasSevereCysticGate(context: RecommendationContext): boolean {
+  const v = (context.formData as any).severeCysticAcne;
+  return typeof v === 'string' && v.toLowerCase() === 'yes';
+}
+
+function hasBarrierStressHighGate(context: RecommendationContext): boolean {
+  const v = (context.formData as any).barrierStressHigh;
+  return typeof v === 'string' && v.toLowerCase() === 'yes';
+}
+
+function hasRecentIsotretinoinGate(context: RecommendationContext): boolean {
+  const v = (context.formData as any).recentIsotretinoin;
+  return typeof v === 'string' && v.toLowerCase() === 'yes';
+}
+
+function parsedAllergies(context: RecommendationContext): string {
+  return ((context.formData as any).allergies || '').toLowerCase();
+}
+
+// Build disallow set for serum keys based on safety gates and allergies
+function buildGateDisallowSet(context: RecommendationContext): Set<string> {
+  const disallow = new Set<string>();
+  const onIso = hasRecentIsotretinoinGate(context);
+  const allergies = parsedAllergies(context);
+  const pregnant = isPregnancySafe(context);
+  const barrierFirst = hasBarrierStressHighGate(context);
+
+  if (onIso) {
+    // Avoid initiating high-irritant actives while on isotretinoin
+    ['retinol','adapalene','benzoyl-peroxide','salicylic-acid','lactic-acid','vitamin-c'].forEach(k => disallow.add(k));
+  }
+  if (pregnant) {
+    // Strictly avoid retinoids in pregnancy
+    ['retinol','adapalene'].forEach(k => disallow.add(k));
+  }
+  if (barrierFirst) {
+    // Phase 0: avoid retinoids/BHA/AHA/BPO
+    ['retinol','adapalene','salicylic-acid','lactic-acid','benzoyl-peroxide'].forEach(k => disallow.add(k));
+  }
+  if (allergies.includes('aspirin') || allergies.includes('salicyl')) disallow.add('salicylic-acid');
+  if (allergies.includes('benzoyl')) disallow.add('benzoyl-peroxide');
+  if (allergies.includes('retino')) { disallow.add('retinol'); disallow.add('adapalene'); }
+  if (allergies.includes('niacinamide')) disallow.add('niacinamide');
+  if (allergies.includes('vitamin c') || allergies.includes('ascorb')) disallow.add('vitamin-c');
+  if (allergies.includes('lactic') || allergies.includes('aha') || allergies.includes('glycol')) disallow.add('lactic-acid');
+
+  return disallow;
+}
+
 // Helper function to determine if user is sensitive
 function isSensitive(context: RecommendationContext): boolean {
   const sensitivityBand = context.effectiveBands?.sensitivity?.toLowerCase();
@@ -139,6 +189,62 @@ function createBasicRoutine(context: RecommendationContext, options: {
       secondary_acid_strength: 'high',
     }
   };
+}
+
+// Build an explicit barrier-first routine (Phase 0) — no strong actives
+function buildBarrierFirstRoutine(context: RecommendationContext): ProductRecommendation {
+  const primarySkinType = getPrimarySkinType(context.skinType);
+  return createBasicRoutine(context, {
+    cleanserType: 'gentle-foaming',
+    coreSerum: 'niacinamide',
+    secondarySerum: undefined,
+    moisturizerType: primarySkinType === 'Dry' ? 'barrier-dry' : 'barrier-oily-combination'
+  });
+}
+
+// Adjust an existing recommendation based on isotretinoin and allergy gates
+function adjustForIsotretinoinAndAllergies(reco: ProductRecommendation, context: RecommendationContext): ProductRecommendation {
+  const disallow = buildGateDisallowSet(context);
+
+  // Determine current keys (fallbacks if absent)
+  const keys = (reco as ProductRecommendation)._keys || {} as any;
+  const currentCleanser = keys.cleanserType || 'gentle-foaming';
+  let coreKey: string | undefined = keys.core || undefined;
+  let secKey: string | undefined = keys.secondary || undefined;
+
+  // Cleanser: avoid salicylic cleanser on iso or aspirin allergy
+  const onIso = hasRecentIsotretinoinGate(context);
+  const cleanserType = (onIso || disallow.has('salicylic-acid')) && currentCleanser === 'salicylic-acid'
+    ? 'gentle-foaming'
+    : currentCleanser || 'gentle-foaming';
+
+  // Replace disallowed core/secondary
+  const safeFallbacks = ['azelaic-acid','niacinamide','peptides'];
+  if (!coreKey || disallow.has(coreKey)) {
+    coreKey = safeFallbacks.find(k => !disallow.has(k));
+  }
+  if (secKey && disallow.has(secKey)) {
+    // Try to replace with a different safe option that isn't same as core
+    const safe = safeFallbacks.find(k => !disallow.has(k) && k !== coreKey!);
+    secKey = safe || undefined;
+  }
+
+  // If both keys end up undefined (extreme allergies), fall back to niacinamide if not disallowed
+  if (!coreKey) {
+    coreKey = disallow.has('niacinamide') ? 'peptides' : 'niacinamide';
+  }
+
+  // Rebuild recommendation strings using safe keys
+  const primarySkinType = getPrimarySkinType(context.skinType);
+  const moisturizerType = keys.moisturizerType || (primarySkinType === 'Dry' ? 'barrier-dry' : 'barrier-oily-combination');
+  const adjusted = createBasicRoutine(context, {
+    cleanserType,
+    coreSerum: coreKey!,
+    secondarySerum: secKey,
+    moisturizerType
+  });
+
+  return adjusted;
 }
 
 // Skin type specific recommendations
@@ -609,6 +715,7 @@ function determineSerumCount(
   serumCount: number; 
   additionalSerums: string[] 
 } {
+  const disallow = buildGateDisallowSet(context);
   const serumComfort = parseInt(context.formData.serumComfort || '1');
   const sensBand = (context.effectiveBands?.sensitivity || 'green').toLowerCase();
   const additionalSerums: string[] = [];
@@ -630,7 +737,7 @@ function determineSerumCount(
   for (let i = 0; i < Math.min(otherConcerns.length, serumComfort - 1); i++) {
     const concern = otherConcerns[i];
     const k = getCoreSerumForConcern(concern, context);
-    if (k) candidates.push(k);
+    if (k && !disallow.has(k)) candidates.push(k);
   }
   // Filter out disallowed clashes against the chosen core/secondary
   const coreTag = coreKey ? serumKeyToTag(coreKey) : null;
@@ -809,6 +916,57 @@ function findPrimaryConcern(concerns: ConcernWithBand[]): ConcernWithBand | null
 
 // Main recommendation function with worst-wins logic
 export function generateRecommendations(context: RecommendationContext): EnhancedRecommendation {
+  // Safety overrides from gates
+  if (hasSevereCysticGate(context)) {
+    return {
+      cleanser: '–',
+      coreSerum: '–',
+      secondarySerum: '–',
+      moisturizer: '–',
+      sunscreen: '– (DERMATOLOGIST REFERRAL REQUIRED)',
+      primaryConcern: 'Safety',
+      concernBand: '',
+      serumCount: 0,
+    } as EnhancedRecommendation;
+  }
+
+  if (hasBarrierStressHighGate(context)) {
+    const barrierReco = buildBarrierFirstRoutine(context);
+    const enhanced: EnhancedRecommendation = {
+      ...barrierReco,
+      primaryConcern: 'Barrier-first (Phase 0)',
+      concernBand: (context.effectiveBands?.sensitivity || '').toLowerCase(),
+      serumCount: 1,
+      additionalSerums: []
+    };
+    try {
+      const keys = (barrierReco as ProductRecommendation)._keys || ({} as any);
+      const flags = (barrierReco as ProductRecommendation)._flags || ({} as any);
+      if (keys.core) {
+        const { plan, customerView } = buildWeeklyPlan({
+          cleanser: barrierReco.cleanser,
+          coreSerumKey: keys.core,
+          secondarySerumKey: keys.secondary,
+          moisturizer: barrierReco.moisturizer,
+          sunscreen: barrierReco.sunscreen,
+          flags: {
+            vc_form: flags.vc_form,
+            core_acid_strength: flags.core_acid_strength,
+            secondary_acid_strength: flags.secondary_acid_strength,
+            pregnancy: isPregnancySafe(context),
+            sensitivity: isSensitive(context),
+            sensitivityBand: (context.effectiveBands?.sensitivity || 'green').toLowerCase() as 'green'|'blue'|'yellow'|'red',
+            serumComfort: parseInt(context.formData.serumComfort || '1'),
+          }
+        });
+        enhanced.schedule = { ...plan, customerView } as any;
+      }
+    } catch (e) {
+      console.warn('Failed to build schedule (barrier-first):', e);
+    }
+    return enhanced;
+  }
+
   // Extract active concerns from the user's selections
   const activeConcerns = extractActiveConcerns(context);
   const primaryConcern = findPrimaryConcern(activeConcerns);
@@ -867,6 +1025,11 @@ export function generateRecommendations(context: RecommendationContext): Enhance
     bandColor = '';
   }
   
+  // Apply isotretinoin/allergy adjustments post-selection
+  if (recommendation) {
+    recommendation = adjustForIsotretinoinAndAllergies(recommendation, context);
+  }
+
   // Determine serum count and additional serums (filtering by compatibility with primary selection when possible)
   const coreKeyForCompat = (recommendation as ProductRecommendation)._keys?.core;
   const secKeyForCompat = (recommendation as ProductRecommendation)._keys?.secondary;
