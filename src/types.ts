@@ -88,7 +88,6 @@ export interface UpdatedConsultData {
   routineSteps: string;
   serumComfort: string;
   moisturizerTexture: string;
-  brandPreference: string;
   budget: string;
   
   // Additional fields that might be missing

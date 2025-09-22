@@ -105,7 +105,6 @@ const initialFormData: UpdatedConsultData = {
   routineSteps: '',
   serumComfort: '',
   moisturizerTexture: '',
-  brandPreference: '',
   budget: '',
   
   // Additional fields
@@ -200,7 +199,6 @@ const dummyFormData: UpdatedConsultData = {
   routineSteps: '4-step',
   serumComfort: '2',
   moisturizerTexture: 'Gel',
-  brandPreference: 'Tech-driven',
   budget: '',
   
   // Additional fields
@@ -942,8 +940,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     // Add lifestyle questions: 5 (diet, water, sleep, stress, environment)
     totalSteps += 5;
     
-    // Add preference questions: 4 (routine-steps, serum-comfort, moisturizer-texture, brand-preference)
-    totalSteps += 4;
+  // Add preference questions: 3 (routine-steps, serum-comfort, moisturizer-texture)
+  totalSteps += 3;
     
     return totalSteps;
   };
@@ -1020,7 +1018,6 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       routineSteps: prevData.routineSteps !== '' ? prevData.routineSteps : dummyFormData.routineSteps,
       serumComfort: prevData.serumComfort !== '' ? prevData.serumComfort : dummyFormData.serumComfort,
       moisturizerTexture: prevData.moisturizerTexture !== '' ? prevData.moisturizerTexture : dummyFormData.moisturizerTexture,
-        brandPreference: prevData.brandPreference !== '' ? prevData.brandPreference : dummyFormData.brandPreference,
         budget: prevData.budget,      // Additional fields
       // Only fill these when the corresponding UI steps exist; keeping them as-is otherwise
       allergies: prevData.allergies, 
@@ -1070,12 +1067,12 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     if (currentStep === lifestyleStartStep + 3) return 'stress-levels';
     if (currentStep === lifestyleStartStep + 4) return 'environment';
     
-    // Individual preference questions (4 questions)
+  // Individual preference questions (3 questions)
     const preferenceStartStep = lifestyleStartStep + 5;
     if (currentStep === preferenceStartStep) return 'routine-steps';
     if (currentStep === preferenceStartStep + 1) return 'serum-comfort';
     if (currentStep === preferenceStartStep + 2) return 'moisturizer-texture';
-    if (currentStep === preferenceStartStep + 3) return 'brand-preference';
+  // brand-preference question removed
     
     const concernIndex = currentStep - 20; // Start after main concerns step (19)
     if (hasPriorityStep && currentStep === priorityStepIndex) return 'concern-priority';
@@ -1209,8 +1206,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           if (!formData.serumComfort.trim()) newErrors.serumComfort = 'Please select your serum comfort level';
         } else if (currentConcernStep === 'moisturizer-texture') {
           if (!formData.moisturizerTexture.trim()) newErrors.moisturizerTexture = 'Please select your preferred moisturizer texture';
-        } else if (currentConcernStep === 'brand-preference') {
-          if (!formData.brandPreference.trim()) newErrors.brandPreference = 'Please select your brand preference';
+        // brand-preference validation removed
         } else if (currentConcernStep && typeof currentConcernStep === 'object') {
           const { concern, step: stepType, questionIndex } = currentConcernStep as any;
           if (stepType === 'sensitivity-question' && typeof questionIndex === 'number') {
@@ -2248,39 +2244,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       );
     }
 
-    if (currentConcernStep === 'brand-preference') {
-      return (
-        <div className="space-y-12 flex flex-col justify-center h-full py-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-              <Sparkles className="w-8 h-8 text-amber-600" />
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-              What type of skincare approach do you prefer?
-            </h2>
-          </div>
-
-          <div className="max-w-2xl mx-auto w-full">
-            <div className="grid grid-cols-1 gap-4">
-              {['Natural', 'Minimal', 'Tech-driven', 'Active-based', 'Luxury'].map((option) => (
-                <label key={option} className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-amber-300 transition-all duration-300">
-                  <input
-                    type="radio"
-                    name="brandPreference"
-                    value={option}
-                    checked={formData.brandPreference === option}
-                    onChange={(e) => updateFormData({ brandPreference: e.target.value })}
-                    className="mr-3 h-5 w-5 text-amber-600 border-gray-300 focus:ring-amber-400"
-                  />
-                  <span className="text-lg text-gray-700">{option}</span>
-                </label>
-              ))}
-            </div>
-            {errors.brandPreference && <p className="text-red-500 text-sm mt-2">{errors.brandPreference}</p>}
-          </div>
-        </div>
-      );
-    }
+    // brand-preference UI removed
 
     // Handle base steps (1-14)
     switch (currentStep) {

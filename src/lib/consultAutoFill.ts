@@ -44,7 +44,7 @@ export const SERUM_COMFORT_OPTIONS = ['1', '2', '3'] as const;
 
 export const MOISTURIZER_TEXTURE_OPTIONS = ['Gel', 'Lotion', 'Cream', 'Rich Balm'] as const;
 
-export const BRAND_PREFERENCE_OPTIONS = ['Natural', 'Minimal', 'Tech-driven', 'Active-based', 'Luxury'] as const;
+// brand preference removed from form
 
 export const PRODUCT_DURATION_OPTIONS = [
   'Less than 1 month',
@@ -564,7 +564,7 @@ export const generateConsultAutoFill = ({ base, machine, rng }: ConsultAutoFillP
     routineSteps: randomFrom(ROUTINE_STEP_OPTIONS, random),
     serumComfort: randomFrom(SERUM_COMFORT_OPTIONS, random),
     moisturizerTexture: randomFrom(MOISTURIZER_TEXTURE_OPTIONS, random),
-    brandPreference: randomFrom(BRAND_PREFERENCE_OPTIONS, random),
+  // brandPreference removed
     budget: randomFrom(SAMPLE_BUDGETS, random),
     allergies: randomFrom(SAMPLE_ALLERGIES, random),
     pregnancyBreastfeeding: randomFrom(SAMPLE_PREGNANCY_STATUSES, random),

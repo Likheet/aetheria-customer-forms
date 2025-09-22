@@ -268,7 +268,6 @@ function transformFormData(formData: UpdatedConsultData & { triageOutcomes?: any
       routine_steps: normalizeValue(formData.routineSteps),
       serum_comfort: normalizeValue(formData.serumComfort),
       moisturizer_texture: normalizeValue(formData.moisturizerTexture),
-      brand_preference: normalizeValue(formData.brandPreference),
       budget: normalizeValue(formData.budget),
     },
     evaluation: {
