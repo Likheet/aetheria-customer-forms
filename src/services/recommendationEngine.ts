@@ -720,27 +720,53 @@ interface ConcernWithBand {
 function extractActiveConcerns(context: RecommendationContext): ConcernWithBand[] {
   const concerns: ConcernWithBand[] = [];
   const mainConcerns = context.formData.mainConcerns || [];
+
+  // Map UI labels to normalized keys used internally
+  const toKey = (label: string): 'acne'|'sebum'|'pigmentation'|'texture'|'pores'|null => {
+    const s = (label || '').toLowerCase();
+    if (/acne/.test(s)) return 'acne';
+    if (/sebum|oiliness/.test(s)) return 'sebum';
+    if (/pigment/.test(s)) return 'pigmentation';
+    if (/wrinkle|bumpy|texture/.test(s)) return 'texture';
+    if (/pore/.test(s)) return 'pores';
+    return null;
+  };
+
+  // Build user-defined priority map (lower = higher priority)
+  const priorityOrder: string[] = Array.isArray((context.formData as any).concernPriority)
+    ? ((context.formData as any).concernPriority as string[])
+    : [];
+  const rankMap: Record<string, number> = {};
+  priorityOrder.forEach((label, idx) => {
+    const key = toKey(label);
+    if (key) rankMap[key] = idx + 1; // 1-based rank
+  });
+  const getRank = (key: string): number => {
+    // If user provided a rank, use it; otherwise default static priority
+    if (rankMap[key] != null) return rankMap[key];
+    return (CONCERN_PRIORITY as any)[key] ?? 999;
+  };
   
   // Check each concern type and map to effective bands
-  if (mainConcerns.includes('Acne Management')) {
+  if (mainConcerns.includes('Acne Management') || mainConcerns.includes('Acne')) {
     const band = context.effectiveBands?.acne?.toLowerCase() || 'green';
     concerns.push({
       concern: 'acne',
       band,
-      priority: CONCERN_PRIORITY.acne
+      priority: getRank('acne')
     });
   }
   
-  if (mainConcerns.includes('Sebum Control')) {
+  if (mainConcerns.includes('Sebum Control') || mainConcerns.includes('Oiliness')) {
     const band = context.effectiveBands?.sebum?.toLowerCase() || 'green';
     concerns.push({
       concern: 'sebum', 
       band,
-      priority: CONCERN_PRIORITY.sebum
+      priority: getRank('sebum')
     });
   }
   
-  if (mainConcerns.includes('Hyperpigmentation')) {
+  if (mainConcerns.includes('Hyperpigmentation') || mainConcerns.includes('Pigmentation')) {
     // Check both red and brown pigmentation, take the worse one
     const redBand = context.effectiveBands?.pigmentation_red?.toLowerCase() || 'green';
     const brownBand = context.effectiveBands?.pigmentation_brown?.toLowerCase() || 'green';
@@ -749,25 +775,25 @@ function extractActiveConcerns(context: RecommendationContext): ConcernWithBand[
     concerns.push({
       concern: 'pigmentation',
       band: worseBand,
-      priority: CONCERN_PRIORITY.pigmentation
+      priority: getRank('pigmentation')
     });
   }
   
-  if (mainConcerns.includes('Texture Improvement')) {
+  if (mainConcerns.includes('Texture Improvement') || mainConcerns.includes('Fine lines & wrinkles') || mainConcerns.includes('Bumpy skin')) {
     const band = context.effectiveBands?.texture?.toLowerCase() || 'green';
     concerns.push({
       concern: 'texture',
       band,
-      priority: CONCERN_PRIORITY.texture
+      priority: getRank('texture')
     });
   }
   
-  if (mainConcerns.includes('Pore Refinement')) {
+  if (mainConcerns.includes('Pore Refinement') || mainConcerns.includes('Large pores')) {
     const band = context.effectiveBands?.pores?.toLowerCase() || 'green';
     concerns.push({
       concern: 'pores',
       band,
-      priority: CONCERN_PRIORITY.pores
+      priority: getRank('pores')
     });
   }
   
@@ -783,7 +809,7 @@ function findPrimaryConcern(concerns: ConcernWithBand[]): ConcernWithBand | null
     const bandComparison = BAND_PRIORITY[a.band] - BAND_PRIORITY[b.band];
     if (bandComparison !== 0) return bandComparison;
     
-    // If bands are the same, use concern priority
+    // If bands are the same, use concern priority (lower is higher priority)
     return a.priority - b.priority;
   });
   

@@ -46,6 +46,8 @@ export interface UpdatedConsultData {
   
   // Section D – Main Concerns
   mainConcerns: string[];
+  // Ordered prioritization of selected concerns (labels as shown in UI)
+  concernPriority?: string[];
   acneBreakouts: AcneBreakoutDetail[];
   acneDuration: string;
   pigmentationType: string;

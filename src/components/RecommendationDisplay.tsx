@@ -16,39 +16,39 @@ type RitualStep = {
 const STEPS: RitualStep[] = [
   {
     id: "cleanser",
-    title: "Cleanse",
+    title: "Cleanser",
     icon: Droplets,
     timing: "AM & PM",
-    narrative: "Sweep away impurities and balance the skin for treatment.",
+    narrative: "Use a gentle cleanser.",
   },
   {
     id: "coreSerum",
-    title: "Target",
+    title: "Treatment serum",
     icon: FlaskRound,
     timing: "AM & PM",
-    narrative: "Apply the hero active that addresses the priority concern.",
+    narrative: "Use your primary treatment serum.",
   },
   {
     id: "secondarySerum",
-    title: "Support",
+    title: "Alternate serum",
     icon: Sparkles,
     timing: "Alternate",
-    narrative: "Introduce complementary treatment on evenings that invite it.",
+    narrative: "Use on alternate evenings if included.",
     optional: true,
   },
   {
     id: "moisturizer",
-    title: "Fortify",
+    title: "Moisturizer",
     icon: Shield,
     timing: "AM & PM",
-    narrative: "Seal the ritual with barrier replenishment and lasting comfort.",
+    narrative: "Apply moisturizer to lock in hydration.",
   },
   {
     id: "sunscreen",
-    title: "Protect",
+    title: "Sunscreen",
     icon: Sun,
     timing: "AM only",
-    narrative: "Finish with daily UV defense to preserve results.",
+    narrative: "Apply sunscreen in the morning.",
   },
 ];
 
@@ -56,6 +56,9 @@ interface RecommendationDisplayProps {
   recommendation: EnhancedRecommendation;
   userName?: string;
   onComplete?: () => void;
+  onSubmit?: () => void;
+  submitting?: boolean;
+  onBackToEdit?: () => void;
 }
 
 const Pill: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -64,7 +67,7 @@ const Pill: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </span>
 );
 
-const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({ recommendation, userName = "Guest", onComplete }) => {
+const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({ recommendation, userName = "Guest", onComplete, onSubmit, submitting, onBackToEdit }) => {
   const ritual = STEPS.map((step) => {
     const product = recommendation[step.id] as string;
     return { ...step, product: product?.trim() }; 
@@ -82,7 +85,7 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({ recommend
   };
 
   const hasSerum = (steps: Array<{label:string;product:string}>) => steps.some(s => s.label === 'Serum');
-  const DAY_ORDER: Array<keyof typeof schedule.pmByDay> = ['mon','tue','wed','thu','fri','sat','sun'];
+  const DAY_ORDER = ['mon','tue','wed','thu','fri','sat','sun'] as const;
   const stepsEqual = (a: Array<{step:number;label:string;product?:string}>, b: Array<{step:number;label:string;product?:string}>) => {
     if (a.length !== b.length) return false;
     for (let i = 0; i < a.length; i++) {
@@ -102,15 +105,14 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({ recommend
     <div className="space-y-10">
       <header className="space-y-3 text-center md:text-left">
         <Badge className="bg-primary/15 text-primary" variant="primary">
-          Personalised Ritual
+          Recommendations
         </Badge>
         <div className="space-y-2">
           <h2 className="text-gradient-gold text-3xl font-semibold md:text-4xl">
-            {userName.split(" ")[0]}'s curated regimen
+            {userName.split(" ")[0]}'s recommendations
           </h2>
           <p className="text-sm text-muted-foreground/75 md:max-w-2xl md:text-base">
-            Primary focus: <span className="font-semibold text-primary">{recommendation.primaryConcern}</span>. 
-            Layer each moment with intention. This sequence reflects your diagnostic priorities and lifestyle rhythm.
+            Primary focus: <span className="font-semibold text-primary">{recommendation.primaryConcern}</span>.
           </p>
           {recommendation.rationale && (
             <div className="mt-4 p-4 bg-primary/10 border border-primary/20 rounded-lg">
@@ -167,9 +169,7 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({ recommend
               <CardTitle className="text-sm uppercase tracking-[0.3em] text-muted-foreground/60">Routine Summary</CardTitle>
             </div>
             <CardDescription className="text-muted-foreground/70">
-              {pmUniform
-                ? 'Your AM and PM steps are consistent day-to-day.'
-                : 'Your AM is daily; PM alternates through the week to respect sensitivity and irritation budget.'}
+              {pmUniform ? 'AM and PM are the same each day.' : 'AM is daily; PM alternates through the week.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -339,14 +339,33 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({ recommend
         </Card>
       </div>
       
-      {onComplete && (
-        <div className="flex justify-center pt-6">
-          <button
-            onClick={onComplete}
-            className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold transition-all duration-300 shadow-lg hover:from-green-700 hover:to-emerald-700"
-          >
-            Back to Staff Portal
-          </button>
+      {(onSubmit || onComplete || onBackToEdit) && (
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-6">
+          {onSubmit && (
+            <button
+              onClick={onSubmit}
+              disabled={!!submitting}
+              className={`px-8 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg text-white ${submitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'}`}
+            >
+              {submitting ? 'Saving…' : 'Submit Consultation'}
+            </button>
+          )}
+          {onBackToEdit && (
+            <button
+              onClick={onBackToEdit}
+              className="px-8 py-3 border border-border/60 rounded-lg font-semibold transition-all duration-300 bg-surface/80 hover:bg-surface text-foreground"
+            >
+              Back to edit
+            </button>
+          )}
+          {onComplete && (
+            <button
+              onClick={onComplete}
+              className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold transition-all duration-300 shadow-lg hover:from-green-700 hover:to-emerald-700"
+            >
+              Back to Staff Portal
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -62,7 +62,13 @@ export default function ChooseProfile({ onBack }: { onBack: () => void }) {
     return (
       <UpdatedConsultForm
         onBack={() => setSelected(null)}
-        onComplete={() => onBack()}
+        onComplete={() => {
+          // Return to staff portal and force-refresh to ensure no stale entries linger
+          try { onBack(); } catch {}
+          if (typeof window !== 'undefined' && window.location) {
+            window.location.reload();
+          }
+        }}
         machine={selected.machine}
         machineRaw={selected.metrics}
         sessionId={selected.session_id}

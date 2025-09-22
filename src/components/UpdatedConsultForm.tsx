@@ -64,6 +64,7 @@ const initialFormData: UpdatedConsultData = {
   
   // Section D – Main Concerns
   mainConcerns: [],
+  concernPriority: [],
   acneBreakouts: [],
   acneDuration: '',
   pigmentationType: '',
@@ -311,6 +312,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [recommendation, setRecommendation] = useState<any>(null);
+  const [decisionAuditState, setDecisionAuditState] = useState<any>(null);
+  const [triageOutcomesState, setTriageOutcomesState] = useState<any[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   // RULE_SPECS runtime state
   const [runtimeSelf, setRuntimeSelf] = useState<any>({});
@@ -931,6 +934,10 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         totalSteps += 1; // Just severity
       }
     });
+    // Add prioritization step if 2+ concerns selected
+    if (concerns.length >= 2) {
+      totalSteps += 1;
+    }
     
     // Add lifestyle questions: 5 (diet, water, sleep, stress, environment)
     totalSteps += 5;
@@ -1051,7 +1058,10 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const getCurrentConcernStep = () => {
     
     const concernSteps = getConcernSteps();
-    const lifestyleStartStep = 20 + concernSteps.length; // Start after main concerns and concern follow-ups
+    // Insert prioritization step if 2+ concerns selected
+    const hasPriorityStep = (formData.mainConcerns || []).length >= 2;
+    const priorityStepIndex = 20 + concernSteps.length; // immediately after concern follow-ups
+    const lifestyleStartStep = priorityStepIndex + (hasPriorityStep ? 1 : 0); // Start after priority (if present)
     
     // Individual lifestyle questions (5 questions)
     if (currentStep === lifestyleStartStep) return 'diet';
@@ -1068,6 +1078,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     if (currentStep === preferenceStartStep + 3) return 'brand-preference';
     
     const concernIndex = currentStep - 20; // Start after main concerns step (19)
+    if (hasPriorityStep && currentStep === priorityStepIndex) return 'concern-priority';
     return concernSteps[concernIndex] || null;
   };
 
@@ -1172,6 +1183,15 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         break;
       default: // Dynamic steps
         // Individual lifestyle questions
+        if (currentConcernStep === 'concern-priority') {
+          // Must have a ranking assigned for all selected concerns
+          const selected = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : [];
+          const order = Array.isArray(formData.concernPriority) ? formData.concernPriority : [];
+          const acnePinnedOk = !selected.includes('Acne') || order[0] === 'Acne';
+          const coveredAll = selected.every(c => order.includes(c)) && order.length === selected.length;
+          if (!acnePinnedOk) newErrors.concernPriority = 'Acne must be the top priority when selected.';
+          else if (!coveredAll) newErrors.concernPriority = 'Please order all selected concerns.';
+        }
         if (currentConcernStep === 'diet') {
           if (!formData.diet.trim()) newErrors.diet = 'Please select your diet type';
         } else if (currentConcernStep === 'water-intake') {
@@ -1273,7 +1293,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       if (currentStep < getTotalSteps()) {
         setCurrentStep(prev => prev + 1);
       } else {
-        handleSubmit();
+        handlePreview();
       }
     }
   };
@@ -1329,11 +1349,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     return () => document.removeEventListener('keydown', escapeHandler, true);
   }, [currentStep, onBack]);
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    
+  // Build preview (decision audit + recommendations) without saving
+  const handlePreview = async () => {
     try {
-      // Build audit and final effective bands using RULE_SPECS runtime
       let decisionAudit: any = {};
       let triageOutcomes: any[] = [];
       try {
@@ -1352,45 +1370,52 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         console.warn('Runtime decision audit failed:', e);
       }
 
-      const payload = { ...(formData as any), triageOutcomes, decisionAudit };
-      console.log('Submitting consultation data:', payload);
-      const createdSessionId = await saveConsultationData(payload, { sessionId });
-      console.log('Consultation saved successfully with session ID:', createdSessionId);
-      
-      // Generate recommendations based on submitted data
-      try {
-        const recommendationContext: RecommendationContext = {
+      setDecisionAuditState(decisionAudit);
+      setTriageOutcomesState(triageOutcomes);
+
+      const recommendationContext: RecommendationContext = {
+        skinType: formData.skinType,
+        effectiveBands: decisionAudit.effectiveBands || {},
+        acneCategories: [],
+        decisions: [],
+        formData: {
+          name: formData.name,
           skinType: formData.skinType,
-          effectiveBands: decisionAudit.effectiveBands || {},
-          acneCategories: [], // Add if available from formData
-          decisions: [], // Add if available from decisionAudit
-          formData: {
-            name: formData.name,
-            skinType: formData.skinType,
-            mainConcerns: formData.mainConcerns || [],
-            pregnancy: formData.pregnancy,
-            pregnancyBreastfeeding: formData.pregnancyBreastfeeding,
-            sensitivity: formData.sensitivity,
-            pigmentationType: formData.pigmentationType,
-            serumComfort: formData.serumComfort,
-            routineSteps: formData.routineSteps,
-            moisturizerTexture: formData.moisturizerTexture,
-            dateOfBirth: formData.dateOfBirth,
-            gender: formData.gender,
-            recentIsotretinoin: formData.recentIsotretinoin,
-            severeCysticAcne: formData.severeCysticAcne
-          }
-        };
-        const recommendationResult = generateRecommendations(recommendationContext);
-        setRecommendation(recommendationResult);
-      } catch (error) {
-        console.error('Failed to generate recommendations:', error);
-      }
-      
+          mainConcerns: formData.mainConcerns || [],
+          pregnancy: formData.pregnancy,
+          pregnancyBreastfeeding: formData.pregnancyBreastfeeding,
+          sensitivity: formData.sensitivity,
+          pigmentationType: formData.pigmentationType,
+          serumComfort: formData.serumComfort,
+          routineSteps: formData.routineSteps,
+          moisturizerTexture: formData.moisturizerTexture,
+          dateOfBirth: formData.dateOfBirth,
+          gender: formData.gender,
+          recentIsotretinoin: formData.recentIsotretinoin,
+          severeCysticAcne: formData.severeCysticAcne
+        }
+      };
+      const recommendationResult = generateRecommendations(recommendationContext);
+      setRecommendation(recommendationResult);
       setIsSubmitted(true);
     } catch (error) {
+      console.error('Failed to prepare recommendations:', error);
+      alert('Could not generate recommendations. Please review inputs and try again.');
+    }
+  };
+
+  // Persist to DB from the recommendations page
+  const handleFinalizeSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      const payload = { ...(formData as any), triageOutcomes: triageOutcomesState, decisionAudit: decisionAuditState };
+      console.log('Finalizing consultation save:', payload);
+      const createdSessionId = await saveConsultationData(payload, { sessionId });
+      console.log('Consultation saved successfully with session ID:', createdSessionId);
+      try { onComplete(); } catch (e) { console.warn('onComplete handler failed:', e); }
+    } catch (error) {
       console.error('Failed to submit consultation:', error);
-      alert('Failed to submit consultation. Please try again.');
+      alert('Failed to save consultation. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -1425,7 +1450,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     e.preventDefault();
     const total = getTotalSteps(formData.mainConcerns);
     if (currentStep === total) {
-      handleSubmit();
+      handlePreview();
     } else {
       handleNext();
     }
@@ -1437,7 +1462,17 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       : formData.mainConcerns.length < 3 
         ? [...formData.mainConcerns, concern]
         : formData.mainConcerns; // Don't add if already at max (3)
-    updateFormData({ mainConcerns: newConcerns });
+    // Maintain concernPriority in sync: keep relative order of existing, add new at end, remove deselected
+    let nextPriority = Array.isArray(formData.concernPriority) ? [...formData.concernPriority] : [];
+    // Remove any that are no longer selected
+    nextPriority = nextPriority.filter(c => newConcerns.includes(c));
+    // Add any newly added at the end
+    newConcerns.forEach(c => { if (!nextPriority.includes(c)) nextPriority.push(c); });
+    // If Acne is present, force it to index 0
+    if (newConcerns.includes('Acne')) {
+      nextPriority = ['Acne', ...nextPriority.filter(c => c !== 'Acne')];
+    }
+    updateFormData({ mainConcerns: newConcerns, concernPriority: nextPriority });
   };
 
   if (isSubmitted) {
@@ -1446,6 +1481,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         <RecommendationDisplay 
           recommendation={recommendation}
           onComplete={onComplete}
+          onSubmit={handleFinalizeSubmit}
+          submitting={isSubmitting}
+          onBackToEdit={() => setIsSubmitted(false)}
         />
       );
     }
@@ -1866,6 +1904,59 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     }
 
     // Handle individual lifestyle questions
+    if (currentConcernStep === 'concern-priority') {
+      const selected = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : [];
+      let order = Array.isArray(formData.concernPriority) ? formData.concernPriority.filter(c => selected.includes(c)) : [];
+      // Ensure all selected present exactly once
+      selected.forEach(c => { if (!order.includes(c)) order.push(c); });
+      // Enforce Acne at top if selected
+      if (selected.includes('Acne')) {
+        order = ['Acne', ...order.filter(c => c !== 'Acne')];
+      }
+
+      const move = (c: string, dir: -1 | 1) => {
+        if (c === 'Acne' && selected.includes('Acne')) return; // Acne pinned
+        const idx = order.indexOf(c);
+        if (idx < 0) return;
+        const newIdx = idx + dir;
+        if (newIdx < (selected.includes('Acne') ? 1 : 0) || newIdx >= order.length) return;
+        const copy = [...order];
+        const [item] = copy.splice(idx, 1);
+        copy.splice(newIdx, 0, item);
+        updateFormData({ concernPriority: copy });
+      };
+
+      return (
+        <div className="space-y-12 flex flex-col justify-center h-full py-8">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
+              <Sparkles className="w-8 h-8 text-amber-600" />
+            </div>
+            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
+              What would you like to prioritize?
+            </h2>
+            <p className="text-gray-600">Drag to reorder or use the arrows. Acne stays #1 if selected.</p>
+          </div>
+          <div className="max-w-xl mx-auto w-full">
+            <ul className="space-y-2">
+              {order.map((c, idx) => (
+                <li key={c} className={`flex items-center justify-between p-3 rounded-xl border ${c==='Acne' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
+                  <div className="flex items-center gap-3">
+                    <span className={`w-8 h-8 inline-flex items-center justify-center rounded-full text-sm font-semibold ${idx===0 ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-700'}`}>{idx+1}</span>
+                    <span className={`text-lg ${c==='Acne' ? 'text-red-700' : 'text-gray-800'}`}>{c}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => move(c, -1)} disabled={idx === (selected.includes('Acne') ? 1 : 0) || c==='Acne'} className="px-2 py-1 text-sm border rounded disabled:opacity-40">↑</button>
+                    <button type="button" onClick={() => move(c, 1)} disabled={idx === order.length - 1} className="px-2 py-1 text-sm border rounded disabled:opacity-40">↓</button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {errors.concernPriority && <p className="text-red-500 text-sm mt-2">{errors.concernPriority}</p>}
+          </div>
+        </div>
+      );
+    }
     if (currentConcernStep === 'diet') {
       return (
         <div className="space-y-12 flex flex-col justify-center h-full py-8">
@@ -1877,7 +1968,6 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               What type of diet do you follow?
             </h2>
           </div>
-
           <div className="max-w-2xl mx-auto w-full">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {['Balanced', 'Oily/Spicy', 'Vegetarian', 'High Sugar'].map((option) => (
@@ -2986,6 +3076,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         <RecommendationDisplay 
           recommendation={recommendation}
           onComplete={onComplete}
+          onSubmit={handleFinalizeSubmit}
+          submitting={isSubmitting}
+          onBackToEdit={() => setIsSubmitted(false)}
         />
       );
     }
