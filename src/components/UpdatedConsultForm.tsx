@@ -373,29 +373,33 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     }
   };
 
-  // Per-concern readiness: allow follow-ups for a category once that concern's Section-D is done
+  // Per-concern readiness: allow follow-ups for a category only if the concern is selected
+  // and prerequisite fields for that concern are answered. Moisture/Grease remain global.
   const isCategoryReady = (category: string, dimension?: 'brown' | 'red') => {
     const concerns: string[] = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : []
     const acneBreakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : []
     switch (category) {
       case 'Acne':
-        if (!concerns.includes('Acne')) return true
+        // Only ready if Acne is a selected concern and required fields are filled
+        if (!concerns.includes('Acne')) return false
         if (!acneBreakouts.length) return false
         return acneBreakouts.every(item => String(item.type || '').trim() && String(item.severity || '').trim())
       case 'Pigmentation':
-        return !concerns.includes('Pigmentation') || (
+        // Only ready if Pigmentation is selected and type/severity provided
+        return concerns.includes('Pigmentation') && (
           String(formData.pigmentationType || '').trim() && String(formData.pigmentationSeverity || '').trim()
         )
       case 'Texture': {
         const wantsWrinkles = concerns.includes('Fine lines & wrinkles')
         const wantsBumpy = concerns.includes('Bumpy skin')
-        if (!wantsWrinkles && !wantsBumpy) return true
+        if (!wantsWrinkles && !wantsBumpy) return false
         if (wantsWrinkles && !String(formData.wrinklesType || '').trim()) return false
         if (wantsBumpy && !String(formData.textureType || '').trim()) return false
         return true
       }
       case 'Pores':
-        return !concerns.includes('Large pores') || !!String(formData.poresType || '').trim()
+        // Only ready if Pores is selected and subtype provided
+        return concerns.includes('Large pores') && !!String(formData.poresType || '').trim()
       // Do not gate Grease/Moisture/Sensitivity here
       default:
         return true
@@ -444,8 +448,30 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       const m = (machine || {}) as any;
       const self = deriveSelfBandsRt(formData as any, ctx);
       setRuntimeSelf(self);
-      // Build follow-ups, then filter per category readiness
-      const qsets = getFollowUpsRt(m, self).filter(q => isCategoryReady(q.category as any, q.dimension as any));
+      // Build follow-ups
+      const allQsets = getFollowUpsRt(m, self);
+      // Helper: is the category still selected (ignores prereqs)
+      const concerns: string[] = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : []
+      const isCategorySelected = (category: string) => {
+        switch (category) {
+          case 'Acne':
+            return concerns.includes('Acne')
+          case 'Pigmentation':
+            return concerns.includes('Pigmentation')
+          case 'Texture':
+            return concerns.includes('Fine lines & wrinkles') || concerns.includes('Bumpy skin')
+          case 'Pores':
+            return concerns.includes('Large pores')
+          default:
+            // Moisture/Grease and others are global
+            return true
+        }
+      }
+      // Filter per category readiness (selected + prereqs)
+      const qsets = allQsets.filter(q => isCategoryReady(q.category as any, q.dimension as any));
+      // Map ruleId -> category for selection-based retention
+      const ruleToCategory: Record<string, string> = {}
+      for (const q of allQsets) ruleToCategory[q.ruleId] = q.category || ''
       const applicable = new Set(qsets.map(q => q.ruleId));
       // Build per-rule dependency keys (category + machine/self bands + key form fields)
       const keysNow: Record<string, string> = {};
@@ -498,13 +524,15 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       }
       keysNow[r.ruleId] = [cat, dim, mBand, sBand, extra].join('#')
     }
-    // Keep ALL follow-up answers that are still applicable (don't filter by dependency key changes)
-    // This preserves answers when users navigate back and forth
+    // Keep ALL follow-up answers that are still relevant
+    // Rule is relevant if either:
+    //  - it's still applicable now (selected + prereqs satisfied), OR
+    //  - its category remains selected (even if prereqs temporarily not filled)
     const filteredAnswers: Record<string, Record<string, string | string[]>> = {}
     for (const [rid, ans] of Object.entries(answersByRuleId || {})) {
-      // Only check if the rule is still applicable, don't invalidate based on key changes
-      // This allows answers to persist when users go back and change earlier answers
-      if (applicable.has(rid)) {
+      const cat = ruleToCategory[rid] || ''
+      const stillSelected = isCategorySelected(cat)
+      if (applicable.has(rid) || stillSelected) {
         filteredAnswers[rid] = ans
       }
     }
@@ -592,6 +620,57 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     (formData as any).sensitivitySeasonal, // age under 20
     (formData as any).sensitivityCleansing, // very dry baseline
   ])
+
+  // When concerns are deselected, proactively drop answers/drafts for rules from those categories
+  useEffect(() => {
+    const concerns: string[] = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : []
+    // Build ruleId -> category using latest runtime self/machine
+    try {
+      const m = (machine || {}) as any
+      const self = (runtimeSelf || {}) as any
+      const qsets = getFollowUpsRt(m, self)
+      const ruleToCategory: Record<string, string> = {}
+      for (const q of qsets) ruleToCategory[q.ruleId] = q.category || ''
+      const isCategorySelected = (category: string) => {
+        switch (category) {
+          case 'Acne': return concerns.includes('Acne')
+          case 'Pigmentation': return concerns.includes('Pigmentation')
+          case 'Texture': return concerns.includes('Fine lines & wrinkles') || concerns.includes('Bumpy skin')
+          case 'Pores': return concerns.includes('Large pores')
+          default: return true
+        }
+      }
+      // Prune answers that belong to categories no longer selected
+      const prunedAnswers: typeof followUpAnswers = {}
+      let changed = false
+      for (const [rid, ans] of Object.entries(followUpAnswers)) {
+        const cat = ruleToCategory[rid] || ''
+        if (isCategorySelected(cat)) {
+          prunedAnswers[rid] = ans
+        } else {
+          changed = true
+        }
+      }
+      if (changed) {
+        setFollowUpAnswers(prunedAnswers)
+        // Also drop any drafts for deselected categories
+        setFollowUpDrafts(prev => {
+          const next: typeof prev = {}
+          for (const [rid, ans] of Object.entries(prev)) {
+            const cat = ruleToCategory[rid] || ''
+            if (isCategorySelected(cat)) next[rid] = ans
+          }
+          return next
+        })
+        // Recompute with pruned answers to reflect band reversion immediately
+        recomputeEngine(prunedAnswers)
+      }
+    } catch (e) {
+      // non-fatal; keep going
+      console.warn('Failed to prune deselected concern answers:', e)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.mainConcerns])
 
   const toggleFollowUpOption = (qid: string, opt: string, multi?: boolean) => {
     setFollowUpLocal(prev => {
