@@ -215,7 +215,8 @@ body::after {
   background: rgba(206, 186, 142, 0.65);
 }
 
-/* Legacy experience-specific refinements preserved for functional components */`n/* Custom calendar styling */
+/* Legacy experience-specific refinements preserved for functional components */
+/* Custom calendar styling */
 .calendar-wrapper {
   font-family: inherit;
   max-width: 100%;

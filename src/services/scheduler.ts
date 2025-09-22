@@ -46,7 +46,11 @@ function step(label: string, product: string, index: number): RoutineStep {
 
 function decideAMSerum(key: string | undefined, flags: SchedulerInput['flags']): string | undefined {
   if (!key) return undefined
-  if (flags?.sensitivityBand === 'red') return undefined
+  if (flags?.sensitivityBand === 'red') {
+  const t = serumKeyToTag(key)
+  // Allow only zero-irritant peptides in AM for very sensitive
+  return t === 'peptides' ? key : undefined
+    }
   const tag = serumKeyToTag(key)
   const vcForm = flags?.vc_form || (key === 'vitamin-c' ? 'laa' : undefined)
   // Retinoids: never AM
@@ -74,7 +78,9 @@ function emptyPM(cleanser: string, moisturizer: string): RoutineStep[] {
 // Very lightweight first pass scheduler that obeys key acceptance checks.
 export function buildWeeklyPlan(input: SchedulerInput, timeZone = 'Asia/Kolkata'): { plan: WeeklyPlan, customerView: CustomerView } {
   const warnings: string[] = []
-  const serumComfort = (input.flags?.sensitivityBand === 'red') ? 0 : Math.max(1, Math.min(2, input.flags?.serumComfort ?? 2))
+  // Honor user's comfort (1..3). We place at most one serum per routine,
+  // but comfort determines whether we place any serum at all.
+  const serumComfort = Math.max(1, Math.min(3, input.flags?.serumComfort ?? 2))
   const sensitive = !!input.flags?.sensitivity
   const pregnant = !!input.flags?.pregnancy
   const sensBand = input.flags?.sensitivityBand || (sensitive ? 'yellow' : 'green')
@@ -329,8 +335,9 @@ function enforceIrritationBudget(plan: WeeklyPlan, nightlyCap: number, minRestNi
     const cost = tagCost(tag)
     if (cost <= nightlyCap) continue
 
-    // Try downgrades: retinoid/BPO/exfoliant → azelaic → niacinamide; vitC → niacinamide
+    // Try downgrades: prefer zero‑irritant peptides (0), then azelaic (30), then niacinamide (10)
     const downgrade = ((): string | undefined => {
+      if (nightlyCap >= tagCost('peptides')) return 'peptides'
       if (nightlyCap >= tagCost('azelaic')) return 'azelaic-acid'
       if (nightlyCap >= tagCost('niacinamide')) return 'niacinamide'
       return undefined

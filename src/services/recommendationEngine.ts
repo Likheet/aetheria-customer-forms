@@ -716,13 +716,9 @@ function determineSerumCount(
   additionalSerums: string[] 
 } {
   const disallow = buildGateDisallowSet(context);
-  const serumComfort = parseInt(context.formData.serumComfort || '1');
+  const serumComfort = Math.max(1, Math.min(3, parseInt(context.formData.serumComfort || '1')));
   const sensBand = (context.effectiveBands?.sensitivity || 'green').toLowerCase();
   const additionalSerums: string[] = [];
-  // Hard caps for higher sensitivity to align with irritation budget
-  if (sensBand === 'red' || sensBand === 'yellow') {
-    return { serumCount: 1, additionalSerums };
-  }
   
   // If user only wants 1 serum or only has 1 concern, use just the core serum
   if (serumComfort === 1 || activeConcerns.length <= 1) {
@@ -750,6 +746,9 @@ function determineSerumCount(
     if (tag && (tag === coreTag || tag === secTag)) {
       ok = false;
     }
+    // If sensitivity is red, only allow zero‑irritant peptides as additional suggestions
+    if (sensBand === 'red' && tag !== 'peptides') ok = false;
+    
     if (coreTag && tag) {
       const cmp = pairCompatibility(coreTag, tag);
       if (cmp === 'disallow') ok = false;

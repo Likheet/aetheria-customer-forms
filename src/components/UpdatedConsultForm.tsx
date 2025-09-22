@@ -113,72 +113,85 @@ const initialFormData: UpdatedConsultData = {
   medications: '',
 };
 
-// Dummy data for testing
-const dummyFormData: UpdatedConsultData = {
+// Scenario-specific dummy data used by the "Fill form" helper
+const AUTO_FILL_MACHINE_FALLBACK: MachineScanBands = {
+  moisture: 'yellow',
+  sebum: 'red',
+  texture: 'yellow',
+  pores: 'blue',
+  acne: 'blue',
+  pigmentation_brown: 'blue',
+  pigmentation_red: 'blue',
+  sensitivity: 'green',
+};
+
+const AUTO_FILL_FORM_TEMPLATE: UpdatedConsultData = {
   // Personal Information
-  name: 'Priya Sharma',
-  phoneNumber: '9876543210',
-  dateOfBirth: '1995-03-15',
+  name: 'Anita Rao',
+  phoneNumber: '+919876543210',
+  dateOfBirth: '1992-08-04',
   gender: 'Female',
-  
+
   // Gate Questions (Safety Screening)
-  pregnancy: '',
-  recentIsotretinoin: '',
-  severeCysticAcne: '',
-  allergyConflict: '',
-  barrierStressHigh: '',
+  pregnancy: 'No',
+  recentIsotretinoin: 'No',
+  severeCysticAcne: 'No',
+  allergyConflict: 'No',
+  barrierStressHigh: 'No',
   gateActions: '',
-  
+
   // Section A – Skin Basics
-  skinType: 'Combination',
-  oilLevels: '',
-  hydrationLevels: '',
-  sensitivity: '',
-  sensitivityTriggers: '',
-  
+  skinType: 'Combination – Hydrated',
+  skinTypeFlag: 'Combination',
+  oilLevels: 'Comfortable, no shine or greasiness → Green',
+  hydrationLevels: 'Comfortable, no tightness → Green',
+  sensitivity: 'No',
+  sensitivityTriggers: 'None noted so far',
+
   // Section B – Current Skin History
-  diagnosedConditions: '',
-  prescriptionTreatments: '',
-  professionalTreatments: '',
-  
+  diagnosedConditions: 'No diagnosed skin conditions',
+  prescriptionTreatments: 'None',
+  professionalTreatments: 'None in the past 6 months',
+
   // Section C – Current Routine
-  currentProducts: '',
+  currentProducts: 'Gentle gel cleanser; Niacinamide serum; Lightweight gel moisturizer; Broad spectrum SPF 50',
   currentProductsList: [
-    { name: 'CeraVe Foaming Cleanser', duration: '6 months' },
-    { name: 'The Ordinary Niacinamide', duration: '3 months' },
-    { name: 'Neutrogena Moisturizer', duration: '1 year' }
+    { name: 'CeraVe Foaming Cleanser', duration: '6-12 months' },
+    { name: 'The Ordinary Niacinamide 10% + Zinc 1%', duration: '3-6 months' },
+    { name: 'Isntree Hyaluronic Acid Watery Sun Gel', duration: '1-3 months' },
   ],
-  productDuration: '',
-  irritatingProducts: '',
-  
+  productDuration: '6-12 months',
+  irritatingProducts: 'Retinol / Retinoids (Adapalene, Tretinoin, etc.)',
+
   // Section D – Main Concerns
-  mainConcerns: ['Acne', 'Pigmentation', 'Large pores'],
+  mainConcerns: ['Acne', 'Large pores', 'Bumpy skin'],
+  concernPriority: ['Acne', 'Large pores', 'Bumpy skin'],
   acneBreakouts: [
     {
       type: 'Red pimples (inflamed, sometimes pus-filled)',
-      severity: '',
-      category: 'Inflammatory acne',
+      severity: 'Several (4–10), some painful → Yellow',
+      category: (deriveAcneCategoryLabel('Red pimples (inflamed, sometimes pus-filled)') || 'Inflammatory acne') as AcneCategory,
     },
   ],
-  acneDuration: '',
+  acneDuration: 'Breakouts flare for about a week before each cycle',
   pigmentationType: 'Moderate brown spots/patches, noticeable in several areas → Yellow',
-  pigmentationSeverity: '',
-  pigmentationDuration: '',
-  rednessType: '',
-  rednessDuration: '',
-  dullnessType: '',
-  dullnessDuration: '',
-  wrinklesType: '',
-  wrinklesDuration: '',
+  pigmentationSeverity: 'Moderate brown spots/patches, noticeable in several areas → Yellow',
+  pigmentationDuration: 'Post-acne marks lingering for the last 3 months',
+  rednessType: 'Redness across nose and cheeks after sun exposure',
+  rednessDuration: 'Calms down in 2-3 days with soothing care',
+  dullnessType: 'Skin looks lacklustre by evening without exfoliation',
+  dullnessDuration: 'Noticeable over the past 2 months',
+  wrinklesType: 'A few fine lines or slight looseness in some spots → Blue',
+  wrinklesDuration: 'Mostly around eyes over the past year',
   poresType: 'Clearly visible on multiple zones (nose, cheeks, forehead) → Yellow',
-  poresDuration: '',
-  textureType: '',
-  textureDuration: '',
-  oilinessType: '',
-  oilinessDuration: '',
-  drynessType: '',
-  drynessDuration: '',
-  
+  poresDuration: 'Visible throughout the day despite skincare',
+  textureType: 'A few small areas with bumps or rough patches (like nose or chin) → Blue',
+  textureDuration: 'Comes and goes depending on exfoliation',
+  oilinessType: 'Shine returns by afternoon on forehead and nose',
+  oilinessDuration: 'Daily, especially in humid weather',
+  drynessType: 'Tightness around mouth after cleansing',
+  drynessDuration: 'Happens whenever skipping moisturizer',
+
   // Sensitivity questions
   sensitivityRedness: 'No',
   sensitivityDiagnosis: 'No',
@@ -187,24 +200,50 @@ const dummyFormData: UpdatedConsultData = {
   sensitivitySun: 'No',
   sensitivityCapillaries: 'No',
   sensitivitySeasonal: 'No',
-  
+
   // Section E - Lifestyle Inputs
   diet: 'Balanced',
   waterIntake: 'Medium',
   sleepHours: '5-7',
   stressLevels: 'Medium',
-  environment: 'Polluted city',
-  
+  environment: 'Humid climate',
+
   // Section F - Willingness & Preferences
   routineSteps: '4-step',
   serumComfort: '2',
   moisturizerTexture: 'Gel',
-  budget: '',
-  
+  budget: 'Flexible if results-driven',
+
   // Additional fields
   allergies: 'No known allergies',
   pregnancyBreastfeeding: 'No',
   medications: 'None',
+};
+
+const AUTO_FILL_FOLLOWUP_ANSWERS: Record<string, Record<string, string | string[]>> = {
+  sebum_machineOily_customerNormal: {
+    Q1: 'Yes',
+    Q2: 'All over',
+    Q3: 'No',
+  },
+  acne_machineClear_customerPresence: {
+    Q1: '6-15',
+    Q2: 'No',
+    Q3: '10-20',
+    Q4: 'Yes',
+    Q5: 'No',
+  },
+  texture_machineBumpy_customerSmooth: {
+    Q1: 'Cheeks',
+    Q2: 'Yes',
+    Q3: 'No',
+    Q4: 'No',
+  },
+  pores_machineNormal_customerConcerned: {
+    Q1: 'No',
+    Q2: 'Yes',
+    Q3: 'Yes',
+  },
 };
 
 const deriveAcneCategory = (acneType: string): string => deriveAcneCategoryLabel(acneType) || '';
@@ -323,6 +362,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const [followUpLocal, setFollowUpLocal] = useState<Record<string, string | string[]>>({});
   // Drafts store in-progress answers for each follow-up (not yet submitted)
   const [followUpDrafts, setFollowUpDrafts] = useState<Record<string, Record<string, string | string[]>>>({});
+  const [pendingAutoFill, setPendingAutoFill] = useState<null | { answers: Record<string, Record<string, string | string[]>> }>(null);
   // Track order of applied follow-up decisions to support undo on Back (removed for now)
   const [effectiveBands, setEffectiveBands] = useState<any>(machine || {});
   const [computedSensitivity, setComputedSensitivity] = useState<{ score: number; tier: string; band: string; remark: string } | null>(null);
@@ -622,6 +662,14 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     (formData as any).sensitivitySeasonal, // age under 20
     (formData as any).sensitivityCleansing, // very dry baseline
   ])
+
+  useEffect(() => {
+    if (pendingAutoFill) {
+      recomputeEngine(pendingAutoFill.answers)
+      setPendingAutoFill(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAutoFill])
 
   // When concerns are deselected, proactively drop answers/drafts for rules from those categories
   useEffect(() => {
@@ -947,91 +995,72 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   };
 
   const fillWithDummyData = () => {
-    // Smart fill: only fill empty/default values, preserve existing data
-    setFormData(prevData => {
-      // Determine concerns to base dynamic answers on (existing or dummy fallback)
-      const nextMainConcerns = prevData.mainConcerns.length > 0 ? prevData.mainConcerns : dummyFormData.mainConcerns;
-      return ({
-        ...prevData,
-        // Personal Information - only fill if empty
-        name: prevData.name.trim() !== '' ? prevData.name : dummyFormData.name,
-        phoneNumber: prevData.phoneNumber.trim() !== '' ? prevData.phoneNumber : dummyFormData.phoneNumber,
-        dateOfBirth: prevData.dateOfBirth !== '' ? prevData.dateOfBirth : dummyFormData.dateOfBirth,
-        gender: prevData.gender !== '' ? prevData.gender : dummyFormData.gender,
-      
-      // Section A - Skin Basics
-      skinType: prevData.skinType !== '' ? prevData.skinType : dummyFormData.skinType,
-      oilLevels: prevData.oilLevels !== '' ? prevData.oilLevels : (dummyFormData.oilLevels || 'Noticeable shine in multiple areas \u001a Yellow'),
-      hydrationLevels: prevData.hydrationLevels !== '' ? prevData.hydrationLevels : (dummyFormData.hydrationLevels || 'Often feels tight, rough, or flaky \u001a Yellow'),
-      sensitivity: prevData.sensitivity !== '' ? prevData.sensitivity : (dummyFormData.sensitivity || 'No'),
-      sensitivityTriggers: prevData.sensitivityTriggers !== '' ? prevData.sensitivityTriggers : dummyFormData.sensitivityTriggers,
-      
-      // Section B - Current Skin History
-      diagnosedConditions: prevData.diagnosedConditions !== '' ? prevData.diagnosedConditions : dummyFormData.diagnosedConditions,
-      prescriptionTreatments: prevData.prescriptionTreatments !== '' ? prevData.prescriptionTreatments : dummyFormData.prescriptionTreatments,
-      professionalTreatments: prevData.professionalTreatments !== '' ? prevData.professionalTreatments : dummyFormData.professionalTreatments,
-      
-        // Section C - Current Routine
-        currentProducts: prevData.currentProducts,
-        currentProductsList: prevData.currentProductsList.length > 0 ? prevData.currentProductsList : dummyFormData.currentProductsList,
-        productDuration: prevData.productDuration,
-        irritatingProducts: prevData.irritatingProducts !== '' ? prevData.irritatingProducts : dummyFormData.irritatingProducts,        // Section D - Main Concerns
-        mainConcerns: nextMainConcerns,
-        // For dynamic concerns: only fill fields relevant to selected concerns
-        acneBreakouts: nextMainConcerns.includes('Acne') && (!prevData.acneBreakouts || prevData.acneBreakouts.length === 0)
-          ? (dummyFormData.acneBreakouts || []).map(item => ({ ...item }))
-          : prevData.acneBreakouts,
-        acneDuration: prevData.acneDuration, // not asked; do not fabricate
-        pigmentationType: nextMainConcerns.includes('Pigmentation') && !prevData.pigmentationType ? (dummyFormData.pigmentationType || 'PIH brown') : prevData.pigmentationType,
-        pigmentationSeverity: prevData.pigmentationSeverity,
-        pigmentationDuration: nextMainConcerns.includes('Pigmentation') && !prevData.pigmentationDuration ? (dummyFormData.pigmentationDuration || 'Recent') : prevData.pigmentationDuration,
-        rednessType: prevData.rednessType,
-        rednessDuration: prevData.rednessDuration,
-        dullnessType: nextMainConcerns.includes('Dullness') && !prevData.dullnessType ? (dummyFormData.dullnessType || 'Occasional') : prevData.dullnessType,
-        dullnessDuration: prevData.dullnessDuration, // not asked; do not fabricate
-        wrinklesType: nextMainConcerns.includes('Fine lines & wrinkles') && !prevData.wrinklesType ? (dummyFormData.wrinklesType || 'Forehead lines') : prevData.wrinklesType,
-        wrinklesDuration: prevData.wrinklesDuration, // not asked; do not fabricate
-        poresType: nextMainConcerns.includes('Large pores') && !prevData.poresType ? (dummyFormData.poresType || 'Always present') : prevData.poresType,
-        poresDuration: prevData.poresDuration, // not asked; do not fabricate
-        oilinessType: nextMainConcerns.includes('Oiliness') && !prevData.oilinessType ? (dummyFormData.oilinessType || 'T-zone only') : prevData.oilinessType,
-        oilinessDuration: prevData.oilinessDuration, // not asked; do not fabricate
-        drynessType: nextMainConcerns.includes('Dryness') && !prevData.drynessType ? (dummyFormData.drynessType || 'Tight/rough') : prevData.drynessType,
-        drynessDuration: prevData.drynessDuration, // not asked; do not fabricate
-      
-      // Sensitivity screening (universal) - always set defaults if missing
-      sensitivityRedness: prevData.sensitivityRedness || dummyFormData.sensitivityRedness,
-      sensitivityDiagnosis: prevData.sensitivityDiagnosis || dummyFormData.sensitivityDiagnosis,
-      sensitivityCleansing: prevData.sensitivityCleansing || dummyFormData.sensitivityCleansing,
-      sensitivityProducts: prevData.sensitivityProducts || dummyFormData.sensitivityProducts,
-      sensitivitySun: prevData.sensitivitySun || dummyFormData.sensitivitySun,
-      sensitivityCapillaries: prevData.sensitivityCapillaries || dummyFormData.sensitivityCapillaries,
-      sensitivitySeasonal: prevData.sensitivitySeasonal || dummyFormData.sensitivitySeasonal,
-      
-      // Section E - Lifestyle Inputs
-      diet: prevData.diet !== '' ? prevData.diet : dummyFormData.diet,
-      waterIntake: prevData.waterIntake !== '' ? prevData.waterIntake : dummyFormData.waterIntake,
-      sleepHours: prevData.sleepHours !== '' ? prevData.sleepHours : dummyFormData.sleepHours,
-      stressLevels: prevData.stressLevels !== '' ? prevData.stressLevels : dummyFormData.stressLevels,
-      environment: prevData.environment !== '' ? prevData.environment : dummyFormData.environment,
-      
-      // Section F - Willingness & Preferences
-      routineSteps: prevData.routineSteps !== '' ? prevData.routineSteps : dummyFormData.routineSteps,
-      serumComfort: prevData.serumComfort !== '' ? prevData.serumComfort : dummyFormData.serumComfort,
-      moisturizerTexture: prevData.moisturizerTexture !== '' ? prevData.moisturizerTexture : dummyFormData.moisturizerTexture,
-        budget: prevData.budget,      // Additional fields
-      // Only fill these when the corresponding UI steps exist; keeping them as-is otherwise
-      allergies: prevData.allergies, 
-      pregnancyBreastfeeding: prevData.pregnancyBreastfeeding, 
-      medications: prevData.medications,
-      });
+    const machineBands: MachineScanBands = { ...AUTO_FILL_MACHINE_FALLBACK, ...(machine || {}) };
+
+    const filledData: UpdatedConsultData = {
+      ...AUTO_FILL_FORM_TEMPLATE,
+      currentProductsList: AUTO_FILL_FORM_TEMPLATE.currentProductsList.map(item => ({ ...item })),
+      mainConcerns: [...AUTO_FILL_FORM_TEMPLATE.mainConcerns],
+      concernPriority: Array.isArray(AUTO_FILL_FORM_TEMPLATE.concernPriority)
+        ? [...AUTO_FILL_FORM_TEMPLATE.concernPriority]
+        : [...AUTO_FILL_FORM_TEMPLATE.mainConcerns],
+      acneBreakouts: AUTO_FILL_FORM_TEMPLATE.acneBreakouts.map(item => ({ ...item })),
+    };
+
+    filledData.currentProducts = filledData.currentProductsList
+      .map(item => `${item.name} (${item.duration})`)
+      .join('; ');
+
+    const followUps: Record<string, Record<string, string | string[]>> = {};
+    for (const [ruleId, answers] of Object.entries(AUTO_FILL_FOLLOWUP_ANSWERS) as Array<[
+      string,
+      Record<string, string | string[]>
+    ]>) {
+      const answerMap: Record<string, string | string[]> = {};
+      for (const [questionId, value] of Object.entries(answers) as Array<[
+        string,
+        string | string[]
+      ]>) {
+        answerMap[questionId] = Array.isArray(value) ? [...value] : value;
+      }
+      followUps[ruleId] = answerMap;
+    }
+
+    const context = {
+      dateOfBirth: filledData.dateOfBirth,
+      pregnancyBreastfeeding: filledData.pregnancyBreastfeeding,
+    } as any;
+
+    const derivedSelf = deriveSelfBandsRt(filledData as any, context);
+    const allDecisions = decideAllRt(machineBands as any, derivedSelf, followUps, context);
+    const sensitivityResult = computeSensitivityFromForm(filledData as any, context);
+
+    setFormData(filledData);
+    setGateRemarks([]);
+    setErrors({});
+    setRecommendation(null);
+    setIsSubmitted(false);
+    setFollowUpAnswers(followUps);
+    setFollowUpDrafts({});
+    setFollowUpLocal({});
+    setFollowUp(null);
+    setActiveFollowUp(null);
+    setRuntimeSelf(derivedSelf);
+    setDecisions(allDecisions.decisions || []);
+    setEffectiveBands({ ...allDecisions.effectiveBands, sensitivity: sensitivityResult.band });
+    setComputedSensitivity(sensitivityResult as any);
+    setTriageOutcomesState(allDecisions.decisions || []);
+    setDecisionAuditState({
+      machineBands,
+      selfBands: derivedSelf,
+      followUpAnswers: followUps,
+      decisions: allDecisions.decisions || [],
+      effectiveBands: { ...allDecisions.effectiveBands, sensitivity: sensitivityResult.band },
     });
-    
-    setErrors({}); // Clear all errors
-    
-    // Calculate total steps based on concerns (use existing or dummy data) and go to final step
-    const concerns = formData.mainConcerns.length > 0 ? formData.mainConcerns : dummyFormData.mainConcerns;
-    const totalSteps = getTotalSteps(concerns);
+
+    const totalSteps = getTotalSteps(filledData.mainConcerns);
     setCurrentStep(totalSteps);
+    setPendingAutoFill({ answers: followUps });
   };
 
   const getConcernSteps = () => {
