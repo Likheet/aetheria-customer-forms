@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { Droplets, Sparkles, FlaskRound, Shield, Sun, Target, Info, CalendarDays, Moon, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { EnhancedRecommendation } from "../services/recommendationEngine";
+import { PRODUCT_DATABASE, type ProductOption } from "../data/productDatabase";
 
 type RitualStep = {
   id: keyof EnhancedRecommendation;
@@ -21,6 +22,7 @@ const STEPS: RitualStep[] = [
     timing: "AM & PM",
     narrative: "Use a gentle cleanser.",
   },
+  // coreSerum timing will be overridden dynamically based on serum family
   {
     id: "coreSerum",
     title: "Treatment serum",
@@ -67,10 +69,73 @@ const Pill: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </span>
 );
 
+type PriceMode = 'budget' | 'luxury'
+
 const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({ recommendation, userName = "Guest", onComplete, onSubmit, submitting, onBackToEdit }) => {
+  const [priceMode, setPriceMode] = useState<PriceMode>('budget')
+
+  // Helpers to pick a product by mode with fallbacks
+  const pickByMode = (options: ProductOption[] | undefined, mode: PriceMode): ProductOption | undefined => {
+    if (!options || options.length === 0) return undefined
+    const byTier = (tier: ProductOption['tier']) => options.find(o => o.tier === tier)
+    if (mode === 'budget') {
+      return byTier('affordable') || byTier('mid-range') || byTier('premium') || options[0]
+    } else {
+      return byTier('premium') || byTier('mid-range') || byTier('affordable') || options[0]
+    }
+  }
+
+  const format = (p?: ProductOption) => p ? `${p.name} (${p.brand})` : ''
+
+  // Compute a display-layer recommendation with SKUs chosen by priceMode using engine _keys
+  const displayRec = useMemo(() => {
+    const keys = (recommendation as any)._keys || {}
+    const out = { ...recommendation }
+    try {
+      // Cleanser
+      if (keys.cleanserType && PRODUCT_DATABASE.cleanser[keys.cleanserType]) {
+        const p = pickByMode(PRODUCT_DATABASE.cleanser[keys.cleanserType], priceMode)
+        if (p) out.cleanser = format(p)
+      }
+      // Core serum
+      if (keys.core && PRODUCT_DATABASE.serum[keys.core]) {
+        const p = pickByMode(PRODUCT_DATABASE.serum[keys.core], priceMode)
+        if (p) out.coreSerum = format(p)
+      }
+      // Secondary serum
+      if (keys.secondary && PRODUCT_DATABASE.serum[keys.secondary]) {
+        const p = pickByMode(PRODUCT_DATABASE.serum[keys.secondary], priceMode)
+        if (p) out.secondarySerum = format(p)
+      }
+      // Moisturizer
+      if (keys.moisturizerType && PRODUCT_DATABASE.moisturizer[keys.moisturizerType]) {
+        const p = pickByMode(PRODUCT_DATABASE.moisturizer[keys.moisturizerType], priceMode)
+        if (p) out.moisturizer = format(p)
+      }
+      // Sunscreen (general)
+      if (PRODUCT_DATABASE.sunscreen['general']) {
+        const p = pickByMode(PRODUCT_DATABASE.sunscreen['general'], priceMode)
+        if (p) out.sunscreen = format(p)
+      }
+    } catch {
+      // Fail soft: keep original strings
+    }
+    return out
+  }, [recommendation, priceMode])
+
+  // Derive dynamic timing for core serum using engine keys if available
+  const coreKey = (recommendation as any)._keys?.core as string | undefined;
+  const dynamicCoreTiming = (() => {
+    if (!coreKey) return "AM & PM";
+    if (coreKey === 'adapalene' || coreKey === 'retinol') return 'PM only';
+    if (coreKey === 'vitamin-c') return 'AM only';
+    return 'AM & PM';
+  })();
+
   const ritual = STEPS.map((step) => {
-    const product = recommendation[step.id] as string;
-    return { ...step, product: product?.trim() }; 
+    const product = (displayRec as any)[step.id] as string;
+    const timing = step.id === 'coreSerum' ? dynamicCoreTiming : step.timing;
+    return { ...step, product: product?.trim(), timing }; 
   });
   const schedule = recommendation.schedule;
 
@@ -103,6 +168,20 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({ recommend
 
   return (
     <div className="space-y-10">
+      {/* Price preference toggle */}
+      <div className="flex items-center justify-center gap-2">
+        <div className="inline-flex rounded-lg border border-border/60 bg-surface/80 overflow-hidden">
+          <button
+            className={`px-4 py-2 text-sm font-medium ${priceMode==='budget' ? 'bg-primary/10 text-primary' : 'text-foreground/80 hover:bg-muted/30'}`}
+            onClick={() => setPriceMode('budget')}
+          >Budget-friendly</button>
+          <button
+            className={`px-4 py-2 text-sm font-medium ${priceMode==='luxury' ? 'bg-primary/10 text-primary' : 'text-foreground/80 hover:bg-muted/30'}`}
+            onClick={() => setPriceMode('luxury')}
+          >Luxury</button>
+        </div>
+      </div>
+
       <header className="space-y-3 text-center md:text-left">
         <Badge className="bg-primary/15 text-primary" variant="primary">
           Recommendations

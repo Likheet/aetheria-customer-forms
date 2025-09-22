@@ -1372,16 +1372,35 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
       setDecisionAuditState(decisionAudit);
       setTriageOutcomesState(triageOutcomes);
+      // Build effective bands for context: prefer latest state (with sensitivity merged); fallback to audit bands and merge sensitivity now
+      let effectiveForContext: any = effectiveBands && Object.keys(effectiveBands || {}).length ? effectiveBands : (decisionAudit.effectiveBands || {});
+      try {
+        const sens = computeSensitivityFromForm(formData as any, { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any);
+        effectiveForContext = { ...(effectiveForContext || {}), sensitivity: sens.band };
+      } catch {}
+
+      // Derive acne categories from selected breakout types; include cystic flag from severeCysticAcne gate
+      const acneCategories: string[] = (() => {
+        const set = new Set<string>();
+        const arr = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : [];
+        for (const item of arr) {
+          const cat = String((item as any)?.category || '').trim();
+          if (cat) set.add(cat);
+        }
+        if (String(formData.severeCysticAcne).trim() === 'Yes') set.add('Cystic acne');
+        return Array.from(set);
+      })();
 
       const recommendationContext: RecommendationContext = {
         skinType: formData.skinType,
-        effectiveBands: decisionAudit.effectiveBands || {},
-        acneCategories: [],
-        decisions: [],
+        effectiveBands: effectiveForContext || {},
+        acneCategories,
+        decisions: triageOutcomes,
         formData: {
           name: formData.name,
           skinType: formData.skinType,
           mainConcerns: formData.mainConcerns || [],
+          concernPriority: (formData as any).concernPriority || [],
           pregnancy: formData.pregnancy,
           pregnancyBreastfeeding: formData.pregnancyBreastfeeding,
           sensitivity: formData.sensitivity,
