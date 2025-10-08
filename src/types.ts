@@ -90,7 +90,14 @@ export interface UpdatedConsultData {
   moisturizerTexture: string;
   budget: string;
   
-  // Additional fields that might be missing
+  // Legal Disclaimer
+  legalDisclaimerAgreed: boolean;
+  legalDisclaimerNotMedical: boolean;
+  legalDisclaimerConsultDermatologist: boolean;
+  legalDisclaimerPatchTest: boolean;
+  legalDisclaimerDiscontinueUse: boolean;
+  legalDisclaimerDiscloseInfo: boolean;
+  legalDisclaimerNoLiability: boolean;
   allergies: string;
   pregnancyBreastfeeding: string;
   medications: string;

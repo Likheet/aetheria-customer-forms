@@ -107,6 +107,15 @@ const initialFormData: UpdatedConsultData = {
   moisturizerTexture: '',
   budget: '',
   
+  // Legal Disclaimer
+  legalDisclaimerAgreed: false,
+  legalDisclaimerNotMedical: false,
+  legalDisclaimerConsultDermatologist: false,
+  legalDisclaimerPatchTest: false,
+  legalDisclaimerDiscontinueUse: false,
+  legalDisclaimerDiscloseInfo: false,
+  legalDisclaimerNoLiability: false,
+  
   // Additional fields
   allergies: '',
   pregnancyBreastfeeding: '',
@@ -213,6 +222,15 @@ const AUTO_FILL_FORM_TEMPLATE: UpdatedConsultData = {
   serumComfort: '2',
   moisturizerTexture: 'Gel',
   budget: 'Flexible if results-driven',
+  
+  // Legal Disclaimer
+  legalDisclaimerAgreed: true,
+  legalDisclaimerNotMedical: true,
+  legalDisclaimerConsultDermatologist: true,
+  legalDisclaimerPatchTest: true,
+  legalDisclaimerDiscontinueUse: true,
+  legalDisclaimerDiscloseInfo: true,
+  legalDisclaimerNoLiability: true,
 
   // Additional fields
   allergies: 'No known allergies',
@@ -990,6 +1008,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     
   // Add preference questions: 3 (routine-steps, serum-comfort, moisturizer-texture)
   totalSteps += 3;
+  
+  // Add legal disclaimer step
+  totalSteps += 1;
     
     return totalSteps;
   };
@@ -1101,6 +1122,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     if (currentStep === preferenceStartStep) return 'routine-steps';
     if (currentStep === preferenceStartStep + 1) return 'serum-comfort';
     if (currentStep === preferenceStartStep + 2) return 'moisturizer-texture';
+    
+    // Legal disclaimer
+    if (currentStep === preferenceStartStep + 3) return 'legal-disclaimer';
   // brand-preference question removed
     
     const concernIndex = currentStep - 20; // Start after main concerns step (19)
@@ -1235,6 +1259,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           if (!formData.serumComfort.trim()) newErrors.serumComfort = 'Please select your serum comfort level';
         } else if (currentConcernStep === 'moisturizer-texture') {
           if (!formData.moisturizerTexture.trim()) newErrors.moisturizerTexture = 'Please select your preferred moisturizer texture';
+        } else if (currentConcernStep === 'legal-disclaimer') {
+          const allChecked = formData.legalDisclaimerNotMedical && formData.legalDisclaimerConsultDermatologist && formData.legalDisclaimerPatchTest && formData.legalDisclaimerDiscontinueUse && formData.legalDisclaimerDiscloseInfo && formData.legalDisclaimerNoLiability;
+          if (!allChecked) newErrors.legalDisclaimerAgreed = 'You must acknowledge all disclaimer points to continue';
         // brand-preference validation removed
         } else if (currentConcernStep && typeof currentConcernStep === 'object') {
           const { concern, step: stepType, questionIndex } = currentConcernStep as any;
@@ -2268,6 +2295,99 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               ))}
             </div>
             {errors.moisturizerTexture && <p className="text-red-500 text-sm mt-2">{errors.moisturizerTexture}</p>}
+          </div>
+        </div>
+      );
+    }
+
+    // Legal Disclaimer
+    if (currentConcernStep === 'legal-disclaimer') {
+      return (
+        <div className="space-y-12 flex flex-col justify-center h-full py-8">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-6">
+              <Shield className="w-8 h-8 text-red-600" />
+            </div>
+            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
+              Important Legal Disclaimer
+            </h2>
+            <p className="text-gray-600 mb-6">Please read and acknowledge the following before proceeding:</p>
+          </div>
+
+          <div className="max-w-4xl mx-auto w-full">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6">
+              <h3 className="text-lg font-semibold text-red-800 mb-4">Before using this system, I understand and agree:</h3>
+              <ul className="space-y-3 text-sm text-red-700">
+                <li className="flex items-start">
+                  <input
+                    type="checkbox"
+                    checked={formData.legalDisclaimerNotMedical}
+                    onChange={(e) => updateFormData({ legalDisclaimerNotMedical: e.target.checked })}
+                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
+                  />
+                  <span>This tool provides general skincare guidance and is NOT a medical diagnosis</span>
+                </li>
+                <li className="flex items-start">
+                  <input
+                    type="checkbox"
+                    checked={formData.legalDisclaimerConsultDermatologist}
+                    onChange={(e) => updateFormData({ legalDisclaimerConsultDermatologist: e.target.checked })}
+                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
+                  />
+                  <span>I should consult a dermatologist for severe acne, suspicious moles, or worsening conditions</span>
+                </li>
+                <li className="flex items-start">
+                  <input
+                    type="checkbox"
+                    checked={formData.legalDisclaimerPatchTest}
+                    onChange={(e) => updateFormData({ legalDisclaimerPatchTest: e.target.checked })}
+                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
+                  />
+                  <span>I will perform a patch test for all new products before full-face application</span>
+                </li>
+                <li className="flex items-start">
+                  <input
+                    type="checkbox"
+                    checked={formData.legalDisclaimerDiscontinueUse}
+                    onChange={(e) => updateFormData({ legalDisclaimerDiscontinueUse: e.target.checked })}
+                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
+                  />
+                  <span>I will discontinue use immediately if irritation, redness, or allergic reaction occurs</span>
+                </li>
+                <li className="flex items-start">
+                  <input
+                    type="checkbox"
+                    checked={formData.legalDisclaimerDiscloseInfo}
+                    onChange={(e) => updateFormData({ legalDisclaimerDiscloseInfo: e.target.checked })}
+                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
+                  />
+                  <span>I am responsible for disclosing all allergies, medications, and health conditions accurately</span>
+                </li>
+                <li className="flex items-start">
+                  <input
+                    type="checkbox"
+                    checked={formData.legalDisclaimerNoLiability}
+                    onChange={(e) => updateFormData({ legalDisclaimerNoLiability: e.target.checked })}
+                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
+                  />
+                  <span>The salon and software provider are not liable for adverse reactions from product misuse or failure to disclose medical information</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="flex items-center justify-center">
+              <label className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-red-300 transition-all duration-300">
+                <input
+                  type="checkbox"
+                  checked={formData.legalDisclaimerNotMedical && formData.legalDisclaimerConsultDermatologist && formData.legalDisclaimerPatchTest && formData.legalDisclaimerDiscontinueUse && formData.legalDisclaimerDiscloseInfo && formData.legalDisclaimerNoLiability}
+                  onChange={() => {}} // Read-only, automatically checked when all individual checkboxes are checked
+                  className="mr-3 h-5 w-5 text-red-600 border-gray-300 focus:ring-red-400"
+                  disabled
+                />
+                <span className="text-lg text-gray-700">All disclaimer points acknowledged</span>
+              </label>
+            </div>
+            {errors.legalDisclaimerAgreed && <p className="text-red-500 text-sm mt-2 text-center">{errors.legalDisclaimerAgreed}</p>}
           </div>
         </div>
       );

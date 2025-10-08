@@ -109,6 +109,16 @@ When a concern is selected the form shows follow-up questions specific to that c
 - How many serums are you comfortable using? (1, 2, 3)
 - What texture do you prefer for your moisturizer? (Gel, Lotion, Cream, Rich Balm)
 
+### Legal Disclaimer
+- **Important Legal Disclaimer** — "Before using this system, I understand and agree:" (each point requires individual checkbox acknowledgment)
+  - ☐ This tool provides general skincare guidance and is NOT a medical diagnosis
+  - ☐ I should consult a dermatologist for severe acne, suspicious moles, or worsening conditions
+  - ☐ I will perform a patch test for all new products before full-face application
+  - ☐ I will discontinue use immediately if irritation, redness, or allergic reaction occurs
+  - ☐ I am responsible for disclosing all allergies, medications, and health conditions accurately
+  - ☐ The salon and software provider are not liable for adverse reactions from product misuse or failure to disclose medical information
+- Master acknowledgment: "All disclaimer points acknowledged" (automatically checked when all individual checkboxes are selected)
+
 ### Additional / Misc fields
 - Allergies (free text)
 - Pregnancy / Breastfeeding (free text)
