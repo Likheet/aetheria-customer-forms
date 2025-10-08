@@ -8,6 +8,7 @@ import ChooseProfile from './components/ChooseProfile';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './components/ui/card';
 import { Button } from './components/ui/button';
 import { Badge } from './components/ui/badge';
+import MachineIntakePage from './components/MachineIntakePage';
 // Add interface for consultation sessions (for feedback)
 interface ConsultationSession {
   session_id: string;
@@ -25,7 +26,8 @@ type AppFlow =
   | 'client-selection'
   | 'feedback-form'
   | 'consultant-input'
-  | 'updated-consult';
+  | 'updated-consult'
+  | 'machine-intake';
 
 function App() {
   const [currentFlow, setCurrentFlow] = useState<AppFlow>('staff-selection');
@@ -93,6 +95,12 @@ function App() {
     });
   };
 
+  const handleSelectMachineIntake = () => {
+    transitionWithOverlay('linear-gradient(135deg, #C1D2FF 0%, #6F82FF 100%)', () => {
+      setCurrentFlow('machine-intake');
+    });
+  };
+
   const handleSelectClient = (consultation: ConsultationSession) => {
     setSelectedClient(consultation);
     setCurrentFlow('feedback-form');
@@ -125,6 +133,7 @@ function App() {
         onSelectFeedback={handleSelectFeedback}
         onSelectConsultantInput={handleSelectConsultantInput}
         onSelectUpdatedConsult={handleSelectUpdatedConsult}
+        onSelectMachineIntake={handleSelectMachineIntake}
       />
     );
   }
@@ -197,6 +206,10 @@ function App() {
         </div>
       </div>
     );
+  }
+
+  if (currentFlow === 'machine-intake') {
+    return <MachineIntakePage onBack={handleGoHome} />;
   }
 
   return null;
