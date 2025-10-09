@@ -172,10 +172,11 @@ export function deriveSelfBandsFromForm(form: {
   self.moisture = containsBand(form.hydrationLevels);
   self.sebum = containsBand(form.oilLevels);
 
-  // Coarse claims from concerns (user says “I have X”)
-  // We'll treat presence of a concern as at-least Blue (i.e., bothered).
+  // Coarse claims from concerns (user says "I have X")
+  // We'll treat absence of Acne concern as explicit "no acne".
   const concerns = new Set((form.mainConcerns || []).map(String));
-  if (concerns.has('Acne')) self.acne_claim = 'yellow'; // at least present
+  const acneSelected = Array.from(concerns).some(label => label.toLowerCase().includes('acne'));
+  if (!acneSelected) self.acne_claim = 'green';
   if (concerns.has('Large pores')) self.pores = 'yellow';
   if (concerns.has('Dullness')) self.texture = 'yellow';
   if (concerns.has('Bumpy skin')) self.texture = 'yellow';
@@ -682,8 +683,8 @@ export function deriveSelfBands(form: any, ctx: RuntimeContext = {}): RuntimeSel
   const concerns: string[] = Array.isArray(form?.mainConcerns) ? form.mainConcerns : []
   const has = (label: string) => concerns.some((c) => normalizeOptionLabel(c).includes(normalizeOptionLabel(label)))
 
-  // Acne baseline: will be refined by subtype severity below
-  if (has('acne')) self.acne = 'yellow'
+  // Acne baseline: only explicit "no acne" if concern absent
+  if (!has('acne')) self.acne = 'green'
 
   // Pores baseline
   const poresType = normalizeOptionLabel(form?.poresType || '')

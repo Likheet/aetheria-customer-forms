@@ -24,7 +24,11 @@ export interface CustomerView {
 export interface SchedulerInput {
   cleanser: string
   coreSerumKey: string // engine key e.g. 'adapalene','vitamin-c','niacinamide',...
+  coreSerumName?: string
+  coreSerumRawName?: string
   secondarySerumKey?: string
+  secondarySerumName?: string
+  secondarySerumRawName?: string
   moisturizer: string
   sunscreen?: string
   flags?: {
@@ -75,6 +79,56 @@ function emptyPM(cleanser: string, moisturizer: string): RoutineStep[] {
   ]
 }
 
+interface SerumMeta {
+  key?: string
+  name?: string
+  rawName?: string
+  explicitAm: boolean
+  explicitPm: boolean
+  tag: ReturnType<typeof serumKeyToTag>
+}
+
+function hasExplicitToken(value: string, token: 'AM' | 'PM'): boolean {
+  const pattern = new RegExp(`\\b${token}\\b`, 'i')
+  return pattern.test(value)
+}
+
+function buildSerumMeta(key?: string, name?: string, rawName?: string): SerumMeta {
+  const reference = `${rawName || ''} ${name || ''}`.trim()
+  return {
+    key,
+    name,
+    rawName,
+    explicitAm: reference ? hasExplicitToken(reference, 'AM') : false,
+    explicitPm: reference ? hasExplicitToken(reference, 'PM') : false,
+    tag: key ? serumKeyToTag(key) : null,
+  }
+}
+
+function allowInAm(meta: SerumMeta, flags: SchedulerInput['flags']): string | undefined {
+  if (!meta.key) return undefined
+  if (meta.explicitPm) return undefined
+  if (meta.explicitAm) return meta.key
+  return decideAMSerum(meta.key, flags)
+}
+
+function allowInPm(meta: SerumMeta): string | undefined {
+  if (!meta.key) return undefined
+  if (meta.explicitAm) return undefined
+  if (meta.explicitPm) return meta.key
+  return decidePMSerum(meta.key)
+}
+
+function serumDisplayName(meta: SerumMeta, key: string): string {
+  if (meta.rawName && meta.rawName.trim()) return meta.rawName.trim()
+  if (meta.name && meta.name.trim()) return meta.name.trim()
+  return labelFromKey(key)
+}
+
+function stripTimingMarkers(name: string): string {
+  return name.replace(/\s*\(?\b(?:AM|PM)\b\)?/gi, '').replace(/\s{2,}/g, ' ').trim()
+}
+
 // Very lightweight first pass scheduler that obeys key acceptance checks.
 export function buildWeeklyPlan(input: SchedulerInput, timeZone = 'Asia/Kolkata'): { plan: WeeklyPlan, customerView: CustomerView } {
   const warnings: string[] = []
@@ -103,12 +157,29 @@ export function buildWeeklyPlan(input: SchedulerInput, timeZone = 'Asia/Kolkata'
     secondary = undefined
   }
 
-  // Build AM baseline: Cleanser → Serum (optional) → Moisturizer → Sunscreen
-  const amSerum = decideAMSerum(core, input.flags) || decideAMSerum(secondary, input.flags)
+  const coreMeta = buildSerumMeta(core, input.coreSerumName, input.coreSerumRawName || input.coreSerumName)
+  const secondaryMeta = buildSerumMeta(secondary, input.secondarySerumName, input.secondarySerumRawName || input.secondarySerumName)
+
+  // Build AM baseline: Cleanser -> Serum (optional) -> Moisturizer -> Sunscreen
+  const amCoreKey = allowInAm(coreMeta, input.flags)
+  const amSecondaryKey = allowInAm(secondaryMeta, input.flags)
+  let amSelection: { key: string; meta: SerumMeta } | undefined
+  if (coreMeta.explicitAm && amCoreKey) {
+    amSelection = { key: amCoreKey, meta: coreMeta }
+  } else if (secondaryMeta.explicitAm && amSecondaryKey) {
+    amSelection = { key: amSecondaryKey, meta: secondaryMeta }
+  } else if (amCoreKey) {
+    amSelection = { key: amCoreKey, meta: coreMeta }
+  } else if (amSecondaryKey) {
+    amSelection = { key: amSecondaryKey, meta: secondaryMeta }
+  }
+
   let am: RoutineStep[] = [
     step('Cleanser', input.cleanser, 1),
   ]
-  if (amSerum && serumComfort >= 1) am.push(step('Serum', labelFromKey(amSerum), 2))
+  if (amSelection && serumComfort >= 1) {
+    am.push(step('Serum', serumDisplayName(amSelection.meta, amSelection.key), 2))
+  }
   am.push(step('Moisturizer', input.moisturizer, 3))
   am.push(step('Sunscreen', input.sunscreen || fallbackSunscreen(), 4))
 
@@ -117,27 +188,38 @@ export function buildWeeklyPlan(input: SchedulerInput, timeZone = 'Asia/Kolkata'
   const pmByDay: Record<DayKey, RoutineStep[]> = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] }
   const retinoidNights: DayKey[] = ['mon','thu']
   const exfoliantNights: DayKey[] = sensitive ? ['tue'] : (isHighStrength(input) ? ['tue','sat'] : ['tue','sat'])
+  const corePmCandidate = allowInPm(coreMeta)
+  const secondaryPmCandidate = allowInPm(secondaryMeta)
+  const corePm = corePmCandidate ? { key: corePmCandidate, meta: coreMeta } : undefined
+  const secPm = secondaryPmCandidate ? { key: secondaryPmCandidate, meta: secondaryMeta } : undefined
 
   for (const d of Object.keys(pmByDay) as DayKey[]) {
     // Default PM is cleanser + moisturizer
     let pm = emptyPM(input.cleanser, input.moisturizer)
-    // Try to place core first
-    const corePm = decidePMSerum(core)
-    const secPm = decidePMSerum(secondary)
-    let chosen: string | undefined
-    if (retinoidNights.includes(d) && serumKeyToTag(corePm) === 'retinoids') {
+    let chosen: { key: string; meta: SerumMeta } | undefined
+    if (retinoidNights.includes(d) && corePm?.meta.tag === 'retinoids') {
       chosen = corePm
-    } else if (exfoliantNights.includes(d) && (isExfoliant(corePm) || isExfoliant(secPm))) {
-      chosen = isExfoliant(corePm) ? corePm : (isExfoliant(secPm) ? secPm : undefined)
-      // Ensure not retinoid night
-      if (serumKeyToTag(chosen) === 'retinoids') chosen = undefined
-    } else {
-      // Fill with non-conflict flexible active
-  chosen = pickFlexible(corePm, secPm)
+    } else if (exfoliantNights.includes(d) && (isExfoliant(corePm?.key) || isExfoliant(secPm?.key))) {
+      const preferred = isExfoliant(corePm?.key) ? corePm : (isExfoliant(secPm?.key) ? secPm : undefined)
+      if (preferred && preferred.meta.tag !== 'retinoids') {
+        chosen = preferred
+      }
+    }
+    if (!chosen) {
+      const flexibleKey = pickFlexible(corePm?.key, secPm?.key)
+      if (flexibleKey && corePm && flexibleKey === corePm.key) {
+        chosen = corePm
+      } else if (flexibleKey && secPm && flexibleKey === secPm.key) {
+        chosen = secPm
+      }
     }
 
     if (chosen && serumComfort >= 1) {
-      pm = [ step('Cleanser', input.cleanser, 1), step('Serum', labelFromKey(chosen), 2), step('Moisturizer', input.moisturizer, 3) ]
+      pm = [
+        step('Cleanser', input.cleanser, 1),
+        step('Serum', serumDisplayName(chosen.meta, chosen.key), 2),
+        step('Moisturizer', input.moisturizer, 3),
+      ]
     }
     pmByDay[d] = pm
   }
@@ -200,7 +282,8 @@ function isHighStrength(input: SchedulerInput): boolean {
 function pmSerumTag(steps: RoutineStep[]): ReturnType<typeof serumKeyToTag> {
   const s = steps.find(x => x.label === 'Serum')
   if (!s) return null
-  return serumKeyToTag(REVERSE_LABEL_KEY_MAP[s.product] || '')
+  const canonical = stripTimingMarkers(s.product)
+  return serumKeyToTag(REVERSE_LABEL_KEY_MAP[canonical] || '')
 }
 
 function amHasLAA(am: RoutineStep[]): boolean {
@@ -352,3 +435,4 @@ function enforceIrritationBudget(plan: WeeklyPlan, nightlyCap: number, minRestNi
     }
   }
 }
+

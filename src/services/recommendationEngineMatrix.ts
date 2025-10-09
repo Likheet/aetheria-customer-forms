@@ -549,6 +549,10 @@ function augmentSerumsForAdditionalConcerns(
 type SerumTiming = 'am' | 'pm' | 'both';
 
 function serumTiming(product: MatrixProduct): SerumTiming {
+  const reference = (product.rawName || product.name || '').toUpperCase();
+  if (/\bAM\b/.test(reference)) return 'am';
+  if (/\bPM\b/.test(reference)) return 'pm';
+
   const name = product.name.toLowerCase();
   const tags = product.ingredientTags;
   if (tags.includes('retinoids')) return 'pm';
@@ -673,10 +677,18 @@ function routineToRecommendation(
 
   try {
     if (coreKey) {
+      const scheduleSecondaryKey = secondaryKey || tertiaryKey;
+      const scheduleSecondaryProduct = secondaryKey
+        ? routine.secondarySerums[0]
+        : (tertiaryKey ? routine.secondarySerums[1] : undefined);
       const { plan, customerView } = buildWeeklyPlan({
         cleanser: recommendation.cleanser,
         coreSerumKey: coreKey,
-        secondarySerumKey: secondaryKey || tertiaryKey,
+        coreSerumName: routine.coreSerum.name,
+        coreSerumRawName: routine.coreSerum.rawName,
+        secondarySerumKey: scheduleSecondaryKey,
+        secondarySerumName: scheduleSecondaryProduct?.name,
+        secondarySerumRawName: scheduleSecondaryProduct?.rawName,
         moisturizer: recommendation.moisturizer,
         sunscreen: recommendation.sunscreen,
         flags: {

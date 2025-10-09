@@ -66,7 +66,7 @@ Static questions are grouped into sections; dynamic follow-ups are listed under 
 Concern selection injects targeted follow-ups:
 
 #### Acne Concern
-- “What kind of breakouts do you usually notice?” (Blackheads / Whiteheads / Red pimples / Large painful bumps / Monthly jawline flares)
+- “What kind of breakouts do you usually notice?” (Blackheads / Whiteheads / Red pimples (inflame) / Large painful bumps (refer dermat) / Monthly jawline flares)
 - Severity ladders for each subtype:  
   - Blackheads: ≤10 → Blue, 11–30 → Yellow, 30+ → Red  
   - Whiteheads: ≤10 → Blue, 11–20 → Yellow, 20+ → Red  
@@ -401,4 +401,5 @@ Keeping these sections updated ensures that consultants, developers, and QA engi
 
 ---
 
-Keeping the README, spreadsheet, and codebase aligned ensures edits propagate predictably. Whenever the spreadsheet changes, update `decisionRules.ts`, validate flows, refresh this README, and run the usual checks before shipping. *** End Patch
+Keeping the README, spreadsheet, and codebase aligned ensures edits propagate predictably. Whenever the spreadsheet changes, update `decisionRules.ts`, validate flows, refresh this README, and run the usual checks before shipping. 
+*** End Patch

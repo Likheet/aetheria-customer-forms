@@ -440,10 +440,14 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     const acneBreakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : []
     switch (category) {
       case 'Acne':
-        // Only ready if Acne is a selected concern and required fields are filled
-        if (!concerns.includes('Acne')) return false
-        if (!acneBreakouts.length) return false
-        return acneBreakouts.every(item => String(item.type || '').trim() && String(item.severity || '').trim())
+        // When Acne is selected, ensure required follow-up inputs are provided
+        if (concerns.includes('Acne')) {
+          if (!acneBreakouts.length) return false
+          return acneBreakouts.every(item => String(item.type || '').trim() && String(item.severity || '').trim())
+        }
+        // If Acne is not selected, still allow mismatch reconciliation when machine flags red/yellow
+        const machineBand = String((machine as any)?.acne || '').toLowerCase()
+        return machineBand === 'red' || machineBand === 'yellow'
       case 'Pigmentation':
         // Only ready if Pigmentation is selected and type/severity provided
         return concerns.includes('Pigmentation') && (
