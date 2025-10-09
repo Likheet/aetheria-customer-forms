@@ -47,6 +47,9 @@ export interface DecisionEngineFlags {
   acneSubtype?: string;
   acneHormonal?: boolean;
   dermatologistReferral?: boolean;
+  referDerm?: boolean;
+  situationalAcne?: boolean;
+  pregnancySafe?: boolean;
   textureSubtype?: string;
   pigmentationSubtype?: string;
   barrierOverride?: boolean;

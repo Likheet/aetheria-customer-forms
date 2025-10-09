@@ -4,6 +4,10 @@ This document is the working companion to the spreadsheet that defines the consu
 
 ---
 
+## Automated validation
+
+- `pnpm run test:acne-complete` — runs the TypeScript harness in `scripts/testAcneComplete.ts` to exercise eight end-to-end acne scenarios (machine mismatches, subtype escalations, pregnancy safety, situational flares, and hormonal patterns). Use it after updating decision rules or recommendation logic to confirm the flows stay aligned with the spec.
+
 ## 1. Form Flow (Updated Client Consult)
 
 Static questions are grouped into sections; dynamic follow-ups are listed under the trigger that reveals them.
@@ -106,7 +110,7 @@ Concern selection injects targeted follow-ups:
 ### Section F — Willingness & Preferences
 - Routine steps comfortable with (3-step / 4-step / 5+ step)
 - Serum comfort (1 / 2 / 3)
-- Preferred moisturizer texture (Gel / Lotion / Cream / Rich Balm)
+- Preferred moisturizer texture (Gel / Lotion / Cream / Rich Balm) REMOVE
 
 ### Legal Disclaimer
 - Five individual acknowledgements (non-medical advice, consult dermatologist, patch test, discontinue on irritation, accurate disclosure)

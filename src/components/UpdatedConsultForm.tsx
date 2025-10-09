@@ -386,6 +386,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const [computedSensitivity, setComputedSensitivity] = useState<{ score: number; tier: string; band: string; remark: string } | null>(null);
   const [decisions, setDecisions] = useState<any[]>([]);
   const [gateRemarks, setGateRemarks] = useState<string[]>([]);
+  const prevMainConcernsRef = useRef<string[]>([]);
 
   // Gate questions logic
   const gateQuestions = [
@@ -435,11 +436,17 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
   // Per-concern readiness: allow follow-ups for a category only if the concern is selected
   // and prerequisite fields for that concern are answered. Moisture/Grease remain global.
+  const MAIN_CONCERNS_STEP = 19;
+
   const isCategoryReady = (category: string, _dimension?: 'brown' | 'red') => {
     const concerns: string[] = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : []
     const acneBreakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : []
     switch (category) {
       case 'Acne':
+        // Don't surface acne follow-ups until after the main concerns step is completed
+        if (currentStep <= MAIN_CONCERNS_STEP) {
+          return false
+        }
         // When Acne is selected, ensure required follow-up inputs are provided
         if (concerns.includes('Acne')) {
           if (!acneBreakouts.length) return false
@@ -693,10 +700,44 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingAutoFill])
 
-  // When concerns are deselected, proactively drop answers/drafts for rules from those categories
+  // When concerns change, proactively drop stale answers/drafts tied to unselected categories
+  // and clear mismatch follow-ups once Acne is explicitly chosen.
   useEffect(() => {
     const concerns: string[] = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : []
-    // Build ruleId -> category using latest runtime self/machine
+    const prevConcerns = prevMainConcernsRef.current || []
+    const mismatchRuleId = 'acne_MAcne_CNone'
+    const acneJustSelected = concerns.includes('Acne') && !prevConcerns.includes('Acne')
+
+    let answersWorking: typeof followUpAnswers = followUpAnswers
+    let draftsWorking: typeof followUpDrafts = followUpDrafts
+    let answersChangedDueToAcne = false
+    let draftsChangedDueToAcne = false
+    let shouldResetFollowUpLocal = false
+
+    if (acneJustSelected) {
+      if (answersWorking[mismatchRuleId]) {
+        const { [mismatchRuleId]: _removed, ...rest } = answersWorking
+        answersWorking = rest
+        answersChangedDueToAcne = true
+      }
+      if (draftsWorking[mismatchRuleId]) {
+        const { [mismatchRuleId]: _removedDraft, ...restDraft } = draftsWorking
+        draftsWorking = restDraft
+        draftsChangedDueToAcne = true
+      }
+      if (followUp?.ruleId === mismatchRuleId) {
+        setFollowUp(null)
+        shouldResetFollowUpLocal = true
+      }
+      if (activeFollowUp?.ruleId === mismatchRuleId) {
+        setActiveFollowUp(null)
+        shouldResetFollowUpLocal = true
+      }
+      if (shouldResetFollowUpLocal) {
+        setFollowUpLocal({})
+      }
+    }
+
     try {
       const m = (machine || {}) as any
       const self = (runtimeSelf || {}) as any
@@ -712,35 +753,41 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           default: return true
         }
       }
-      // Prune answers that belong to categories no longer selected
+      // Prune answers that belong to categories no longer selected, or were cleared due to Acne being added
       const prunedAnswers: typeof followUpAnswers = {}
-      let changed = false
-      for (const [rid, ans] of Object.entries(followUpAnswers)) {
+      let answersChanged = answersChangedDueToAcne
+      for (const [rid, ans] of Object.entries(answersWorking)) {
         const cat = ruleToCategory[rid] || ''
         if (isCategorySelected(cat)) {
           prunedAnswers[rid] = ans
         } else {
-          changed = true
+          answersChanged = true
         }
       }
-      if (changed) {
+      if (answersChanged) {
         setFollowUpAnswers(prunedAnswers)
-        // Also drop any drafts for deselected categories
-        setFollowUpDrafts(prev => {
-          const next: typeof prev = {}
-          for (const [rid, ans] of Object.entries(prev)) {
-            const cat = ruleToCategory[rid] || ''
-            if (isCategorySelected(cat)) next[rid] = ans
-          }
-          return next
-        })
-        // Recompute with pruned answers to reflect band reversion immediately
         recomputeEngine(prunedAnswers)
+      }
+
+      const prunedDrafts: typeof followUpDrafts = {}
+      let draftsChanged = draftsChangedDueToAcne
+      for (const [rid, ans] of Object.entries(draftsWorking)) {
+        const cat = ruleToCategory[rid] || ''
+        if (isCategorySelected(cat)) {
+          prunedDrafts[rid] = ans
+        } else {
+          draftsChanged = true
+        }
+      }
+      if (draftsChanged) {
+        setFollowUpDrafts(prunedDrafts)
       }
     } catch (e) {
       // non-fatal; keep going
       console.warn('Failed to prune deselected concern answers:', e)
     }
+
+    prevMainConcernsRef.current = concerns
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.mainConcerns])
 

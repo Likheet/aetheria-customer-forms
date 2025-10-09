@@ -330,27 +330,129 @@ const RULES: Rule[] = [
     scope: 'Acne',
     when: (m, s) => (m.acne === 'yellow' || m.acne === 'red') && (!s.acne_claim || s.acne_claim === 'green' || s.acne_claim === 'blue'),
     questions: [
-      { id: 'q1', prompt: 'Any new bumps in last 2 weeks?', options: ['None', '1–2', 'Several'] },
-      { id: 'q2', prompt: 'Are there red/brown spots without raised bump?', options: ['Yes', 'No'] },
+      { id: 'q1', prompt: 'Any new bumps in last 2 weeks?', options: ['None', '1-2', 'Several'] },
+      { id: 'q2', prompt: 'Any red/brown spots without a raised bump?', options: ['Yes', 'No'] },
+      { id: 'q2a', prompt: 'If yes, are the spots red or brown?', options: ['Red', 'Brown'] },
       { id: 'q3', prompt: 'Do you get monthly breakouts around periods/jawline?', options: ['Yes', 'No', 'NA'] },
       { id: 'q4', prompt: 'Do you frequently notice tiny bumps/blackheads/whiteheads?', options: ['Yes', 'No'] },
+      { id: 'q5', prompt: 'Do you have any inflamed pimples now?', options: ['None', '1-5', '6-15', '>15'] },
     ],
-    decide: (a) => {
-      const q1 = String(a.q1);
-      const q2 = String(a.q2);
-      const q3 = String(a.q3);
-      const q4 = String(a.q4);
+    decide: (a, _ctx) => {
+      const q1 = String(a.q1 || '');
+      const q2 = String(a.q2 || '');
+      const q2a = String(a.q2a || '');
+      const q3 = String(a.q3 || '');
+      const q4 = String(a.q4 || '');
+      const q5 = String(a.q5 || '');
 
-      if (q1 === '1–2' || q3 === 'Yes') {
-        return { scope: 'Acne', verdict: 'ACNE – MILD (trust machine).', updatedBand: 'blue', flags: q3 === 'Yes' ? ['acne-category:Hormonal'] : [] };
+      const pigmentFlag = q2a === 'Red' ? 'pigmentation:red' : q2a === 'Brown' ? 'pigmentation:brown' : undefined;
+      const addPigmentFlag = (flags: string[]) => {
+        if (pigmentFlag && !flags.includes(pigmentFlag)) flags.push(pigmentFlag);
+        return flags;
+      };
+
+      const hasInflamed = q5 === '1-5' || q5 === '6-15' || q5 === '>15';
+
+      if (q2 === 'Yes' && q5 === '>15') {
+        const flags = addPigmentFlag(['acne-category:Inflammatory', 'refer-derm']);
+        return {
+          scope: 'Acne',
+          verdict: 'Post-acne marks with severe inflammation — refer dermatologist.',
+          updatedBand: 'red',
+          flags,
+          safety: ['refer-derm'],
+        };
       }
-      if (q2 === 'Yes' && (q1 === 'None' || q1 === '1–2')) {
-        return { scope: 'Acne', verdict: 'POST-ACNE MARKS ONLY (no active acne).', updatedBand: 'green', flags: ['shift-focus-to-PIH/PIE'] };
+      if (q2 === 'Yes' && q5 === '6-15') {
+        const flags = addPigmentFlag(['acne-category:Inflammatory']);
+        return {
+          scope: 'Acne',
+          verdict: 'Post-acne marks with active inflammatory lesions.',
+          updatedBand: 'red',
+          flags,
+        };
       }
-      if (q1 === 'Several' || q4 === 'Yes') {
-        return { scope: 'Acne', verdict: 'Comedonal or inflammatory acne.', updatedBand: 'yellow', flags: q4 === 'Yes' ? ['acne-category:Comedonal'] : [] };
+      if (q2 === 'Yes' && q5 === '1-5') {
+        const flags = addPigmentFlag(['acne-category:Inflammatory']);
+        return {
+          scope: 'Acne',
+          verdict: 'Post-acne marks with mild inflammatory lesions.',
+          updatedBand: 'yellow',
+          flags,
+        };
       }
-      return { scope: 'Acne', verdict: 'No clear activity.', updatedBand: 'green' };
+      if (q2 === 'Yes' && !hasInflamed && (q1 === 'None' || q1 === '1-2')) {
+        const flags = addPigmentFlag(['shift-focus-to-PIH/PIE']);
+        return {
+          scope: 'Acne',
+          verdict: 'Post-acne pigmentation only — shift focus to marks.',
+          updatedBand: 'green',
+          flags,
+        };
+      }
+
+      if (q5 === '>15') {
+        return {
+          scope: 'Acne',
+          verdict: 'Severe inflammatory acne detected — refer to dermatologist.',
+          updatedBand: 'red',
+          flags: ['acne-category:Inflammatory', 'refer-derm'],
+          safety: ['refer-derm'],
+        };
+      }
+      if (q5 === '6-15') {
+        return {
+          scope: 'Acne',
+          verdict: 'Moderate inflammatory acne present — escalate care.',
+          updatedBand: 'red',
+          flags: ['acne-category:Inflammatory'],
+        };
+      }
+      if (q5 === '1-5') {
+        return {
+          scope: 'Acne',
+          verdict: 'Mild inflammatory acne confirmed.',
+          updatedBand: 'yellow',
+          flags: ['acne-category:Inflammatory'],
+        };
+      }
+
+      if (q1 === 'Several') {
+        return {
+          scope: 'Acne',
+          verdict: 'Visible active acne aligns with machine reading.',
+          updatedBand: 'yellow',
+          flags: ['acne-category:Inflammatory'],
+        };
+      }
+      if (q4 === 'Yes') {
+        return {
+          scope: 'Acne',
+          verdict: 'Active comedonal congestion detected.',
+          updatedBand: 'yellow',
+          flags: ['acne-category:Comedonal'],
+        };
+      }
+
+      if (q5 === 'None' && q3 === 'Yes') {
+        return {
+          scope: 'Acne',
+          verdict: 'Hormonal flare pattern detected despite clear skin today.',
+          updatedBand: 'blue',
+          flags: ['acne-category:Hormonal'],
+        };
+      }
+
+      if (q5 === 'None' && q1 === '1-2') {
+        return {
+          scope: 'Acne',
+          verdict: 'Mild or cyclical breakouts — monitor pattern.',
+          updatedBand: 'blue',
+          flags: ['acne-category:Inflammatory'],
+        };
+      }
+
+      return { scope: 'Acne', verdict: 'False positive — no active acne detected.', updatedBand: 'green' };
     },
   },
 
@@ -360,38 +462,124 @@ const RULES: Rule[] = [
     scope: 'Acne',
     when: (m, s) => (m.acne === 'green' || m.acne === 'blue') && (s.acne_claim === 'yellow' || s.acne_claim === 'red'),
     questions: [
-      { id: 'q1', prompt: 'How many inflamed (red, swollen, painful) pimples do you currently see?', options: ['None', '1–5', '6–15', '>=15'] },
+      { id: 'q1', prompt: 'How many inflamed (red, swollen, painful) pimples do you currently see?', options: ['None', '1-5', '6-15', '>15'] },
       { id: 'q2', prompt: 'Do you get deep, painful lumps or nodules under the skin?', options: ['Yes', 'No'] },
-      { id: 'q3', prompt: 'Do you have visible blackheads/whiteheads?', options: ['None', '<10', '10–20', '>=20'] },
-      { id: 'q4', prompt: 'Do your breakouts flare with mask/sweat, periods, stress, products?', options: ['Yes', 'No'] },
-      { id: 'q5', prompt: 'Are you currently pregnant or breastfeeding?', options: ['Yes', 'No', 'NA (male)'] },
+      { id: 'q3', prompt: 'Do you have visible blackheads/whiteheads alongside these breakouts?', options: ['None', '<10', '10-20', '>20'] },
+      { id: 'q4', prompt: 'Do your breakouts flare with specific triggers (mask/sweat/stress/products)?', options: ['Yes', 'No'] },
+      { id: 'q5', prompt: 'Are you currently pregnant or breastfeeding?', options: ['Yes', 'No', 'NA'] },
     ],
     decide: (a, ctx) => {
-      const q1 = String(a.q1);
-      const q2 = String(a.q2);
-      const q3 = String(a.q3);
-      const q4 = String(a.q4);
-      const q5 = String(a.q5);
+      const normalize = (value: string) => normalizeOptionLabel(String(value || ''));
+      const q1 = normalize(a.q1 as string);
+      const q2 = normalize(a.q2 as string);
+      const q3 = normalize(a.q3 as string);
+      const q4 = normalize(a.q4 as string);
+      const q5 = normalize(a.q5 as string);
 
-      if (q2 === 'Yes' || q1 === '>=15') {
-        return { scope: 'Acne', verdict: 'MODERATE–SEVERE ACNE — refer to dermatologist.', updatedBand: 'red', flags: ['refer-derm'], safety: ['nodulocystic-suspect'] };
+      const severeInflamed = q1 === '>15' || q1 === '>=15';
+      const moderateInflamed = q1 === '6-15';
+      const mildInflamed = q1 === '1-5';
+      const nodules = q2 === 'yes';
+      const severeComedonal = q3 === '>=20' || q3 === '>20';
+      const moderateComedonal = q3 === '10-20';
+      const lightComedonal = q3 === 'none' || q3 === '<10';
+      const situational = q4 === 'yes';
+      const pregnancyCtx = normalize(ctx?.pregnancyBreastfeeding || '');
+      const pregnancy = q5 === 'yes' || pregnancyCtx === 'yes';
+
+      const applyPregnancy = (outcome: Outcome): Outcome => {
+        if (!pregnancy) return outcome;
+        const flags = outcome.flags ? [...outcome.flags] : [];
+        if (!flags.includes('pregnancy-filter')) flags.push('pregnancy-filter');
+        const safety = outcome.safety ? [...outcome.safety] : [];
+        if (!safety.includes('pregnancy-filter')) safety.push('pregnancy-filter');
+        const baseVerdict = (outcome.verdict || '').trim();
+        const pregnancyMessage = baseVerdict && /pregnancy/i.test(baseVerdict)
+          ? baseVerdict
+          : `${baseVerdict || 'Acne routine updated.'} Pregnancy-safe routine needed.`.trim();
+        const verdict = pregnancyMessage;
+        const updatedBand = outcome.updatedBand === 'red' ? outcome.updatedBand : 'blue';
+        return { ...outcome, flags, safety, verdict, updatedBand };
+      };
+
+      if (nodules || severeInflamed) {
+        return applyPregnancy({
+          scope: 'Acne',
+          verdict: 'Deep, painful lesions present — refer to dermatologist.',
+          updatedBand: 'red',
+          flags: ['acne-category:Nodulocystic', 'refer-derm'],
+          safety: ['refer-derm'],
+        });
       }
-      if (q1 === '6–15' && q2 === 'No') {
-        return { scope: 'Acne', verdict: 'MILD–MODERATE ACNE — start actives, follow up in 4 weeks.', updatedBand: 'yellow', flags: ['acne-category:Mild-Inflammatory'] };
+
+      if (moderateInflamed) {
+        return applyPregnancy({
+          scope: 'Acne',
+          verdict: 'Moderate inflammatory acne confirmed.',
+          updatedBand: 'red',
+          flags: ['acne-category:Inflammatory'],
+        });
       }
-      if (q1 === '1–5' && (q3 === 'None' || q3 === '<10')) {
-        return { scope: 'Acne', verdict: 'MILD ACNE — gentle active routine.', updatedBand: 'blue' };
+
+      if (severeComedonal) {
+        return applyPregnancy({
+          scope: 'Acne',
+          verdict: 'Severe comedonal congestion detected.',
+          updatedBand: 'red',
+          flags: ['acne-category:Comedonal'],
+        });
       }
-      if ((q1 === 'None' || q1 === '1–5') && (q3 === '10–20' || q3 === '>=20')) {
-        return { scope: 'Acne', verdict: 'COMEDONAL ACNE — exfoliation focus (BHA/AHA).', updatedBand: 'yellow', flags: ['acne-category:Comedonal'] };
+
+      if (situational && lightComedonal && !moderateInflamed && !severeInflamed && !nodules) {
+        return applyPregnancy({
+          scope: 'Acne',
+          verdict: 'Situational acne triggered by mask/sweat/stress/products.',
+          updatedBand: 'blue',
+          flags: ['acne-category:Situational acne'],
+        });
       }
-      if ((q1 === 'None' || q1 === '1–5') && (q3 === 'None' || q3 === '<10') && q4 === 'Yes') {
-        return { scope: 'Acne', verdict: 'SITUATIONAL ACNE — triggers control + targeted routine.', updatedBand: 'blue', flags: ['acne-category:Situational'] };
+
+      if (moderateComedonal) {
+        return applyPregnancy({
+          scope: 'Acne',
+          verdict: 'Comedonal congestion present — target exfoliation.',
+          updatedBand: 'yellow',
+          flags: ['acne-category:Comedonal'],
+        });
       }
-      if (q5 === 'Yes' || (ctx.pregnancyBreastfeeding && /yes/i.test(ctx.pregnancyBreastfeeding))) {
-        return { scope: 'Acne', verdict: 'ACNE WITH PREGNANCY SAFETY FILTER — restrict high-risk actives.', updatedBand: 'blue', safety: ['pregnancy-filter'] };
+
+      if (mildInflamed) {
+        return applyPregnancy({
+          scope: 'Acne',
+          verdict: 'Mild inflammatory acne present.',
+          updatedBand: 'yellow',
+          flags: ['acne-category:Inflammatory'],
+        });
       }
-      return { scope: 'Acne', verdict: 'CLEAR SKIN — machine false positive possible; confirm later.', updatedBand: 'green' };
+
+      if (lightComedonal) {
+        return applyPregnancy({
+          scope: 'Acne',
+          verdict: 'Light congestion detected — maintain gentle actives.',
+          updatedBand: 'blue',
+          flags: ['acne-category:Comedonal'],
+        });
+      }
+
+      if (pregnancy) {
+        return applyPregnancy({
+          scope: 'Acne',
+          verdict: 'Pregnancy safety filter engaged.',
+          updatedBand: 'blue',
+          flags: [],
+        });
+      }
+
+      return {
+        scope: 'Acne',
+        verdict: 'Clear skin on examination — monitor and reassess if concerns persist.',
+        updatedBand: 'green',
+      };
     },
   },
 
@@ -658,7 +846,7 @@ function toBand(val?: string): Band4 | undefined {
 
 // ---- deriveSelfBands(formAnswers, ctx)
 // Adapts UpdatedConsultData-like answers into standard bands
-export function deriveSelfBands(form: any, ctx: RuntimeContext = {}): RuntimeSelfBands {
+export function deriveSelfBands(form: any, _ctx: RuntimeContext = {}): RuntimeSelfBands {
   const self: RuntimeSelfBands = {}
 
   // Sebum (oil) mapping from single-question prompt or band value

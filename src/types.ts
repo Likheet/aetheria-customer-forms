@@ -4,6 +4,20 @@ export type AcneCategory =
   | 'Cystic acne'
   | 'Hormonal acne';
 
+export type AcneBreakoutTypeKey =
+  | 'Blackheads'
+  | 'Whiteheads'
+  | 'RedPimples'
+  | 'PainfulBumps'
+  | 'JawlineFlares';
+
+export type AcneSubtypeKey =
+  | 'Comedonal'
+  | 'Inflammatory'
+  | 'Hormonal'
+  | 'Nodulocystic'
+  | 'Situational';
+
 export interface AcneBreakoutDetail {
   type: string;
   severity: string;
@@ -49,6 +63,8 @@ export interface UpdatedConsultData {
   // Ordered prioritization of selected concerns (labels as shown in UI)
   concernPriority?: string[];
   acneBreakouts: AcneBreakoutDetail[];
+  acneBreakoutType?: AcneBreakoutTypeKey;
+  acnePendingSubtype?: AcneSubtypeKey;
   acneDuration: string;
   pigmentationType: string;
   pigmentationSeverity: string;

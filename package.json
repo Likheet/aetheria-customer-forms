@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "npx tsx scripts/buildProductIndex.ts && vite build",
     "build:products": "npx tsx scripts/buildProductIndex.ts",
+  "test:acne-complete": "tsx scripts/testAcneComplete.ts",
     "lint": "eslint .",
     "knip": "knip --include src app components pages",
     "tsprune": "ts-prune --ignoreTests --tsConfig tsconfig.json",
