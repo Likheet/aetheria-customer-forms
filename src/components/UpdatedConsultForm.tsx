@@ -1443,8 +1443,26 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         return Array.from(set);
       })();
 
+      const acneSubtypeFlag = (() => {
+        if (!acneCategories.length) return '';
+        return acneCategories[0];
+      })();
+
+      const decisionEngineInput = {
+        effectiveBands: effectiveForContext || {},
+        flags: {
+          acneSubtype: acneSubtypeFlag,
+          acneHormonal: acneCategories.includes('Hormonal acne'),
+          dermatologistReferral: String(formData.severeCysticAcne || '').trim() === 'Yes',
+          barrierOverride: String(formData.barrierStressHigh || '').trim() === 'Yes',
+          textureSubtype: formData.textureType || formData.wrinklesType || '',
+          pigmentationSubtype: formData.pigmentationType || '',
+        },
+      };
+
       const recommendationContext: RecommendationContext = {
         skinType: formData.skinType,
+        decisionEngine: decisionEngineInput,
         effectiveBands: effectiveForContext || {},
         acneCategories,
         decisions: triageOutcomes,
@@ -1463,7 +1481,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           dateOfBirth: formData.dateOfBirth,
           gender: formData.gender,
           recentIsotretinoin: formData.recentIsotretinoin,
-          severeCysticAcne: formData.severeCysticAcne
+          severeCysticAcne: formData.severeCysticAcne,
+          barrierStressHigh: formData.barrierStressHigh,
+          allergies: formData.allergies,
         }
       };
       const recommendationResult = generateRecommendations(recommendationContext);

@@ -254,25 +254,150 @@ Concern selection injects targeted follow-ups:
 
 ---
 
-## 3. Product Recommendation Engine Overview
+## 3. Product Recommendation Engine Overview (Matrix System)
 
-`src/services/recommendationEngine.ts` converts the form + decision output into specific products and schedules.
+`src/services/recommendationEngine.ts` now re-exports the matrix-driven engine in `src/services/recommendationEngineMatrix.ts`. The engine resolves every routine by walking a 4D concern matrix (concern → subtype → skin type → band) and then applies safety, compatibility, and scheduling logic before returning structured AM/PM plans.
 
-- **Inputs**:  
-  - `effectiveBands` from the decision engine (worst-wins after follow-ups)  
-  - Decision history per rule (for flags/A/B testing)  
-  - Form data (gates, concerns, budget, serum comfort, etc.)
-- **Safety Gates**: Pregnancy, isotretinoin, barrier stress, and allergy entries build a disallow set of actives so retinoids, strong acids, or BPO are removed automatically when unsafe.
-- **Concern Prioritisation**: `extractActiveConcerns` + `findPrimaryConcern` pick the highest-severity concern (worst band wins, filtered by the client’s selected priorities). Each concern maps to helper routines (`getAcneRecommendation`, `getSebumRecommendation`, `getPigmentationRecommendation`, `getTextureRecommendation`, `getPoresRecommendation`).
-- **Product Selection**: Helpers choose SKUs from `PRODUCT_DATABASE` based on concern, price tier (derived from `budget`), skin type, and safety. Returns cleanser, core serum, optional secondary serum, moisturizer, and sunscreen. Internal metadata (`_keys`, `_flags`) preserves the chosen active families.
-- **Adjustments**: `adjustForIsotretinoinAndAllergies` swaps out unsafe items post-selection. Serum counts respect `serumComfort` and compatibility from `ingredientInteractions`.
-- **Scheduling**: When product keys are available, `buildWeeklyPlan` (in `src/services/scheduler.ts`) generates AM/PM schedules plus a customer-facing summary, with barrier-first variants when required.
-- **Fallbacks**: If no concern-specific match exists, the engine falls back to skin-type defaults, then to a general gentle routine so recommendations are never empty.
+- **Core data** live in `src/data/concernMatrix.ts`. Each matrix row stores product metadata (name, ingredient tags, usage defaults) per slot.
+- **Compatibility** continues to be enforced via `src/services/ingredientInteractions.ts`. Matrix products carry ingredient tags so the serum layering logic can reuse the existing compatibility matrix.
+- **Decision inputs** come from the consult form and decision engine. An acne-first override runs before any band comparison.
+- **Safety gates** (pregnancy, isotretinoin, barrier compromise, allergies) swap unsafe products for vetted alternatives and append notes so consultants understand what changed.
+- **Outputs** include the historical fields plus two new arrays: `am` and `pm`, listing products in application order. These align with the weekly schedule generator (`buildWeeklyPlan`) but are constructed directly inside the recommendation function.
 
-When the spreadsheet changes:
-1. Confirm concern categories in the sheet still map to existing helper functions; add new helpers if a new concern appears.  
-2. Extend safety logic if new gates or contraindications exist.  
-3. Update this README with any new recommendation rules or terminology so manual verification remains quick.
+### 3.1 Adding Products to the Concern Matrix
+
+Use `registerProduct` inside `src/data/concernMatrix.ts` to describe aliases, ingredient tags, usage defaults, and any safety flags. Then map raw CSV values to `MatrixProduct`s via the helper functions already in that file.
+
+```ts
+// src/data/concernMatrix.ts
+registerProduct(['Superhero Retinol 0.3%'], {
+  ingredientTags: ['retinoids'],
+  ingredientKeywords: ['retinol', 'encapsulated retinoid'],
+  defaultUsage: 'pm',
+  pregnancyUnsafe: true,
+  isotretinoinUnsafe: true,
+});
+
+// Add a CSV row (concern, subtype, skin type, band, slots…)
+const RAW_MATRIX = `Concern,Subtype,SkinType,Band,Cleanser,CoreSerum,SecondarySerum,Moisturizer,Sunscreen,Remarks
+Texture,Aging,Combo,Yellow,Gentle foaming,Superhero Retinol 0.3%,Vitamin C,Gel-cream,SKINTYPE_DEFAULT,Encapsulated retinol upgrade
+${RAW_MATRIX}`;
+```
+
+Key steps:
+1. **Register aliases** with `registerProduct` so ingredient tags and safety flags are available.
+2. **Reference the product** in the CSV block. Unknown strings throw during startup, making it obvious when metadata is missing.
+3. **Run `pnpm tsc --noEmit`** to ensure the matrix parses correctly.
+
+### 3.2 Updating Ingredient Compatibility Rules
+
+Compatibility remains centralized in `src/services/ingredientInteractions.ts`. To block or caution new pairs, extend the `disallow` or `caution` arrays. Tags referenced here must match the values emitted by `serumKeyToTag`.
+
+```ts
+// src/services/ingredientInteractions.ts
+const disallow: Array<[IngredientTag, IngredientTag]> = [
+  ['retinoids', 'vitamin_c_ascorbic'],
+  ['aha', 'bha'],
+  ['tranexamic', 'benzoyl_peroxide'], // new block
+];
+
+export function serumKeyToTag(key?: string): IngredientTag | null {
+  switch ((key || '').toLowerCase()) {
+    case 'tranexamic-acid':
+      return 'tranexamic';
+    // …
+  }
+}
+```
+
+1. Add the tag to `serumKeyToTag` (or the moisturizer/sunscreen tag helpers).
+2. Update the compatibility tables.
+3. Adjust product metadata in `concernMatrix.ts` so the new tag is emitted.
+
+### 3.3 Acne Priority Override
+
+As soon as the recommendation function receives the concern list, it searches for acne and promotes it to primary, regardless of severity band. The override is implemented in `selectPrimaryConcern`.
+
+```ts
+// src/services/recommendationEngineMatrix.ts
+function selectPrimaryConcern(concerns: ConcernSelection[], notes: string[]) {
+  const acneConcern = concerns.find(c => c.concern === 'acne');
+  if (acneConcern) {
+    notes.push('Acne priority override applied.');
+    const others = concerns.filter(c => c !== acneConcern);
+    return { primary: acneConcern, others };
+  }
+  const [first, ...rest] = concerns;
+  return { primary: first ?? null, others: rest };
+}
+```
+
+If acne is absent, worst-band logic (red → yellow → blue → green) governs the selection. All triggered rules append to the `notes` array returned with every recommendation.
+
+### 3.4 Safety Gates & Substitutions
+
+Safety gates run after the primary routine is assembled. Each gate swaps unsafe items for alternative matrix products and documents the change.
+
+```ts
+// src/services/recommendationEngineMatrix.ts
+function applyPregnancySafety(routine: RoutineState, context: RecommendationContext, notes: string[]) {
+  if (!isPregnancySafe(context)) return;
+  const replaceIfUnsafe = (product: MatrixProduct, target: 'core' | number) => {
+    const tags = product.ingredientTags;
+    if (tags.includes('retinoids') || tags.includes('benzoyl_peroxide') || tags.includes('bha')) {
+      const safe = instantiateProduct('Azelaic acid 10%', product.slot);
+      replaceSerum(target, routine, safe, notes, 'Pregnancy safety');
+    }
+  };
+  replaceIfUnsafe(routine.coreSerum, 'core');
+  routine.secondarySerums.forEach((serum, idx) => replaceIfUnsafe(serum, idx));
+}
+```
+
+Related helpers (`applyIsotretinoinSafety`, `applyAllergySafety`, and the barrier-first routine) normalise cleansers, moisturisers, and serums while logging explanatory notes so consultants can explain the substitutions.
+
+### 3.5 AM/PM Routing
+
+AM/PM arrays are generated directly from product tags. Retinoids and peptides remain PM-only, while vitamin C (L-AA) and tranexamic acid default to AM. Sunscreen only appears in AM.
+
+```ts
+// src/services/recommendationEngineMatrix.ts
+function serumTiming(product: MatrixProduct): 'am' | 'pm' | 'both' {
+  if (product.ingredientTags.includes('retinoids')) return 'pm';
+  if (product.ingredientTags.includes('vitamin_c_ascorbic') || product.ingredientTags.includes('tranexamic')) return 'am';
+  if (product.ingredientTags.includes('azelaic') || product.ingredientTags.includes('niacinamide')) return 'both';
+  // …
+}
+
+function buildAmPmRoutines(routine: RoutineState) {
+  const serums = [routine.coreSerum, ...routine.secondarySerums];
+  const am = [routine.cleanser.name, ...serums.filter(s => ['am', 'both'].includes(serumTiming(s))).map(s => s.name), routine.moisturizer.name, routine.sunscreen.name];
+  const pm = [routine.cleanser.name, ...serums.filter(s => ['pm', 'both'].includes(serumTiming(s))).map(s => s.name), routine.moisturizer.name];
+  return { am, pm };
+}
+```
+
+These arrays are always cleanser → serums → moisturizer (+ sunscreen in AM), so downstream UI can render a consistent stacked routine without re-deriving timing rules.
+
+### 3.6 Troubleshooting Missing Matrix Entries
+
+Missing matrix data bubbles up via `notes` and throws during parsing when possible. Use the following checklist when a concern returns an unexpected fallback:
+
+```ts
+// src/services/recommendationEngineMatrix.ts
+const entry = fetchMatrixEntry(primary, skinType, notes);
+if (!entry) {
+  notes.push(`Matrix entry missing for ${primary.concern} ${primary.subtype}.`);
+  routine = buildSkinTypeFallbackRoutine(skinType, notes);
+}
+```
+
+1. **Check `notes`** in the result. A message like “Matrix entry missing for acne hormonal (Combo)” points to the exact key.
+2. **Verify CSV rows** in `concernMatrix.ts`. Ensure the concern, subtype, skin type, and band string match the engine’s normalized keys.
+3. **Confirm product aliases** are registered via `registerProduct`. Unknown product strings throw a build-time error.
+4. **Run `pnpm tsc --noEmit`** after changes—the matrix parser executes at module load and will throw if the CSV contains invalid data.
+
+Keeping these sections updated ensures that consultants, developers, and QA engineers can add new content confidently without breaking the recommendation flow.
 
 ---
 
