@@ -29,6 +29,7 @@ export interface UpdatedConsultData {
   name: string;
   phoneNumber: string;
   dateOfBirth: string;
+  calculatedAge?: number | null;
   gender: string;
   
   // Section 0 - Gates

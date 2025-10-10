@@ -6,11 +6,10 @@ import {
   MatrixEntry,
   MatrixProduct,
   ProductSlot,
-  ProductInfo,
   getProductInfo,
 } from '../data/concernMatrix';
 import { buildWeeklyPlan } from './scheduler';
-import { pairCompatibility, serumKeyToTag, IngredientTag } from './ingredientInteractions';
+import { pairCompatibility, IngredientTag } from './ingredientInteractions';
 
 type Maybe<T> = T | undefined | null;
 
@@ -143,7 +142,7 @@ function isPregnancySafe(context: RecommendationContext): boolean {
 function deriveEffectiveBands(context: RecommendationContext): Record<string, string> {
   const fromDecision = context.decisionEngine?.effectiveBands || {};
   const legacy = context.effectiveBands || {};
-  return { ...legacy, ...fromDecision };
+  return { ...legacy, ...fromDecision } as Record<string, string>;
 }
 
 function isSensitive(context: RecommendationContext): boolean {
@@ -184,6 +183,12 @@ function buildGateDisallowSet(context: RecommendationContext): Set<string> {
   if (allergyMatches('lactic') || allergyMatches('aha') || allergyMatches('glycol')) disallow.add('lactic-acid');
 
   return disallow;
+}
+
+function parseSerumComfort(context: RecommendationContext): number {
+  const raw = parseInt(String(context.formData.serumComfort || '1'), 10);
+  if (Number.isNaN(raw)) return 1;
+  return Math.max(1, Math.min(3, raw));
 }
 
 const BAND_PRIORITY: Record<BandColor, number> = {
@@ -386,6 +391,54 @@ function evaluateCompatibility(existing: MatrixProduct[], candidate: MatrixProdu
   return { allowed: true, cautions };
 }
 
+type SerumAppendFailureReason = 'comfort-limit' | 'safety-gate' | 'duplicate' | 'compatibility' | 'other';
+
+interface SerumAppendResult {
+  added: boolean;
+  reason?: SerumAppendFailureReason;
+  detail?: string;
+}
+
+function tryAppendSecondarySerum(
+  routine: RoutineState,
+  candidate: MatrixProduct,
+  context: RecommendationContext,
+  notes: string[],
+  source: string,
+): SerumAppendResult {
+  const limit = parseSerumComfort(context);
+  const currentCount = 1 + routine.secondarySerums.length;
+  if (currentCount >= limit) {
+    notes.push(`Serum comfort limit reached; skipped ${candidate.name} from ${source}.`);
+    return { added: false, reason: 'comfort-limit', detail: 'serum comfort limit reached' };
+  }
+
+  const disallow = buildGateDisallowSet(context);
+  const key = serumKeyFromProduct(candidate);
+  if (key && disallow.has(key)) {
+    notes.push(`Skipped ${candidate.name} from ${source} due to safety gate (${key}).`);
+    return { added: false, reason: 'safety-gate', detail: `safety gate (${key})` };
+  }
+
+  const existing = [routine.coreSerum, ...routine.secondarySerums];
+  if (key && existing.some(product => serumKeyFromProduct(product) === key)) {
+    notes.push(`Skipped ${candidate.name} from ${source} because a similar serum is already included.`);
+    return { added: false, reason: 'duplicate', detail: `duplicate key ${key}` };
+  }
+
+  const compat = evaluateCompatibility(existing, candidate);
+  if (!compat.allowed) {
+    notes.push(`Skipped ${candidate.name} from ${source}: ${compat.reason}.`);
+    return { added: false, reason: 'compatibility', detail: compat.reason };
+  }
+
+  routine.secondarySerums.push(candidate);
+  if (compat.cautions.length) {
+    compat.cautions.forEach(caution => notes.push(`Compatibility caution: ${caution}.`));
+  }
+  return { added: true };
+}
+
 function replaceSerum(target: 'core' | number, routine: RoutineState, replacement: MatrixProduct, notes: string[], reason: string): void {
   if (target === 'core') {
     notes.push(`${reason}: replaced core serum with ${replacement.name}.`);
@@ -511,40 +564,81 @@ function augmentSerumsForAdditionalConcerns(
   skinType: SkinTypeKey,
   notes: string[],
 ): void {
-  const serumComfort = Math.max(1, Math.min(3, parseInt(String(context.formData.serumComfort || '1'), 10) || 1));
-  if (serumComfort <= 1) return;
+  const limit = parseSerumComfort(context);
+  if (1 + routine.secondarySerums.length >= limit) return;
 
-  const disallow = buildGateDisallowSet(context);
-  const existingSerums: MatrixProduct[] = [routine.coreSerum, ...routine.secondarySerums];
-  let slotsRemaining = serumComfort - 1;
+  const describeConcern = (concern: ConcernSelection): string => `${concern.concern} ${concern.subtype}`;
 
   for (const concern of additionalConcerns) {
-    if (slotsRemaining <= 0) break;
+    if (1 + routine.secondarySerums.length >= limit) break;
     const entry = fetchMatrixEntry(concern, skinType, notes);
     if (!entry) {
-      notes.push(`Missing matrix entry for ${concern.concern} ${concern.subtype}; unable to add serum.`);
+      notes.push(`Missing matrix entry for ${describeConcern(concern)}; unable to add serum.`);
       continue;
     }
-    if (!entry.secondarySerum) {
-      notes.push(`No secondary serum defined for ${concern.concern} ${concern.subtype}.`);
+    const secondaryProduct = entry.secondarySerum ? cloneProduct(entry.secondarySerum) : null;
+    const coreProduct = entry.coreSerum ? cloneProduct(entry.coreSerum) : null;
+    const concernLabel = describeConcern(concern);
+    const sourceLabel = `additional concern ${concernLabel}`;
+
+    if (!secondaryProduct && !coreProduct) {
+      notes.push(`No serums defined in matrix for ${concernLabel}.`);
       continue;
     }
-    const candidate = cloneProduct(entry.secondarySerum);
-    const key = serumKeyFromProduct(candidate);
-    if (key && disallow.has(key)) {
-      notes.push(`Skipped ${candidate.name} due to safety gate (${key}).`);
+
+    const productsAreSame = secondaryProduct && coreProduct
+      ? (secondaryProduct.rawName || secondaryProduct.name) === (coreProduct.rawName || coreProduct.name)
+      : false;
+
+    if (!secondaryProduct && coreProduct) {
+      const coreOnlyResult = tryAppendSecondarySerum(routine, coreProduct, context, notes, `${sourceLabel} (core only)`);
+      if (!coreOnlyResult.added) {
+        const detail = coreOnlyResult.detail ? ` (${coreOnlyResult.detail})` : '';
+        notes.push(`Core serum ${coreProduct.name} for ${concernLabel} could not be added${detail}.`);
+      }
       continue;
     }
-    const compat = evaluateCompatibility(existingSerums, candidate);
-    if (!compat.allowed) {
-      notes.push(`Skipped ${candidate.name}: ${compat.reason}.`);
+
+    if (secondaryProduct && productsAreSame) {
+      const singleResult = tryAppendSecondarySerum(routine, secondaryProduct, context, notes, sourceLabel);
+      if (!singleResult.added) {
+        const detail = singleResult.detail ? ` (${singleResult.detail})` : '';
+        notes.push(`Serum ${secondaryProduct.name} for ${concernLabel} could not be added${detail}.`);
+      }
       continue;
     }
-    routine.secondarySerums.push(candidate);
-    existingSerums.push(candidate);
-    slotsRemaining -= 1;
-    if (compat.cautions.length) {
-      compat.cautions.forEach(c => notes.push(`Compatibility caution: ${c}.`));
+
+    if (secondaryProduct) {
+      const secondaryResult = tryAppendSecondarySerum(routine, secondaryProduct, context, notes, sourceLabel);
+      if (secondaryResult.added) {
+        continue;
+      }
+
+      if (secondaryResult.reason === 'compatibility' && coreProduct) {
+        const coreResult = tryAppendSecondarySerum(routine, coreProduct, context, notes, `${sourceLabel} (core fallback)`);
+        if (coreResult.added) {
+          const detail = secondaryResult.detail ? ` (${secondaryResult.detail})` : '';
+          notes.push(
+            `Using ${coreProduct.name} for ${concernLabel} because ${secondaryProduct.name} was incompatible${detail}.`,
+          );
+          continue;
+        }
+
+        if (coreResult.reason === 'compatibility') {
+          notes.push(
+            `Both ${secondaryProduct.name} and ${coreProduct.name} for ${concernLabel} were incompatible; skipping this concern.`,
+          );
+        } else {
+          const fallbackDetail = coreResult.detail ? ` (${coreResult.detail})` : '';
+          notes.push(
+            `Fallback serum ${coreProduct.name} for ${concernLabel} could not be added${fallbackDetail}.`,
+          );
+        }
+        continue;
+      }
+
+      const detail = secondaryResult.detail ? ` (${secondaryResult.detail})` : '';
+      notes.push(`Secondary serum ${secondaryProduct.name} for ${concernLabel} could not be added${detail}.`);
     }
   }
 }
@@ -701,7 +795,7 @@ function routineToRecommendation(
           pregnancy: isPregnancySafe(context),
           sensitivity: isSensitive(context),
           sensitivityBand: (deriveEffectiveBands(context).sensitivity as 'green' | 'blue' | 'yellow' | 'red') || 'green',
-          serumComfort: Math.max(1, Math.min(3, parseInt(String(context.formData.serumComfort || '1'), 10) || 1)),
+          serumComfort: parseSerumComfort(context),
         },
       });
       recommendation.schedule = { ...plan, customerView };
@@ -761,17 +855,6 @@ function buildDermReferralRecommendation(): EnhancedRecommendation {
   };
 }
 
-function buildFallbackRecommendation(
-  skinType: SkinTypeKey,
-  primary: ConcernSelection,
-  others: ConcernSelection[],
-  context: RecommendationContext,
-  notes: string[],
-): EnhancedRecommendation {
-  const routine = buildSkinTypeFallbackRoutine(skinType, notes);
-  return routineToRecommendation(routine, primary, others, context, notes);
-}
-
 export function generateRecommendations(context: RecommendationContext): EnhancedRecommendation {
   const notes: string[] = [];
 
@@ -805,11 +888,28 @@ export function generateRecommendations(context: RecommendationContext): Enhance
   if (!entry) {
     notes.push(`Matrix entry missing for ${primary.concern} ${primary.subtype}.`);
     routine = buildSkinTypeFallbackRoutine(skinType, notes);
+    const fallbackDefaults = SKIN_TYPE_DEFAULTS[skinType];
+    if (fallbackDefaults?.secondarySerum) {
+      const fallbackSecondary = instantiateProduct(fallbackDefaults.secondarySerum, 'secondarySerum');
+      tryAppendSecondarySerum(routine, fallbackSecondary, context, notes, 'skin type fallback');
+    }
   } else if (entry.cleanser.isReferral || entry.coreSerum.isReferral || entry.sunscreen.isReferral) {
     notes.push('Matrix row indicates dermatologist referral.');
     return buildDermReferralRecommendation();
   } else {
     routine = buildRoutineFromEntry(entry);
+    if (entry.secondarySerum) {
+      const primarySecondary = cloneProduct(entry.secondarySerum);
+      tryAppendSecondarySerum(
+        routine,
+        primarySecondary,
+        context,
+        notes,
+        `primary concern ${primary.concern} ${primary.subtype}`,
+      );
+    } else {
+      notes.push(`No secondary serum defined for primary concern ${primary.concern} ${primary.subtype}.`);
+    }
   }
 
   augmentSerumsForAdditionalConcerns(routine, others, context, skinType, notes);

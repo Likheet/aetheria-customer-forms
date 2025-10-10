@@ -33,6 +33,7 @@ const initialFormData: UpdatedConsultData = {
   name: '',
   phoneNumber: '',
   dateOfBirth: '',
+  calculatedAge: null,
   gender: '',
   
   // Gate Questions (Safety Screening)
@@ -139,6 +140,7 @@ const AUTO_FILL_FORM_TEMPLATE: UpdatedConsultData = {
   name: 'Anita Rao',
   phoneNumber: '+919876543210',
   dateOfBirth: '1992-08-04',
+  calculatedAge: computeAgeFromDOB('1992-08-04') ?? null,
   gender: 'Female',
 
   // Gate Questions (Safety Screening)
@@ -274,6 +276,33 @@ const ACNE_TYPE_OPTIONS = [
   'Mostly around jawline/chin, often before periods (hormonal)',
 ];
 
+const SENSITIVITY_QUESTION_CONFIG = [
+  {
+    key: 'sensitivityRedness' as const,
+    label: 'Do you often experience redness, burning, or stinging when using skincare products?',
+  },
+  {
+    key: 'sensitivityDiagnosis' as const,
+    label: 'Have you ever been diagnosed with sensitive skin, rosacea, or eczema?',
+  },
+  {
+    key: 'sensitivityCleansing' as const,
+    label: 'Would you describe your skin baseline as very dry (tight, flaky, rough)?',
+  },
+  {
+    key: 'sensitivityProducts' as const,
+    label: 'Have you noticed breakouts or irritation with actives (Vitamin C, AHAs, Niacinamide, Retinoids, etc.)?',
+  },
+  {
+    key: 'sensitivitySun' as const,
+    label: 'Does your skin get easily irritated by sun, heat, wind, or pollution?',
+  },
+  {
+    key: 'sensitivityCapillaries' as const,
+    label: 'Do you have visible broken capillaries or flushing (cheeks, nose, etc.)?',
+  },
+] as const;
+
 const getAcneSeverityOptions = (acneType: string): string[] => {
   const normalized = (acneType || '').toLowerCase();
   if (normalized.includes('blackheads')) {
@@ -328,6 +357,19 @@ const deriveSkinTypeFlag = (skinType: string | null | undefined): string => {
   return '';
 };
 
+function computeAgeFromDOB(dob?: string | null): number | null {
+  if (!dob) return null;
+  const parsed = new Date(`${dob}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - parsed.getFullYear();
+  const monthDiff = now.getMonth() - parsed.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < parsed.getDate())) {
+    age--;
+  }
+  return age >= 0 ? age : null;
+}
+
 const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onComplete, machine, machineRaw, sessionId, prefill }) => {
   const buildInitialFormData = (): UpdatedConsultData => {
     const base: any = { ...initialFormData, ...(prefill || {}) }
@@ -358,6 +400,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     if (base.skinType && !base.skinTypeFlag) {
       base.skinTypeFlag = deriveSkinTypeFlag(base.skinType);
     }
+
+    base.calculatedAge = computeAgeFromDOB(base.dateOfBirth) ?? null;
     
     return base as UpdatedConsultData
   }
@@ -387,6 +431,45 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const [decisions, setDecisions] = useState<any[]>([]);
   const [gateRemarks, setGateRemarks] = useState<string[]>([]);
   const prevMainConcernsRef = useRef<string[]>([]);
+  const [calculatedAge, setCalculatedAge] = useState<number | null>(computeAgeFromDOB(formData.dateOfBirth));
+
+  useEffect(() => {
+    setCalculatedAge(computeAgeFromDOB(formData.dateOfBirth));
+  }, [formData.dateOfBirth]);
+
+  useEffect(() => {
+    setFormData(prev => {
+      let next = prev;
+      const autoValue = calculatedAge == null
+        ? ''
+        : calculatedAge < 20
+          ? 'Yes'
+          : 'No';
+
+      if (autoValue !== prev.sensitivitySeasonal) {
+        next = next === prev ? { ...prev } : next;
+        next.sensitivitySeasonal = autoValue;
+      }
+
+      if (calculatedAge != null && calculatedAge <= 25 && prev.mainConcerns.includes('Fine lines & wrinkles')) {
+        const filteredConcerns = prev.mainConcerns.filter(c => c !== 'Fine lines & wrinkles');
+        const filteredPriority = (Array.isArray(prev.concernPriority) ? prev.concernPriority : []).filter(c => c !== 'Fine lines & wrinkles');
+        if (filteredConcerns.length !== prev.mainConcerns.length || filteredPriority.length !== (Array.isArray(prev.concernPriority) ? prev.concernPriority.length : 0)) {
+          next = next === prev ? { ...prev } : next;
+          next.mainConcerns = filteredConcerns as typeof prev.mainConcerns;
+          next.concernPriority = filteredPriority as typeof prev.concernPriority;
+        }
+      }
+
+      const ageForForm = calculatedAge ?? null;
+      if ((prev as any).calculatedAge !== ageForForm) {
+        next = next === prev ? { ...prev } : next;
+        (next as any).calculatedAge = ageForForm;
+      }
+
+      return next;
+    });
+  }, [calculatedAge]);
 
   // Gate questions logic
   const gateQuestions = [
@@ -497,6 +580,12 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     // If skinType is being updated, also update skinTypeFlag
     if (updates.skinType) {
       updates.skinTypeFlag = deriveSkinTypeFlag(updates.skinType);
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'dateOfBirth')) {
+      const dob = updates.dateOfBirth as string | undefined;
+      const computedAge = computeAgeFromDOB(dob) ?? null;
+      updates.calculatedAge = computedAge;
+      setCalculatedAge(computedAge);
     }
     
     setFormData(prev => ({ ...prev, ...updates }));
@@ -1238,17 +1327,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       case 12: // Hydration Levels
         if (!formData.hydrationLevels.trim()) newErrors.hydrationLevels = 'Hydration level description is required';
         break;
-      case 13: // Sensitivity Screening (everyone answers 7)
+  case 13: // Sensitivity Screening (auto-age + 6 prompts)
         {
-          const sensitivityFields = [
-            'sensitivityRedness',
-            'sensitivityDiagnosis',
-            'sensitivityCleansing',
-            'sensitivityProducts',
-            'sensitivitySun',
-            'sensitivityCapillaries',
-            'sensitivitySeasonal'
-          ] as const;
+          const sensitivityFields = SENSITIVITY_QUESTION_CONFIG.map(q => q.key);
           sensitivityFields.forEach((key) => {
             const val = (formData as any)[key] as string;
             if (!val || !val.trim()) newErrors[key] = 'Please select an option';
@@ -1317,17 +1398,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         } else if (currentConcernStep && typeof currentConcernStep === 'object') {
           const { concern, step: stepType, questionIndex } = currentConcernStep as any;
           if (stepType === 'sensitivity-question' && typeof questionIndex === 'number') {
-        const sensitivityFields = [
-            'sensitivityRedness',
-            'sensitivityDiagnosis',
-            // Mapped to very-dry-baseline (repurposed key)
-            'sensitivityCleansing',
-            'sensitivityProducts',
-            'sensitivitySun',
-            'sensitivityCapillaries',
-            // Mapped to age-under-20 (repurposed key)
-            'sensitivitySeasonal'
-          ];
+        const sensitivityFields = SENSITIVITY_QUESTION_CONFIG.map(q => q.key);
             const key = sensitivityFields[questionIndex] as keyof UpdatedConsultData;
             const val = (formData[key] as string) || '';
             if (!val.trim()) newErrors[key as string] = 'Please select an option';
@@ -1599,6 +1670,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   };
 
   const handleConcernToggle = (concern: string) => {
+    if (concern === 'Fine lines & wrinkles' && !(calculatedAge !== null && calculatedAge > 25)) {
+      return;
+    }
     const newConcerns = formData.mainConcerns.includes(concern)
       ? formData.mainConcerns.filter((c: string) => c !== concern)
       : formData.mainConcerns.length < 3 
@@ -1653,23 +1727,14 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     ): { fieldKey: string | null; title: string; subtitle?: string } => {
       // Sensitivity universal screening (rarely routed here, but supported)
       if (s === 'sensitivity-question') {
-        const sensitivityFields = [
-          'sensitivityRedness',
-          'sensitivityDiagnosis',
-          'sensitivityCleansing',
-          'sensitivityProducts',
-          'sensitivitySun',
-          'sensitivityCapillaries',
-          'sensitivitySeasonal'
-        ] as const;
+        const sensitivityFields = SENSITIVITY_QUESTION_CONFIG.map(q => q.key);
         const titles = [
           'Do you flush or turn red easily?',
           'Have you been told by a professional you have “sensitive skin” or rosacea?',
           'Does your skin sting/burn when cleansing?',
           'Do many new products irritate your skin?',
           'Does sun exposure make your skin red or itchy?',
-          'Do you see visible capillaries or broken veins?',
-          'Is your skin more reactive in certain seasons?'
+          'Do you see visible capillaries or broken veins?'
         ];
         const idx = typeof qIdx === 'number' ? qIdx : 0;
         const fieldKey = sensitivityFields[idx] ?? sensitivityFields[0];
@@ -2979,18 +3044,12 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             </div>
 
             <div className="max-w-3xl mx-auto w-full space-y-4">
-              {[
-                {
-                  key: 'sensitivityRedness',
-                  label: 'Do you often experience redness, burning, or stinging when using skincare products?'
-                },
-                { key: 'sensitivityDiagnosis', label: 'Have you ever been diagnosed with sensitive skin, rosacea, or eczema?' },
-                { key: 'sensitivityCleansing', label: 'Would you describe your skin baseline as very dry (tight, flaky, rough)?' },
-                { key: 'sensitivityProducts', label: 'Have you noticed breakouts or irritation with actives (Vitamin C, AHAs, Niacinamide, Retinoids, etc.)?' },
-                { key: 'sensitivitySun', label: 'Does your skin get easily irritated by sun, heat, wind, or pollution?' },
-                { key: 'sensitivityCapillaries', label: 'Do you have visible broken capillaries or flushing (cheeks, nose, etc.)?' },
-                { key: 'sensitivitySeasonal', label: 'Are you under 20 years of age?' }
-              ].map((q) => (
+              {calculatedAge != null && (
+                <div className="bg-white/60 border border-amber-100 rounded-2xl p-4 text-sm text-gray-600">
+                  Detected age from birth date: <span className="font-medium text-gray-800">{calculatedAge}</span>
+                </div>
+              )}
+              {SENSITIVITY_QUESTION_CONFIG.map((q) => (
                 <div key={q.key} className="bg-white/80 border border-amber-200 rounded-2xl p-4">
                   <div className="flex flex-col gap-3">
                     <label className="text-gray-800 font-medium">{q.label}</label>
@@ -3231,13 +3290,10 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
             <div className="max-w-2xl mx-auto w-full">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[
-                  'Acne',
-                  'Pigmentation', 
-                  'Fine lines & wrinkles',
-                  'Large pores',
-                  'Bumpy skin'
-                ].map((concern) => {
+                {((calculatedAge !== null && calculatedAge > 25)
+                  ? ['Acne', 'Pigmentation', 'Fine lines & wrinkles', 'Large pores', 'Bumpy skin']
+                  : ['Acne', 'Pigmentation', 'Large pores', 'Bumpy skin']
+                ).map((concern) => {
                   const isSelected = formData.mainConcerns.includes(concern);
                   const isDisabled = !isSelected && formData.mainConcerns.length >= 3;
                   
@@ -3261,6 +3317,11 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                   );
                 })}
               </div>
+              {calculatedAge !== null && calculatedAge <= 25 && (
+                <p className="text-sm text-gray-500 mt-4 text-center">
+                  Fine lines &amp; wrinkles becomes available after age 25.
+                </p>
+              )}
               {errors.mainConcerns && <p className="text-red-500 text-sm mt-2">{errors.mainConcerns}</p>}
             </div>
           </div>

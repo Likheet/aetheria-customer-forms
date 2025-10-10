@@ -88,6 +88,19 @@ function normalizeObject(obj: any): any {
   return normalized
 }
 
+const computeAgeFromDOB = (dob?: string | null): number | null => {
+  if (!dob) return null
+  const parsed = new Date(`${dob}T00:00:00`)
+  if (Number.isNaN(parsed.getTime())) return null
+  const now = new Date()
+  let age = now.getFullYear() - parsed.getFullYear()
+  const monthDiff = now.getMonth() - parsed.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < parsed.getDate())) {
+    age--
+  }
+  return age >= 0 ? age : null
+}
+
 const BAND_ORDER: Band[] = ['green', 'blue', 'yellow', 'red']
 
 const parseBandString = (value: any): Band | undefined => {
@@ -209,6 +222,11 @@ function transformFormData(formData: UpdatedConsultData & { triageOutcomes?: any
       sensitivity: normalizeValue(formData.sensitivity),
       sensitivity_triggers: normalizeValue(formData.sensitivityTriggers),
       main_concerns: normalizeValue(formData.mainConcerns),
+      age_years: normalizeValue(
+        typeof formData.calculatedAge === 'number'
+          ? formData.calculatedAge
+          : computeAgeFromDOB(formData.dateOfBirth)
+      ),
       // Include concern-specific data
       acne_breakouts: normalizeValue(acneBreakouts),
       acne_type: normalizeValue(acneTypeSummary),
