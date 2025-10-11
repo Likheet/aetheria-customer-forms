@@ -84,6 +84,8 @@ const TAGS = {
   tranexamic: ['tranexamic'] as IngredientTag[],
   ceramides: ['ceramides'] as IngredientTag[],
   sunscreen: ['sunscreen'] as IngredientTag[],
+  clay: ['clay'] as IngredientTag[],
+  silicone: ['silicone'] as IngredientTag[],
 };
 
 // --- Cleanser definitions ---
@@ -140,8 +142,8 @@ registerProduct(
   }
 );
 
-registerProduct(['Benzoyl Peroxide facewash'], {
-  name: 'Benzoyl Peroxide facewash',
+registerProduct(['Benzoyl Peroxide facewash', 'Benzoyl Peroxide facewash AM'], {
+  name: 'Benzoyl Peroxide facewash AM',
   ingredientTags: TAGS.bpo,
   ingredientKeywords: ['benzoyl peroxide', 'bpo cleanser'],
   pregnancyUnsafe: false,
@@ -171,12 +173,12 @@ registerProduct(
 );
 
 registerProduct(
-  ['Adapalene', 'Adapalene 0.1%', 'Adapalene 0.1% PM', 'Adapalene 0.1% (3-5x/week)'],
+  ['Adapalene', 'Adapalene PM', 'Adapalene 0.1%', 'Adapalene 0.1% PM', 'Adapalene 0.1% (3-5x/week)', 'Adapalene 0.1% PM (3-5x/week)'],
   {
-    name: 'Adapalene 0.1%',
+    name: 'Adapalene 0.1% PM',
     ingredientTags: TAGS.retinoids,
     ingredientKeywords: ['adapalene', 'retinoid'],
-    defaultUsage: 'pm',
+  defaultUsage: 'pm',
     pregnancyUnsafe: true,
     isotretinoinUnsafe: true,
     barrierUnsafe: true,
@@ -186,7 +188,7 @@ registerProduct(
 registerProduct(
   ['Benzoyl Peroxide 2.5%', 'Benzoyl Peroxide 2.5% AM'],
   {
-    name: 'Benzoyl Peroxide 2.5%',
+    name: 'Benzoyl Peroxide 2.5% AM',
     ingredientTags: TAGS.bpo,
     ingredientKeywords: ['benzoyl peroxide'],
     defaultUsage: 'am',
@@ -237,8 +239,8 @@ registerProduct(['Tranexamic acid', 'Tranexamic Acid + Alpha Arbutin'], {
   defaultUsage: 'am',
 });
 
-registerProduct(['Retinol'], {
-  name: 'Retinol treatment',
+registerProduct(['Retinol', 'Retinol PM'], {
+  name: 'Retinol treatment PM',
   ingredientTags: TAGS.retinoids,
   ingredientKeywords: ['retinol'],
   defaultUsage: 'pm',
@@ -247,8 +249,8 @@ registerProduct(['Retinol'], {
   barrierUnsafe: true,
 });
 
-registerProduct(['Retinol/Peptides'], {
-  name: 'Retinol peptide treatment',
+registerProduct(['Retinol/Peptides', 'Retinol/Peptides PM'], {
+  name: 'Retinol peptide treatment PM',
   ingredientTags: TAGS.retinoids.concat(TAGS.peptides),
   ingredientKeywords: ['retinol', 'peptides'],
   defaultUsage: 'pm',
@@ -270,8 +272,8 @@ registerProduct(['Azelaic Acid 10%'], {
   ingredientKeywords: ['azelaic acid'],
 });
 
-registerProduct(['Adapalene 0.1%'], {
-  name: 'Adapalene 0.1%',
+registerProduct(['Adapalene 0.1% PM', 'Adapalene 0.1%'], {
+  name: 'Adapalene 0.1% PM',
   ingredientTags: TAGS.retinoids,
   ingredientKeywords: ['adapalene', 'retinoid'],
   defaultUsage: 'pm',
@@ -282,23 +284,31 @@ registerProduct(['Adapalene 0.1%'], {
 
 registerProduct(['Clay mask'], {
   name: 'Clay mask',
-  ingredientTags: [],
+  ingredientTags: TAGS.clay,
   ingredientKeywords: ['kaolin', 'bentonite'],
   defaultUsage: 'pm',
 });
 
-registerProduct(['Silicon sheets'], {
+registerProduct(['Silicone sheets', 'Silicone scar sheets', 'Silicon sheets'], {
   name: 'Silicone scar sheets',
-  ingredientTags: [],
+  ingredientTags: TAGS.silicone,
   ingredientKeywords: ['silicone sheets'],
   defaultUsage: 'pm',
 });
 
+registerProduct(['REFER_DERM'], {
+  name: 'Dermatologist referral required',
+  ingredientTags: [],
+  ingredientKeywords: [],
+  notes: 'Escalate to dermatologist; topical routine deferred',
+  isReferral: true,
+});
+
 // --- Moisturizers ---
-registerProduct(['Gel cream', 'Gel-cream'], {
+registerProduct(['Gel-cream'], {
   name: 'Gel-cream moisturizer',
   ingredientTags: [],
-  ingredientKeywords: ['gel cream'],
+  ingredientKeywords: ['gel-cream'],
 });
 
 registerProduct(['Oil-free gel'], {
@@ -501,14 +511,14 @@ function createMatrixProduct(
 }
 
 const RAW_MATRIX = `Concern,Subtype,SkinType,Band,Cleanser,CoreSerum,SecondarySerum,Moisturizer,Sunscreen,Remarks
-Sebum,General,Combo,Blue,Gel-based,Niacinamide,,Gel cream,SKINTYPE_DEFAULT,
-Sebum,General,Combo,Yellow,Gel-based,Niacinamide,,Gel cream,SKINTYPE_DEFAULT,
-Sebum,General,Normal,Blue,Gel-based,Niacinamide,,Gel cream,SKINTYPE_DEFAULT,
-Sebum,General,Normal,Yellow,Gel-based,Niacinamide,,Gel cream,SKINTYPE_DEFAULT,
+Sebum,General,Combo,Blue,Gel-based,Niacinamide,,Gel-cream,SKINTYPE_DEFAULT,
+Sebum,General,Combo,Yellow,Gel-based,Niacinamide,,Gel-cream,SKINTYPE_DEFAULT,
+Sebum,General,Normal,Blue,Gel-based,Niacinamide,,Gel-cream,SKINTYPE_DEFAULT,
+Sebum,General,Normal,Yellow,Gel-based,Niacinamide,,Gel-cream,SKINTYPE_DEFAULT,
 Sebum,General,Oily,Blue,Salicylic acid or foaming cleanser,Niacinamide,Salicylic acid 2%,Oil-free gel,SKINTYPE_DEFAULT,
 Sebum,General,Oily,Yellow,Salicylic acid or foaming cleanser,Niacinamide,Salicylic acid 2%,Oil-free gel,SKINTYPE_DEFAULT,
-Sebum,General,Sensitive,Blue,Gel-based,Niacinamide,,Gel cream,Pure mineral sunscreen,
-Sebum,General,Sensitive,Yellow,Gel-based,Niacinamide,,Gel cream,Pure mineral sunscreen,
+Sebum,General,Sensitive,Blue,Gel-based,Niacinamide,,Gel-cream,Pure mineral sunscreen,
+Sebum,General,Sensitive,Yellow,Gel-based,Niacinamide,,Gel-cream,Pure mineral sunscreen,
 Sebum,General,Oily,Red,Salicylic acid or foaming cleanser,Niacinamide,Salicylic acid 2%,Oil-free gel,SKINTYPE_DEFAULT,
 Sebum,General,Sensitive,Red,Gel-based,Niacinamide,,Oil-free gel,Pure mineral sunscreen,
 Acne,Inflammatory,Dry,Blue,Cream cleanser,Azelaic 10%,5% Niacinamide,Rich cream,SKINTYPE_DEFAULT,
@@ -516,8 +526,8 @@ Acne,Inflammatory,Combo,Blue,Gentle gel,Adapalene 0.1% PM,10% Azelaic Acid,Gel-c
 Acne,Inflammatory,Normal,Blue,Gentle gel,Adapalene 0.1% PM,10% Azelaic Acid,Gel-cream,SKINTYPE_DEFAULT,
 Acne,Inflammatory,Oily,Blue,Gentle gel,Adapalene 0.1% PM,10% Azelaic Acid,Oil-free gel,SKINTYPE_DEFAULT,
 Acne,Inflammatory,Sensitive,Blue,Gentle gel,10% Azelaic Acid,5% Niacinamide,Barrier cream,Pure mineral sunscreen,
-Acne,Inflammatory,Dry,Yellow,Cream cleanser,Benzoyl Peroxide 2.5%,10% Azelaic Acid,Rich cream,SKINTYPE_DEFAULT,
-Acne,Inflammatory,Dry,Red,Cream cleanser,Benzoyl Peroxide 2.5%,10% Azelaic Acid,Rich cream,SKINTYPE_DEFAULT,
+Acne,Inflammatory,Dry,Yellow,Cream cleanser,Benzoyl Peroxide 2.5% AM,10% Azelaic Acid,Rich cream,SKINTYPE_DEFAULT,
+Acne,Inflammatory,Dry,Red,Cream cleanser,Benzoyl Peroxide 2.5% AM,10% Azelaic Acid,Rich cream,SKINTYPE_DEFAULT,
 Acne,Inflammatory,Combo,Yellow,Gentle foaming cleanser,Benzoyl Peroxide 2.5% AM,10% Azelaic Acid,Gel-cream,SKINTYPE_DEFAULT,
 Acne,Inflammatory,Combo,Red,Gentle foaming cleanser,Benzoyl Peroxide 2.5% AM,10% Azelaic Acid,Gel-cream,SKINTYPE_DEFAULT,
 Acne,Inflammatory,Normal,Yellow,Gentle foaming cleanser,Benzoyl Peroxide 2.5% AM,10% Azelaic Acid,Gel-cream,SKINTYPE_DEFAULT,
@@ -526,44 +536,44 @@ Acne,Inflammatory,Oily,Yellow,Gel cleanser,Benzoyl Peroxide 2.5% AM,10% Azelaic 
 Acne,Inflammatory,Oily,Red,Gel cleanser,Benzoyl Peroxide 2.5% AM,10% Azelaic Acid,Oil-free gel,SKINTYPE_DEFAULT,
 Acne,Inflammatory,Sensitive,Yellow,Gentle gel,10% Azelaic Acid,5% Niacinamide,Gel-cream,Pure mineral sunscreen,
 Acne,Inflammatory,Sensitive,Red,Gentle gel,10% Azelaic Acid,5% Niacinamide,Gel-cream,Pure mineral sunscreen,
-Acne,Comedonal,Dry,Yellow,Gentle cleanser,Adapalene 0.1%,10% Azelaic Acid,Barrier cream,SKINTYPE_DEFAULT,
-Acne,Comedonal,Dry,Red,Gentle cleanser,Adapalene 0.1%,10% Azelaic Acid,Barrier cream,SKINTYPE_DEFAULT,
-Acne,Comedonal,Combo,Yellow,Salicylic acid cleanser,Adapalene 0.1%,10% Azelaic Acid,Gel-cream,SKINTYPE_DEFAULT,
-Acne,Comedonal,Combo,Red,Salicylic acid cleanser,Adapalene 0.1%,10% Azelaic Acid,Gel-cream,SKINTYPE_DEFAULT,
-Acne,Comedonal,Oily,Yellow,Salicylic acid cleanser,Adapalene 0.1%,10% Azelaic Acid,Oil-free gel,SKINTYPE_DEFAULT,
-Acne,Comedonal,Oily,Red,Salicylic acid cleanser,Adapalene 0.1%,10% Azelaic Acid,Oil-free gel,SKINTYPE_DEFAULT,
+Acne,Comedonal,Dry,Yellow,Gentle cleanser,Adapalene 0.1% PM,10% Azelaic Acid,Barrier cream,SKINTYPE_DEFAULT,
+Acne,Comedonal,Dry,Red,Gentle cleanser,Adapalene 0.1% PM,10% Azelaic Acid,Barrier cream,SKINTYPE_DEFAULT,
+Acne,Comedonal,Combo,Yellow,Salicylic acid cleanser,Adapalene 0.1% PM,10% Azelaic Acid,Gel-cream,SKINTYPE_DEFAULT,
+Acne,Comedonal,Combo,Red,Salicylic acid cleanser,Adapalene 0.1% PM,10% Azelaic Acid,Gel-cream,SKINTYPE_DEFAULT,
+Acne,Comedonal,Oily,Yellow,Salicylic acid cleanser,Adapalene 0.1% PM,10% Azelaic Acid,Oil-free gel,SKINTYPE_DEFAULT,
+Acne,Comedonal,Oily,Red,Salicylic acid cleanser,Adapalene 0.1% PM,10% Azelaic Acid,Oil-free gel,SKINTYPE_DEFAULT,
 Acne,Comedonal,Sensitive,Yellow,Mild Salicylic acid cleanser,Niacinamide,,Barrier cream,Pure mineral sunscreen,
 Acne,Comedonal,Sensitive,Red,Mild Salicylic acid cleanser,Niacinamide,,Barrier cream,Pure mineral sunscreen,
 Acne,Situational,Dry,Blue,Gentle cleanser,Azelaic acid,Niacinamide,Barrier cream,SKINTYPE_DEFAULT,
-Acne,Situational,Combo,Blue,Benzoyl Peroxide facewash,Niacinamide,,Gel-cream,SKINTYPE_DEFAULT,
-Acne,Situational,Oily,Blue,Benzoyl Peroxide facewash,Niacinamide,,Oil-free gel,SKINTYPE_DEFAULT,
-Acne,Hormonal,Dry,Blue,SKINTYPE_DEFAULT,10% Azelaic Acid,Adapalene 0.1%,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,REFER DOCTOR
-Acne,Hormonal,Combo,Blue,SKINTYPE_DEFAULT,10% Azelaic Acid,Adapalene 0.1%,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,REFER DOCTOR
-Acne,Hormonal,Oily,Blue,SKINTYPE_DEFAULT,10% Azelaic Acid,Adapalene 0.1%,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,REFER DOCTOR
-Acne,Hormonal,Sensitive,Blue,SKINTYPE_DEFAULT,10% Azelaic Acid,Adapalene 0.1%,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,REFER DOCTOR
+Acne,Situational,Combo,Blue,Benzoyl Peroxide facewash AM,Niacinamide,,Gel-cream,SKINTYPE_DEFAULT,
+Acne,Situational,Oily,Blue,Benzoyl Peroxide facewash AM,Niacinamide,,Oil-free gel,SKINTYPE_DEFAULT,
+Acne,Hormonal,Dry,Blue,SKINTYPE_DEFAULT,10% Azelaic Acid,Adapalene 0.1% PM,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,REFER DOCTOR
+Acne,Hormonal,Combo,Blue,SKINTYPE_DEFAULT,10% Azelaic Acid,Adapalene 0.1% PM,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,REFER DOCTOR
+Acne,Hormonal,Oily,Blue,SKINTYPE_DEFAULT,10% Azelaic Acid,Adapalene 0.1% PM,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,REFER DOCTOR
+Acne,Hormonal,Sensitive,Blue,SKINTYPE_DEFAULT,10% Azelaic Acid,Adapalene 0.1% PM,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,REFER DOCTOR
 Acne,Nodulocystic,Dry,Red,REFER_DERM,REFER_DERM,REFER_DERM,REFER_DERM,REFER_DERM,Dermatologist referral required
 Acne,Nodulocystic,Combo,Red,REFER_DERM,REFER_DERM,REFER_DERM,REFER_DERM,REFER_DERM,Dermatologist referral required
 Acne,Nodulocystic,Oily,Red,REFER_DERM,REFER_DERM,REFER_DERM,REFER_DERM,REFER_DERM,Dermatologist referral required
 Acne,Nodulocystic,Sensitive,Red,REFER_DERM,REFER_DERM,REFER_DERM,REFER_DERM,REFER_DERM,Dermatologist referral required
-AcneScars,IcePick,Dry,Yellow,SKINTYPE_DEFAULT,Adapalene 0.1% (3-5x/week),2% Salicylic acid (2x/week),SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
-AcneScars,IcePick,Combo,Yellow,SKINTYPE_DEFAULT,Adapalene 0.1% (3-5x/week),2% Salicylic acid (2x/week),SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
-AcneScars,IcePick,Oily,Yellow,SKINTYPE_DEFAULT,Adapalene 0.1% (3-5x/week),2% Salicylic acid (2x/week),SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
-AcneScars,IcePick,Sensitive,Yellow,SKINTYPE_DEFAULT,Adapalene 0.1% (3-5x/week),2% Salicylic acid (2x/week),SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
-AcneScars,Rolling,Oily,Yellow,SKINTYPE_DEFAULT,Adapalene 0.1% (3-5x/week),8-10% Glycolic acid,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
-AcneScars,Rolling,Combo,Yellow,SKINTYPE_DEFAULT,Adapalene 0.1% (3-5x/week),8-10% Glycolic acid,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
-AcneScars,Rolling,Dry,Yellow,SKINTYPE_DEFAULT,Adapalene 0.1% (3-5x/week),5% Lactic acid,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
-AcneScars,PIE,Dry,Yellow,SKINTYPE_DEFAULT,Azelaic Acid 10%,Adapalene 0.1%,SKINTYPE_DEFAULT,Tinted mineral sunscreen,Post-inflammatory erythema (red marks)
-AcneScars,PIE,Combo,Yellow,SKINTYPE_DEFAULT,Azelaic Acid 10%,Adapalene 0.1%,SKINTYPE_DEFAULT,Tinted mineral sunscreen,Post-inflammatory erythema (red marks)
-AcneScars,PIE,Oily,Yellow,SKINTYPE_DEFAULT,Azelaic Acid 10%,Adapalene 0.1%,SKINTYPE_DEFAULT,Tinted mineral sunscreen,Post-inflammatory erythema (red marks)
-AcneScars,PIE,Sensitive,Yellow,SKINTYPE_DEFAULT,Azelaic Acid 10%,Adapalene 0.1%,SKINTYPE_DEFAULT,Tinted mineral sunscreen,Post-inflammatory erythema (red marks)
+AcneScars,IcePick,Dry,Yellow,SKINTYPE_DEFAULT,Adapalene 0.1% PM (3-5x/week),2% Salicylic acid (2x/week),SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
+AcneScars,IcePick,Combo,Yellow,SKINTYPE_DEFAULT,Adapalene 0.1% PM (3-5x/week),2% Salicylic acid (2x/week),SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
+AcneScars,IcePick,Oily,Yellow,SKINTYPE_DEFAULT,Adapalene 0.1% PM (3-5x/week),2% Salicylic acid (2x/week),SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
+AcneScars,IcePick,Sensitive,Yellow,SKINTYPE_DEFAULT,Adapalene 0.1% PM (3-5x/week),2% Salicylic acid (2x/week),SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
+AcneScars,Rolling,Oily,Yellow,SKINTYPE_DEFAULT,Adapalene 0.1% PM (3-5x/week),8-10% Glycolic acid,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
+AcneScars,Rolling,Combo,Yellow,SKINTYPE_DEFAULT,Adapalene 0.1% PM (3-5x/week),8-10% Glycolic acid,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
+AcneScars,Rolling,Dry,Yellow,SKINTYPE_DEFAULT,Adapalene 0.1% PM (3-5x/week),5% Lactic acid,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
+AcneScars,PIE,Dry,Yellow,SKINTYPE_DEFAULT,Azelaic Acid 10%,Adapalene 0.1% PM,SKINTYPE_DEFAULT,Tinted mineral sunscreen,Post-inflammatory erythema (red marks)
+AcneScars,PIE,Combo,Yellow,SKINTYPE_DEFAULT,Azelaic Acid 10%,Adapalene 0.1% PM,SKINTYPE_DEFAULT,Tinted mineral sunscreen,Post-inflammatory erythema (red marks)
+AcneScars,PIE,Oily,Yellow,SKINTYPE_DEFAULT,Azelaic Acid 10%,Adapalene 0.1% PM,SKINTYPE_DEFAULT,Tinted mineral sunscreen,Post-inflammatory erythema (red marks)
+AcneScars,PIE,Sensitive,Yellow,SKINTYPE_DEFAULT,Azelaic Acid 10%,Adapalene 0.1% PM,SKINTYPE_DEFAULT,Tinted mineral sunscreen,Post-inflammatory erythema (red marks)
 AcneScars,PIH,Dry,Yellow,SKINTYPE_DEFAULT,Tranexamic Acid + Alpha Arbutin,Azelaic Acid 10%,SKINTYPE_DEFAULT,Tinted mineral sunscreen,Post-inflammatory hyperpigmentation (brown marks)
 AcneScars,PIH,Combo,Yellow,SKINTYPE_DEFAULT,Tranexamic Acid + Alpha Arbutin,Azelaic Acid 10%,SKINTYPE_DEFAULT,Tinted mineral sunscreen,Post-inflammatory hyperpigmentation (brown marks)
 AcneScars,PIH,Oily,Yellow,SKINTYPE_DEFAULT,Tranexamic Acid + Alpha Arbutin,Azelaic Acid 10%,SKINTYPE_DEFAULT,Tinted mineral sunscreen,Post-inflammatory hyperpigmentation (brown marks)
 AcneScars,PIH,Sensitive,Yellow,SKINTYPE_DEFAULT,Tranexamic Acid + Alpha Arbutin,Azelaic Acid 10%,SKINTYPE_DEFAULT,Tinted mineral sunscreen,Post-inflammatory hyperpigmentation (brown marks)
-AcneScars,Keloid,Dry,Red,SKINTYPE_DEFAULT,Silicon sheets,,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
-AcneScars,Keloid,Combo,Red,SKINTYPE_DEFAULT,Silicon sheets,,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
-AcneScars,Keloid,Oily,Red,SKINTYPE_DEFAULT,Silicon sheets,,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
-AcneScars,Keloid,Sensitive,Red,SKINTYPE_DEFAULT,Silicon sheets,,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
+AcneScars,Keloid,Dry,Red,SKINTYPE_DEFAULT,Silicone scar sheets,,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
+AcneScars,Keloid,Combo,Red,SKINTYPE_DEFAULT,Silicone scar sheets,,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
+AcneScars,Keloid,Oily,Red,SKINTYPE_DEFAULT,Silicone scar sheets,,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
+AcneScars,Keloid,Sensitive,Red,SKINTYPE_DEFAULT,Silicone scar sheets,,SKINTYPE_DEFAULT,SKINTYPE_DEFAULT,Products improve texture but won't fully fix; dermat procedures help
 Acne,Pregnancy,Dry,Blue,Gentle cleanser,Azelaic acid 10-15%,Niacinamide,Barrier cream,SKINTYPE_DEFAULT,Pregnancy-safe routine
 Acne,Pregnancy,Combo,Blue,Gentle cleanser,Azelaic acid 10-15%,Niacinamide,Barrier cream,SKINTYPE_DEFAULT,Pregnancy-safe routine
 Acne,Pregnancy,Oily,Blue,Gentle cleanser,Azelaic acid 10-15%,Niacinamide,Barrier cream,SKINTYPE_DEFAULT,Pregnancy-safe routine
@@ -578,20 +588,20 @@ Pores,General,Oily,Yellow,Salicylic acid cleanser,Salicylic acid,Niacinamide,Oil
 Pores,General,Oily,Red,Salicylic acid cleanser,Salicylic acid,Niacinamide,Oil-free gel,SKINTYPE_DEFAULT,
 Pores,General,Sensitive,Yellow,Salicylic acid cleanser,Niacinamide 5%,Clay mask,Gel-cream,Pure mineral sunscreen,Mild to moderate sensitivity
 Pores,General,Sensitive,Red,Gentle foaming,Niacinamide 5%,Clay mask,Barrier cream,Pure mineral sunscreen,High sensitivity
-Texture,Aging,Dry,Yellow,Cream cleanser,Retinol/Peptides,Vitamin C (derivatives),Rich cream,SKINTYPE_DEFAULT,
-Texture,Aging,Dry,Red,Cream cleanser,Retinol/Peptides,Vitamin C (derivatives),Rich cream,SKINTYPE_DEFAULT,
-Texture,Aging,Combo,Yellow,Gentle foaming,Retinol,Vitamin C,Gel-cream,SKINTYPE_DEFAULT,
-Texture,Aging,Combo,Red,Gentle foaming,Retinol,Vitamin C,Gel-cream,SKINTYPE_DEFAULT,
-Texture,Aging,Oily,Yellow,Foaming,Retinol,Vitamin C,Oil-free gel,SKINTYPE_DEFAULT,
-Texture,Aging,Oily,Red,Foaming,Retinol,Vitamin C,Oil-free gel,SKINTYPE_DEFAULT,
+Texture,Aging,Dry,Yellow,Cream cleanser,Retinol/Peptides PM,Vitamin C (derivatives),Rich cream,SKINTYPE_DEFAULT,
+Texture,Aging,Dry,Red,Cream cleanser,Retinol/Peptides PM,Vitamin C (derivatives),Rich cream,SKINTYPE_DEFAULT,
+Texture,Aging,Combo,Yellow,Gentle foaming,Retinol PM,Vitamin C,Gel-cream,SKINTYPE_DEFAULT,AM/PM separation resolves conflict
+Texture,Aging,Combo,Red,Gentle foaming,Retinol PM,Vitamin C,Gel-cream,SKINTYPE_DEFAULT,AM/PM separation resolves conflict
+Texture,Aging,Oily,Yellow,Foaming,Retinol PM,Vitamin C,Oil-free gel,SKINTYPE_DEFAULT,AM/PM separation resolves conflict
+Texture,Aging,Oily,Red,Foaming,Retinol PM,Vitamin C,Oil-free gel,SKINTYPE_DEFAULT,AM/PM separation resolves conflict
 Texture,Aging,Sensitive,Yellow,Cream cleanser,Bakuchiol/Peptides,Vitamin C (derivatives),Barrier cream,Pure mineral sunscreen,Mild to moderate sensitivity
 Texture,Aging,Sensitive,Red,Cream cleanser,Bakuchiol/Peptides,Niacinamide,Barrier cream,Pure mineral sunscreen,High sensitivity
-Texture,Bumpy,Dry,Yellow,Cream cleanser,Adapalene,Lactic acid,Barrier cream,SKINTYPE_DEFAULT,
-Texture,Bumpy,Dry,Red,Cream cleanser,Adapalene,Lactic acid,Barrier cream,SKINTYPE_DEFAULT,
-Texture,Bumpy,Combo,Yellow,Gentle foaming,Adapalene,Salicylic acid,Gel-cream,SKINTYPE_DEFAULT,
-Texture,Bumpy,Combo,Red,Gentle foaming,Adapalene,Salicylic acid,Gel-cream,SKINTYPE_DEFAULT,
-Texture,Bumpy,Oily,Yellow,Gentle foaming,Adapalene,Salicylic acid,Oil-free gel,SKINTYPE_DEFAULT,
-Texture,Bumpy,Oily,Red,Gentle foaming,Adapalene,Salicylic acid,Oil-free gel,SKINTYPE_DEFAULT,
+Texture,Bumpy,Dry,Yellow,Cream cleanser,Adapalene 0.1% PM,Lactic acid,Barrier cream,SKINTYPE_DEFAULT,
+Texture,Bumpy,Dry,Red,Cream cleanser,Adapalene 0.1% PM,Lactic acid,Barrier cream,SKINTYPE_DEFAULT,
+Texture,Bumpy,Combo,Yellow,Gentle foaming,Adapalene 0.1% PM,Salicylic acid,Gel-cream,SKINTYPE_DEFAULT,
+Texture,Bumpy,Combo,Red,Gentle foaming,Adapalene 0.1% PM,Salicylic acid,Gel-cream,SKINTYPE_DEFAULT,
+Texture,Bumpy,Oily,Yellow,Gentle foaming,Adapalene 0.1% PM,Salicylic acid,Oil-free gel,SKINTYPE_DEFAULT,
+Texture,Bumpy,Oily,Red,Gentle foaming,Adapalene 0.1% PM,Salicylic acid,Oil-free gel,SKINTYPE_DEFAULT,
 Texture,Bumpy,Sensitive,Yellow,Cream cleanser,Niacinamide,,Smoothening moisturizer,Pure mineral sunscreen,Mild to moderate sensitivity
 Texture,Bumpy,Sensitive,Red,Cream cleanser,Niacinamide,,Smoothening moisturizer,Pure mineral sunscreen,High sensitivity
 Pigmentation,PIE,Dry,Yellow,Gentle cleanser,Azelaic acid,Niacinamide,Barrier cream,SKINTYPE_DEFAULT,Red pigmentation (post-inflammatory erythema)

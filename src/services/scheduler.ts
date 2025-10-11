@@ -9,16 +9,31 @@ import { PRODUCT_DATABASE } from '../data/productDatabase'
 export type RoutineStep = { step: number; label: string; product: string }
 export type DayKey = 'mon'|'tue'|'wed'|'thu'|'fri'|'sat'|'sun'
 
+const ALL_DAYS: DayKey[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+
 export interface WeeklyPlan {
   am: RoutineStep[] // same for all days
   pmByDay: Record<DayKey, RoutineStep[]>
   warnings: string[]
+  nightlyCost?: Record<DayKey, number>
+  nightlyActives?: Record<DayKey, string[]>
+  nightlyNotes?: Record<DayKey, string[]>
+  restNights?: DayKey[]
+  budget?: {
+    nightlyCap: number
+    requiredRestNights: number
+    sensitivityScore?: number
+  }
+  budgetNotes?: string[]
+  totalWeeklyCost?: number
 }
 
 export interface CustomerView {
   am: RoutineStep[]
   pm: RoutineStep[]
   notes: string[]
+  nightlyCost?: number
+  nightlyActives?: string[]
 }
 
 export interface SchedulerInput {
@@ -31,6 +46,14 @@ export interface SchedulerInput {
   secondarySerumRawName?: string
   moisturizer: string
   sunscreen?: string
+  tertiarySerumKey?: string
+  tertiarySerumName?: string
+  tertiarySerumRawName?: string
+  additionalSerums?: Array<{
+    key?: string
+    name?: string
+    rawName?: string
+  }>
   flags?: {
     pregnancy?: boolean
     sensitivity?: boolean
@@ -41,6 +64,7 @@ export interface SchedulerInput {
     core_acid_strength?: 'low'|'medium'|'high'
     secondary_acid_strength?: 'low'|'medium'|'high'
     // wash-off cleansers are assumed safe; not considered leave-on
+    sensitivityScore?: number
   }
 }
 
@@ -125,10 +149,6 @@ function serumDisplayName(meta: SerumMeta, key: string): string {
   return labelFromKey(key)
 }
 
-function stripTimingMarkers(name: string): string {
-  return name.replace(/\s*\(?\b(?:AM|PM)\b\)?/gi, '').replace(/\s{2,}/g, ' ').trim()
-}
-
 // Very lightweight first pass scheduler that obeys key acceptance checks.
 export function buildWeeklyPlan(input: SchedulerInput, timeZone = 'Asia/Kolkata'): { plan: WeeklyPlan, customerView: CustomerView } {
   const warnings: string[] = []
@@ -138,7 +158,12 @@ export function buildWeeklyPlan(input: SchedulerInput, timeZone = 'Asia/Kolkata'
   const sensitive = !!input.flags?.sensitivity
   const pregnant = !!input.flags?.pregnancy
   const sensBand = input.flags?.sensitivityBand || (sensitive ? 'yellow' : 'green')
-  const { nightlyCap, minRestNights } = budgetFromSensitivityBand(sensBand)
+  const sensitivityScore = input.flags?.sensitivityScore
+  const budget = sensitivityScore !== undefined
+    ? { ...getNightlyBudget(Number(sensitivityScore)), sensitivityScore: Number(sensitivityScore) }
+    : { ...legacyBudgetFromBand(sensBand), sensitivityScore: undefined }
+  const nightlyCap = budget.maxNightlyUnits
+  const requiredRestNights = budget.requiredRestNights
 
   // Pregnancy filter
   const coreTag = serumKeyToTag(input.coreSerumKey)
@@ -159,6 +184,10 @@ export function buildWeeklyPlan(input: SchedulerInput, timeZone = 'Asia/Kolkata'
 
   const coreMeta = buildSerumMeta(core, input.coreSerumName, input.coreSerumRawName || input.coreSerumName)
   const secondaryMeta = buildSerumMeta(secondary, input.secondarySerumName, input.secondarySerumRawName || input.secondarySerumName)
+  const tertiaryMeta = buildSerumMeta(input.tertiarySerumKey, input.tertiarySerumName, input.tertiarySerumRawName || input.tertiarySerumName)
+  const additionalMetas = (input.additionalSerums || []).map(item =>
+    buildSerumMeta(item.key, item.name, item.rawName || item.name)
+  )
 
   // Build AM baseline: Cleanser -> Serum (optional) -> Moisturizer -> Sunscreen
   const amCoreKey = allowInAm(coreMeta, input.flags)
@@ -183,63 +212,65 @@ export function buildWeeklyPlan(input: SchedulerInput, timeZone = 'Asia/Kolkata'
   am.push(step('Moisturizer', input.moisturizer, 3))
   am.push(step('Sunscreen', input.sunscreen || fallbackSunscreen(), 4))
 
-  // Build PM scaffold, enforce non-conflicts
-  // Default strategy: place retinoid on Mon/Thu nights; place leave-on AHA/BHA on Tue/Sat nights (non-retinoid), else azelaic/niacinamide on remaining nights.
-  const pmByDay: Record<DayKey, RoutineStep[]> = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] }
-  const retinoidNights: DayKey[] = ['mon','thu']
-  const exfoliantNights: DayKey[] = sensitive ? ['tue'] : (isHighStrength(input) ? ['tue','sat'] : ['tue','sat'])
-  const corePmCandidate = allowInPm(coreMeta)
-  const secondaryPmCandidate = allowInPm(secondaryMeta)
-  const corePm = corePmCandidate ? { key: corePmCandidate, meta: coreMeta } : undefined
-  const secPm = secondaryPmCandidate ? { key: secondaryPmCandidate, meta: secondaryMeta } : undefined
-
-  for (const d of Object.keys(pmByDay) as DayKey[]) {
-    // Default PM is cleanser + moisturizer
-    let pm = emptyPM(input.cleanser, input.moisturizer)
-    let chosen: { key: string; meta: SerumMeta } | undefined
-    if (retinoidNights.includes(d) && corePm?.meta.tag === 'retinoids') {
-      chosen = corePm
-    } else if (exfoliantNights.includes(d) && (isExfoliant(corePm?.key) || isExfoliant(secPm?.key))) {
-      const preferred = isExfoliant(corePm?.key) ? corePm : (isExfoliant(secPm?.key) ? secPm : undefined)
-      if (preferred && preferred.meta.tag !== 'retinoids') {
-        chosen = preferred
-      }
+  const pmCandidatesRaw: Array<{ key?: string; meta: SerumMeta }> = []
+  const corePmKey = allowInPm(coreMeta)
+  if (corePmKey) pmCandidatesRaw.push({ key: corePmKey, meta: coreMeta })
+  const secondaryPmKey = allowInPm(secondaryMeta)
+  if (secondaryPmKey) pmCandidatesRaw.push({ key: secondaryPmKey, meta: secondaryMeta })
+  const tertiaryPmKey = allowInPm(tertiaryMeta)
+  if (tertiaryPmKey) pmCandidatesRaw.push({ key: tertiaryPmKey, meta: tertiaryMeta })
+  for (const meta of additionalMetas) {
+    if (meta.key) {
+      const pmKey = allowInPm(meta)
+      if (pmKey) pmCandidatesRaw.push({ key: pmKey, meta })
+    } else if ((meta.rawName || meta.name) && (meta.explicitPm || (!meta.explicitAm && serumComfort >= 1))) {
+      pmCandidatesRaw.push({ key: undefined, meta })
     }
-    if (!chosen) {
-      const flexibleKey = pickFlexible(corePm?.key, secPm?.key)
-      if (flexibleKey && corePm && flexibleKey === corePm.key) {
-        chosen = corePm
-      } else if (flexibleKey && secPm && flexibleKey === secPm.key) {
-        chosen = secPm
-      }
-    }
-
-    if (chosen && serumComfort >= 1) {
-      pm = [
-        step('Cleanser', input.cleanser, 1),
-        step('Serum', serumDisplayName(chosen.meta, chosen.key), 2),
-        step('Moisturizer', input.moisturizer, 3),
-      ]
-    }
-    pmByDay[d] = pm
   }
 
-  // Conflicts between AM and PM of the same day: ensure LAA and BPO/retinoid separation
+  const filteredCandidates = pmCandidatesRaw.filter(candidate => {
+    if (pregnant && candidate.meta.tag === 'retinoids') return false
+    return true
+  })
+
+  const pmActives = deriveActiveCandidates(filteredCandidates, new Set())
+
+  const budgetPlan = generateBudgetAwarePmPlan(
+    input.cleanser,
+    input.moisturizer,
+    pmActives,
+    { nightlyCap, requiredRestNights },
+    serumComfort,
+    { allowOverBudgetMargin: pregnant ? 10 : 0 }
+  )
+
+  const plan: WeeklyPlan = {
+    am,
+    pmByDay: budgetPlan.pmByDay,
+    warnings,
+    nightlyCost: budgetPlan.nightlyCost,
+    nightlyActives: budgetPlan.nightlyActives,
+    nightlyNotes: budgetPlan.nightlyNotes,
+    restNights: budgetPlan.restNights,
+    budgetNotes: budgetPlan.budgetNotes,
+    totalWeeklyCost: budgetPlan.totalCost,
+    budget: {
+      nightlyCap,
+      requiredRestNights,
+      sensitivityScore,
+    },
+  }
+
+  plan.warnings.push(...budgetPlan.warnings)
+  plan.warnings.push(`Irritation budget applied (cap ${nightlyCap}, rest nights ${requiredRestNights}).`)
+
   if (amHasLAA(am)) {
-    for (const d of Object.keys(pmByDay) as DayKey[]) {
-      const pm = pmByDay[d]
-      if (pmSerumTag(pm) === 'benzoyl_peroxide' || pmSerumTag(pm) === 'retinoids') {
-        warnings.push('Separated L-ascorbic (AM) and BPO/Retinoid (PM)')
-      }
+    const conflicting = pmActives.some(active => active.tag === 'benzoyl_peroxide' || active.tag === 'retinoids')
+    if (conflicting) {
+      plan.warnings.push('Separated L-ascorbic (AM) from BPO/Retinoid (PM) to avoid conflicts.')
     }
   }
 
-  // Final pass: enforce serumComfort
-  // (We only schedule max 1 serum per routine in this v1)
-
-  const plan: WeeklyPlan = { am, pmByDay, warnings }
-  // Enforce irritation budget post-pass on PM plan
-  enforceIrritationBudget(plan, nightlyCap, minRestNights)
   const customerView = buildCustomerView(plan, timeZone)
   return { plan, customerView }
 }
@@ -267,25 +298,6 @@ function fallbackSunscreen(): string {
   return `${spf.name} (${spf.brand})`
 }
 
-function isExfoliant(key?: string): boolean {
-  const tag = serumKeyToTag(key)
-  return tag === 'aha' || tag === 'bha'
-}
-
-function isHighStrength(input: SchedulerInput): boolean {
-  const cs = input.flags?.core_acid_strength
-  const ss = input.flags?.secondary_acid_strength
-  const norm = (s?: string) => (s || 'high') // unknown treated as high (stricter)
-  return norm(cs) === 'high' || norm(ss) === 'high'
-}
-
-function pmSerumTag(steps: RoutineStep[]): ReturnType<typeof serumKeyToTag> {
-  const s = steps.find(x => x.label === 'Serum')
-  if (!s) return null
-  const canonical = stripTimingMarkers(s.product)
-  return serumKeyToTag(REVERSE_LABEL_KEY_MAP[canonical] || '')
-}
-
 function amHasLAA(am: RoutineStep[]): boolean {
   const s = am.find(x => x.label === 'Serum')
   if (!s) return false
@@ -294,10 +306,18 @@ function amHasLAA(am: RoutineStep[]): boolean {
 
 function buildCustomerView(plan: WeeklyPlan, timeZone: string): CustomerView {
   const today = dayKeyForTz(timeZone)
+  const notes: string[] = [...plan.warnings]
+  if (plan.budgetNotes) {
+    for (const note of plan.budgetNotes) {
+      if (!notes.includes(note)) notes.push(note)
+    }
+  }
   return {
     am: plan.am,
     pm: plan.pmByDay[today],
-    notes: plan.warnings,
+    notes,
+    nightlyCost: plan.nightlyCost?.[today],
+    nightlyActives: plan.nightlyActives?.[today],
   }
 }
 
@@ -307,132 +327,377 @@ function dayKeyForTz(tzName: string): DayKey {
   return map[d]
 }
 
-function pickFlexible(a?: string, b?: string): string | undefined {
-  // Prefer non-retinoid, non-exfoliant helpers first (niacinamide, azelaic, peptides)
-  const pref = ['niacinamide','azelaic-acid','peptides','alpha-arbutin','tranexamic-acid','vitamin-c']
-  const list = [a, b].filter(Boolean) as string[]
-  for (const k of pref) if (list.includes(k)) return k
-  return list[0]
-}
-
 // ---- Irritation budget helpers ----
-const REVERSE_LABEL_KEY_MAP: Record<string,string> = {
-  'Adapalene 0.1%': 'adapalene',
-  'Retinol': 'retinol',
-  'Vitamin C': 'vitamin-c',
-  'Niacinamide': 'niacinamide',
-  '2% Salicylic Acid': 'salicylic-acid',
-  'Lactic Acid': 'lactic-acid',
-  '10% Azelaic Acid': 'azelaic-acid',
-  'Alpha Arbutin': 'alpha-arbutin',
-  'Tranexamic Acid': 'tranexamic-acid',
-  'Benzoyl Peroxide 2.5%': 'benzoyl-peroxide',
-  'Peptides': 'peptides',
+export function getNightlyBudget(sensitivityScore: number): { maxNightlyUnits: number; requiredRestNights: number } {
+  if (sensitivityScore >= 6) return { maxNightlyUnits: 0, requiredRestNights: 7 }
+  if (sensitivityScore >= 4) return { maxNightlyUnits: 30, requiredRestNights: 4 }
+  if (sensitivityScore >= 2) return { maxNightlyUnits: 70, requiredRestNights: 3 }
+  return { maxNightlyUnits: 100, requiredRestNights: 2 }
 }
 
-function budgetFromSensitivityBand(band: 'green'|'blue'|'yellow'|'red'): { nightlyCap: number; minRestNights: number } {
+function legacyBudgetFromBand(band: 'green'|'blue'|'yellow'|'red'): { maxNightlyUnits: number; requiredRestNights: number } {
   switch (band) {
     case 'green':
     case 'blue':
-      return { nightlyCap: 100, minRestNights: 2 }
+      return { maxNightlyUnits: 100, requiredRestNights: 2 }
     case 'yellow':
-      return { nightlyCap: 70, minRestNights: 3 }
+      return { maxNightlyUnits: 70, requiredRestNights: 3 }
     case 'red':
     default:
-      return { nightlyCap: 0, minRestNights: 4 }
+      return { maxNightlyUnits: 0, requiredRestNights: 4 }
   }
 }
 
-function tagCost(tag: ReturnType<typeof serumKeyToTag>): number {
-  switch (tag) {
-    case 'retinoids': return 60
-    case 'benzoyl_peroxide': return 50
-    case 'aha': return 60
-    case 'bha': return 60
-    case 'vitamin_c_ascorbic': return 25
-    case 'tranexamic': return 20
-    case 'azelaic': return 30
-    case 'niacinamide': return 10
-    case 'peptides': return 0
-    default: return 0
-  }
+type ActiveCategory =
+  | 'retinoid'
+  | 'benzoyl_peroxide'
+  | 'bha'
+  | 'aha'
+  | 'azelaic'
+  | 'tranexamic'
+  | 'vitamin_c_derivative'
+  | 'vitamin_c'
+  | 'niacinamide'
+  | 'hyaluronic'
+  | 'ceramide'
+  | 'peptide'
+  | 'alpha_arbutin'
+  | 'unknown'
+
+interface ActiveCostSpec {
+  category: ActiveCategory
+  keywords: RegExp
+  cost: number
+  priority: number
 }
 
-function replacePmSerum(plan: WeeklyPlan, day: DayKey, newKey?: string) {
-  // Replace or remove the Serum step for a day's PM routine
-  const steps = plan.pmByDay[day]
-  const withoutSerum = steps.filter(s => s.label !== 'Serum')
-  if (!newKey) {
-    plan.pmByDay[day] = withoutSerum
-    return
-  }
-  const label = labelFromKey(newKey)
-  const serumStep: RoutineStep = step('Serum', label, 2)
-  // Rebuild: Cleanser, Serum, Moisturizer (ensure order)
-  const cleanser = steps.find(s => s.label === 'Cleanser')
-  const moisturizer = steps.find(s => s.label === 'Moisturizer')
-  plan.pmByDay[day] = [cleanser || step('Cleanser', '', 1), serumStep, moisturizer || step('Moisturizer', '', 3)]
+const ACTIVE_COST_SPECS: ActiveCostSpec[] = [
+  { category: 'retinoid', keywords: /(retinoid|retinol|adapalene|tretinoin|differin)/i, cost: 60, priority: 100 },
+  { category: 'benzoyl_peroxide', keywords: /(benzoyl\s+peroxide|\bbpo\b)/i, cost: 50, priority: 95 },
+  { category: 'bha', keywords: /(bha|salicylic)/i, cost: 60, priority: 85 },
+  { category: 'aha', keywords: /(aha|glycolic|lactic|mandelic)/i, cost: 60, priority: 80 },
+  { category: 'azelaic', keywords: /(azelaic)/i, cost: 30, priority: 70 },
+  { category: 'tranexamic', keywords: /(tranexamic)/i, cost: 20, priority: 55 },
+  { category: 'vitamin_c_derivative', keywords: /(derivative|tetrahexyldecyl|ethyl ascorbic|map|sap)/i, cost: 15, priority: 50 },
+  { category: 'vitamin_c', keywords: /(vitamin\s*c|ascorbic)/i, cost: 15, priority: 50 },
+  { category: 'niacinamide', keywords: /(niacinamide)/i, cost: 10, priority: 45 },
+  { category: 'hyaluronic', keywords: /(hyaluronic)/i, cost: 0, priority: 20 },
+  { category: 'ceramide', keywords: /(ceramide|barrier\s*cream)/i, cost: 0, priority: 20 },
+  { category: 'peptide', keywords: /(peptide|bakuchiol)/i, cost: 0, priority: 25 },
+  { category: 'alpha_arbutin', keywords: /(alpha\s*arbutin)/i, cost: 0, priority: 25 },
+]
+
+interface ActiveCostResult {
+  category: ActiveCategory
+  cost: number
+  priority: number
 }
 
-function enforceIrritationBudget(plan: WeeklyPlan, nightlyCap: number, minRestNights: number) {
-  const warnings = plan.warnings
-  warnings.push(`Irritation budget: cap ${nightlyCap}, min rest nights ${minRestNights}`)
-
-  // Count current serum nights and sort days by priority (keep harder actives by default)
-  const dayOrder: DayKey[] = ['mon','tue','wed','thu','fri','sat','sun']
-  const keepPriority = (tag: ReturnType<typeof serumKeyToTag>): number => {
-    switch (tag) {
-      case 'retinoids': return 100
-      case 'benzoyl_peroxide': return 90
-      case 'aha':
-      case 'bha': return 80
-      case 'azelaic': return 60
-      case 'vitamin_c_ascorbic': return 50
-      case 'niacinamide': return 40
-      case 'peptides': return 30
-      default: return 0
+function costForProductName(name: string | undefined): ActiveCostResult {
+  if (!name) return { category: 'unknown', cost: 0, priority: 10 }
+  for (const spec of ACTIVE_COST_SPECS) {
+    if (spec.keywords.test(name)) {
+      return { category: spec.category, cost: spec.cost, priority: spec.priority }
     }
   }
+  return { category: 'unknown', cost: 0, priority: 10 }
+}
 
-  const daysWithSerum = dayOrder.filter(d => plan.pmByDay[d].some(s => s.label === 'Serum'))
-  const targetSerumNights = Math.max(0, 7 - minRestNights)
-  if (daysWithSerum.length > targetSerumNights) {
-    // Build list with tags and priority
-    const annotated = daysWithSerum.map(d => {
-      const tag = pmSerumTag(plan.pmByDay[d])
-      return { day: d, tag, priority: keepPriority(tag) }
+interface ActiveCandidate {
+  key?: string
+  displayName: string
+  rawName?: string
+  tag: ReturnType<typeof serumKeyToTag>
+  cost: number
+  priority: number
+  category: ActiveCategory
+}
+
+interface ActiveGroup {
+  id: string
+  actives: ActiveCandidate[]
+  cost: number
+  exceedsBudget?: boolean
+  budgetNote?: string
+  maxUses?: number
+}
+
+interface BudgetPlan {
+  pmByDay: Record<DayKey, RoutineStep[]>
+  nightlyCost: Record<DayKey, number>
+  nightlyActives: Record<DayKey, string[]>
+  nightlyNotes: Record<DayKey, string[]>
+  restNights: DayKey[]
+  budgetNotes: string[]
+  warnings: string[]
+  totalCost: number
+}
+
+function deriveActiveCandidates(
+  candidates: Array<{ key?: string; meta: SerumMeta }>,
+  seenKeys: Set<string>
+): ActiveCandidate[] {
+  const list: ActiveCandidate[] = []
+  for (const { key, meta } of candidates) {
+    const displayName = meta.key ? serumDisplayName(meta, meta.key) : (meta.rawName || meta.name || '').trim()
+    const uniqueKey = (key || displayName).toLowerCase()
+    if (!uniqueKey) continue
+    if (seenKeys.has(uniqueKey)) continue
+    seenKeys.add(uniqueKey)
+    const costMeta = costForProductName(displayName || meta.rawName)
+    list.push({
+      key,
+      displayName: displayName || meta.rawName || 'Serum',
+      rawName: meta.rawName,
+      tag: meta.tag,
+      cost: costMeta.cost,
+      priority: Math.max(costMeta.priority, meta.tag ? priorityFromTag(meta.tag) : costMeta.priority),
+      category: costMeta.category,
     })
-    // Drop lowest priority nights first until target reached
-    annotated.sort((a, b) => a.priority - b.priority)
-    const toDrop = annotated.slice(0, daysWithSerum.length - targetSerumNights)
-    for (const drop of toDrop) {
-      replacePmSerum(plan, drop.day, undefined)
-      warnings.push(`Set rest night on ${drop.day.toUpperCase()} (min rest nights policy)`) 
+  }
+  return list
+}
+
+function priorityFromTag(tag: ReturnType<typeof serumKeyToTag>): number {
+  switch (tag) {
+    case 'retinoids': return 100
+    case 'benzoyl_peroxide': return 95
+    case 'bha': return 85
+    case 'aha': return 80
+    case 'azelaic': return 70
+    case 'tranexamic': return 55
+    case 'vitamin_c_ascorbic': return 50
+    case 'vitamin_c_derivative': return 45
+    case 'niacinamide': return 45
+    case 'peptides': return 25
+    default: return 10
+  }
+}
+
+function pickRestNights(required: number): DayKey[] {
+  if (required >= 7) return [...ALL_DAYS]
+  const preference: DayKey[] = ['sun', 'wed', 'sat', 'tue', 'thu', 'mon', 'fri']
+  return preference.slice(0, Math.min(required, preference.length))
+}
+
+function buildGroups(
+  actives: ActiveCandidate[],
+  nightlyCap: number,
+  serumComfort: number,
+  allowOverBudgetMargin: number
+): { groups: ActiveGroup[]; notes: string[] } {
+  const groups: ActiveGroup[] = []
+  const notes: string[] = []
+  const sorted = [...actives].sort((a, b) => b.priority - a.priority)
+
+  sorted.forEach((active, index) => {
+    let placed = false
+    for (const group of groups) {
+      if (group.actives.length >= serumComfort) continue
+      const potentialCost = group.cost + active.cost
+      if (potentialCost <= nightlyCap || potentialCost <= nightlyCap + allowOverBudgetMargin) {
+        group.actives.push(active)
+        group.cost = potentialCost
+        if (potentialCost > nightlyCap) {
+          group.exceedsBudget = true
+        }
+        placed = true
+        break
+      }
+    }
+    if (!placed) {
+      const exceeds = active.cost > nightlyCap
+      groups.push({
+        id: `group-${index}`,
+        actives: [active],
+        cost: active.cost,
+        exceedsBudget: exceeds,
+      })
+      if (exceeds && nightlyCap > 0) {
+        notes.push(`${active.displayName} alone exceeds nightly budget; reducing frequency.`)
+      }
+    }
+  })
+
+  groups.forEach(group => {
+    if (group.exceedsBudget) {
+      group.maxUses = 3
+    }
+  })
+
+  return { groups, notes }
+}
+
+function trimGroupsByBudget(
+  baseActives: ActiveCandidate[],
+  nightlyCap: number,
+  serumComfort: number,
+  allowOverBudgetMargin: number,
+  activeNightsAllowed: number
+): { groups: ActiveGroup[]; removed: ActiveCandidate[]; notes: string[] } {
+  const removed: ActiveCandidate[] = []
+  let candidates = [...baseActives].sort((a, b) => b.priority - a.priority)
+  let notes: string[] = []
+  while (candidates.length) {
+    const { groups, notes: groupNotes } = buildGroups(candidates, nightlyCap, serumComfort, allowOverBudgetMargin)
+    notes = groupNotes
+    if (groups.length <= Math.max(activeNightsAllowed, 1)) {
+      return { groups, removed, notes }
+    }
+    const removedActive = candidates.pop()
+    if (removedActive) {
+      removed.push(removedActive)
+    } else {
+      break
+    }
+  }
+  return { groups: [], removed, notes }
+}
+
+function generateBudgetAwarePmPlan(
+  cleanser: string,
+  moisturizer: string,
+  actives: ActiveCandidate[],
+  budget: { nightlyCap: number; requiredRestNights: number },
+  serumComfort: number,
+  options: { allowOverBudgetMargin: number }
+): BudgetPlan {
+  const nightlyCost: Record<DayKey, number> = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }
+  const nightlyActives: Record<DayKey, string[]> = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] }
+  const nightlyNotes: Record<DayKey, string[]> = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] }
+  const pmByDay: Record<DayKey, RoutineStep[]> = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] }
+  const warnings: string[] = []
+  const budgetNotes: string[] = []
+  const restNights = new Set<DayKey>(pickRestNights(budget.requiredRestNights))
+  const activeNightsAllowed = Math.max(0, ALL_DAYS.length - budget.requiredRestNights)
+
+  if (budget.nightlyCap === 0 || activeNightsAllowed === 0 || actives.length === 0) {
+    // All rest nights barrier focus
+    ALL_DAYS.forEach(day => {
+      pmByDay[day] = emptyPM(cleanser, moisturizer)
+      nightlyNotes[day].push('Rest night (barrier repair only)')
+    })
+    if (budget.nightlyCap === 0) {
+      budgetNotes.push('Focus on barrier repair due to very high sensitivity.')
+    }
+    return {
+      pmByDay,
+      nightlyCost,
+      nightlyActives,
+      nightlyNotes,
+      restNights: ALL_DAYS,
+      budgetNotes,
+      warnings,
+      totalCost: 0,
     }
   }
 
-  // Enforce nightly cap by downgrading or resting
-  for (const d of dayOrder) {
-    const tag = pmSerumTag(plan.pmByDay[d])
-    if (!tag) continue
-    const cost = tagCost(tag)
-    if (cost <= nightlyCap) continue
+  const { groups, removed, notes } = trimGroupsByBudget(
+    actives,
+    budget.nightlyCap,
+    serumComfort,
+    options.allowOverBudgetMargin,
+    activeNightsAllowed
+  )
 
-    // Try downgrades: prefer zero‑irritant peptides (0), then azelaic (30), then niacinamide (10)
-    const downgrade = ((): string | undefined => {
-      if (nightlyCap >= tagCost('peptides')) return 'peptides'
-      if (nightlyCap >= tagCost('azelaic')) return 'azelaic-acid'
-      if (nightlyCap >= tagCost('niacinamide')) return 'niacinamide'
-      return undefined
-    })()
+  if (removed.length) {
+    budgetNotes.push(
+      `Removed lower-priority actives to meet nightly budget: ${removed
+        .map(a => a.displayName)
+        .join(', ')}`
+    )
+  }
+  budgetNotes.push(`Nightly irritation cap: ${budget.nightlyCap} units. Required rest nights: ${budget.requiredRestNights}.`)
+  budgetNotes.push(...notes)
 
-    if (downgrade) {
-      replacePmSerum(plan, d, downgrade)
-      warnings.push(`Downgraded PM serum on ${d.toUpperCase()} to ${labelFromKey(downgrade)} to meet irritation cap`)
-    } else {
-      replacePmSerum(plan, d, undefined)
-      warnings.push(`Removed PM serum on ${d.toUpperCase()} to meet irritation cap`)
+  const usageCounts = new Map<string, number>()
+  const usageLimits = new Map<string, number>()
+
+  groups.forEach(group => {
+    usageCounts.set(group.id, 0)
+    usageLimits.set(group.id, group.maxUses ?? activeNightsAllowed)
+    if (group.exceedsBudget) {
+      budgetNotes.push('Alternating high-cost actives to respect sensitivity budget.')
     }
+  })
+
+  let totalCost = 0
+  const activeSlots = ALL_DAYS.filter(day => !restNights.has(day))
+  let groupIndex = 0
+  let assignedActiveNights = 0
+
+  for (const day of activeSlots) {
+    if (!groups.length || assignedActiveNights >= activeNightsAllowed) {
+      restNights.add(day)
+      pmByDay[day] = emptyPM(cleanser, moisturizer)
+      nightlyNotes[day].push('Rest night (budget allocation).')
+      continue
+    }
+
+    let selected: ActiveGroup | undefined
+    let attempts = 0
+    while (attempts < groups.length) {
+      const candidate = groups[groupIndex % groups.length]
+      groupIndex += 1
+      attempts += 1
+      const used = usageCounts.get(candidate.id) || 0
+      const limit = usageLimits.get(candidate.id) || activeNightsAllowed
+      if (used < limit) {
+        selected = candidate
+        break
+      }
+    }
+
+    if (!selected) {
+      restNights.add(day)
+      pmByDay[day] = emptyPM(cleanser, moisturizer)
+      nightlyNotes[day].push('Rest night (budget allocation).')
+      continue
+    }
+
+    usageCounts.set(selected.id, (usageCounts.get(selected.id) || 0) + 1)
+    assignedActiveNights += 1
+
+    const activeNames = selected.actives.map(active => active.displayName)
+    nightlyActives[day] = activeNames
+    nightlyCost[day] = selected.cost
+    totalCost += selected.cost
+
+    const steps: RoutineStep[] = []
+    steps.push(step('Cleanser', cleanser, 1))
+    let nextStepIndex = 2
+    selected.actives.forEach((active, idx) => {
+      const label = selected.actives.length > 1 ? `Serum ${idx + 1}` : 'Serum'
+      steps.push(step(label, active.displayName, nextStepIndex))
+      nextStepIndex += 1
+    })
+    steps.push(step('Moisturizer', moisturizer, nextStepIndex))
+    pmByDay[day] = steps
+    if (selected.exceedsBudget) {
+      nightlyNotes[day].push('Using reduced frequency due to sensitivity (single active exceeds nightly cap).')
+    } else if (selected.cost > budget.nightlyCap) {
+      nightlyNotes[day].push('Allowed slight budget overage to keep safe pregnancy routine.')
+    }
+  }
+
+  // Remaining rest nights (including pre-selected ones)
+  ALL_DAYS.forEach(day => {
+    if (restNights.has(day)) {
+      pmByDay[day] = pmByDay[day].length ? pmByDay[day] : emptyPM(cleanser, moisturizer)
+      nightlyCost[day] = nightlyCost[day] || 0
+      nightlyNotes[day].push('Rest night (cleanser + moisturizer only).')
+    }
+  })
+
+  return {
+    pmByDay,
+    nightlyCost,
+    nightlyActives,
+    nightlyNotes,
+    restNights: Array.from(restNights),
+    budgetNotes,
+    warnings,
+    totalCost,
   }
 }
 

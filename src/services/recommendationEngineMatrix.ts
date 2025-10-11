@@ -10,6 +10,7 @@ import {
 } from '../data/concernMatrix';
 import { buildWeeklyPlan } from './scheduler';
 import { pairCompatibility, IngredientTag } from './ingredientInteractions';
+import { computeSensitivityFromForm, deriveSelfBands } from '../lib/decisionEngine';
 
 type Maybe<T> = T | undefined | null;
 
@@ -103,8 +104,36 @@ export interface EnhancedRecommendation extends ProductRecommendation {
       am: Array<{ step: number; label: string; product: string }>;
       pm: Array<{ step: number; label: string; product: string }>;
       notes: string[];
+      nightlyCost?: number;
+      nightlyActives?: string[];
+    };
+    nightlyCost?: Record<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun', number>;
+    nightlyActives?: Record<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun', string[]>;
+    nightlyNotes?: Record<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun', string[]>;
+    restNights?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
+    budgetNotes?: string[];
+    totalWeeklyCost?: number;
+    budget?: {
+      nightlyCap: number;
+      requiredRestNights: number;
+      sensitivityScore?: number;
     };
   };
+}
+
+export interface RoutineVariant extends EnhancedRecommendation {
+  type: 'conservative' | 'balanced' | 'comprehensive' | 'referral' | 'barrier-first';
+  label: string;
+  description: string;
+  irritationRisk: 'low' | 'moderate' | 'higher';
+  recommended?: boolean;
+  available: boolean;
+  conflictReason?: string;
+}
+
+export interface RoutineOptionsResponse {
+  routines: RoutineVariant[];
+  selectedIndex: number;
 }
 
 // ---- Safety gate helpers ----
@@ -254,6 +283,56 @@ const SKIN_TYPE_DEFAULTS: Record<
   },
 };
 
+type SkinMoistureStatus = 'Hydrated' | 'Dehydrated';
+type SebumClass = 'Oily' | 'Combo' | 'Dry';
+
+const SKIN_TYPE_BASE_PRODUCTS: Record<string, { cleanser: string; moisturizer: string; sunscreen: string }> = {
+  'Oily-Dehydrated-Yellow': {
+    cleanser: 'Gentle foaming cleanser',
+    moisturizer: 'Oil-free gel',
+    sunscreen: 'Lightweight gel sunscreen SPF 50',
+  },
+  'Oily-Dehydrated-Red': {
+    cleanser: 'Gentle foaming cleanser',
+    moisturizer: 'Oil-free gel',
+    sunscreen: 'Lightweight gel sunscreen SPF 50',
+  },
+  'Oily-Hydrated-Yellow': {
+    cleanser: 'Foaming cleanser',
+    moisturizer: 'Oil-free gel',
+    sunscreen: 'Lightweight gel sunscreen SPF 50',
+  },
+  'Oily-Hydrated-Red': {
+    cleanser: 'Salicylic acid cleanser',
+    moisturizer: 'Oil-free gel',
+    sunscreen: 'Lightweight gel sunscreen SPF 50',
+  },
+  'Combo-Dehydrated': {
+    cleanser: 'Cream cleanser',
+    moisturizer: 'Gel-cream',
+    sunscreen: 'Hybrid sunscreen SPF 50',
+  },
+  'Combo-Hydrated': {
+    cleanser: 'Gentle foaming cleanser',
+    moisturizer: 'Gel-cream',
+    sunscreen: 'Hybrid sunscreen SPF 50',
+  },
+  'Dry-Dehydrated': {
+    cleanser: 'Cream cleanser',
+    moisturizer: 'Rich cream',
+    sunscreen: 'Nourishing mineral cream sunscreen SPF 50',
+  },
+};
+
+interface SkinProfile {
+  sebumClass: SebumClass;
+  sebumBand: BandColor | null;
+  moistureStatus: SkinMoistureStatus;
+  moistureBand: BandColor | null;
+  fallbackSkinType: SkinTypeKey;
+  baseKey: string | null;
+}
+
 function toBandColor(value: string | undefined): BandColor | null {
   if (!value) return null;
   const lower = value.trim().toLowerCase();
@@ -261,6 +340,124 @@ function toBandColor(value: string | undefined): BandColor | null {
     return lower as BandColor;
   }
   return null;
+}
+
+function computeBaseKey(sebumClass: SebumClass, moistureStatus: SkinMoistureStatus, sebumBand: BandColor | null): string | null {
+  if (sebumClass === 'Oily') {
+    const severity = sebumBand === 'red' ? 'Red' : 'Yellow';
+    return `Oily-${moistureStatus}-${severity}`;
+  }
+  if (sebumClass === 'Combo') {
+    return `Combo-${moistureStatus}`;
+  }
+  if (sebumClass === 'Dry') {
+    return 'Dry-Dehydrated';
+  }
+  return null;
+}
+
+function deriveSkinProfile(context: RecommendationContext, fallbackSkinType: SkinTypeKey): SkinProfile {
+  const effectiveBands = deriveEffectiveBands(context);
+  const selfBands = deriveSelfBands(context.formData || {});
+
+  const sebumBand = toBandColor(String(effectiveBands.sebum))
+    || toBandColor(selfBands.sebum as string | undefined)
+    || (fallbackSkinType === 'Oily' ? 'yellow' : fallbackSkinType === 'Combo' ? 'blue' : fallbackSkinType === 'Dry' ? 'green' : null);
+
+  const moistureBand = toBandColor(String((effectiveBands as any).moisture))
+    || toBandColor(selfBands.moisture as string | undefined)
+    || (fallbackSkinType === 'Dry' ? 'yellow' : null);
+
+  const rawSkinType = Array.isArray(context.skinType) ? context.skinType.join(' ') : String(context.skinType || '');
+  const lowerSkinType = rawSkinType.toLowerCase();
+
+  let sebumClass: SebumClass;
+  if (sebumBand === 'red' || sebumBand === 'yellow') {
+    sebumClass = 'Oily';
+  } else if (sebumBand === 'blue') {
+    sebumClass = 'Combo';
+  } else if (lowerSkinType.includes('dry')) {
+    sebumClass = 'Dry';
+  } else if (lowerSkinType.includes('oily')) {
+    sebumClass = 'Oily';
+  } else if (lowerSkinType.includes('combo') || lowerSkinType.includes('combination')) {
+    sebumClass = 'Combo';
+  } else if (fallbackSkinType === 'Dry') {
+    sebumClass = 'Dry';
+  } else if (fallbackSkinType === 'Oily') {
+    sebumClass = 'Oily';
+  } else {
+    sebumClass = 'Combo';
+  }
+
+  const moistureStatus: SkinMoistureStatus = moistureBand === 'red' || moistureBand === 'yellow' ? 'Dehydrated' : 'Hydrated';
+
+  const baseKey = computeBaseKey(sebumClass, moistureStatus, sebumBand);
+
+  return {
+    sebumClass,
+    sebumBand,
+    moistureStatus,
+    moistureBand,
+    fallbackSkinType,
+    baseKey,
+  };
+}
+
+function sebumClassToSkinTypeKey(sebumClass: SebumClass): SkinTypeKey {
+  switch (sebumClass) {
+    case 'Oily':
+      return 'Oily';
+    case 'Dry':
+      return 'Dry';
+    default:
+      return 'Combo';
+  }
+}
+
+function getFallbackProduct(slot: 'cleanser' | 'moisturizer' | 'sunscreen', profile: SkinProfile): string {
+  const priority: SkinTypeKey[] = [sebumClassToSkinTypeKey(profile.sebumClass), profile.fallbackSkinType, 'Normal'];
+  for (const skinKey of priority) {
+    const defaults = SKIN_TYPE_DEFAULTS[skinKey];
+    if (defaults && defaults[slot]) {
+      return defaults[slot];
+    }
+  }
+  throw new Error(`No fallback product defined for ${slot}`);
+}
+
+function resolveAsPerSkinTypeName(slot: 'cleanser' | 'moisturizer' | 'sunscreen', profile: SkinProfile, notes: string[]): string {
+  const profileLabel = profile.baseKey || `${profile.sebumClass}-${profile.moistureStatus}`;
+  const mapping = profile.baseKey ? SKIN_TYPE_BASE_PRODUCTS[profile.baseKey] : undefined;
+  if (mapping && mapping[slot]) {
+    notes.push(`Resolved ${slot} to ${mapping[slot]} using ${profileLabel} base products.`);
+    return mapping[slot];
+  }
+
+  const fallback = getFallbackProduct(slot, profile);
+  notes.push(`No base mapping for ${profileLabel}; fell back to ${fallback}.`);
+  return fallback;
+}
+
+function resolveRoutineProduct(
+  product: MatrixProduct,
+  slot: ProductSlot,
+  profile: SkinProfile,
+  notes: string[],
+): MatrixProduct {
+  const relevantSlot = slot === 'cleanser' || slot === 'moisturizer' || slot === 'sunscreen';
+  const raw = (product.rawName || '').trim().toLowerCase();
+  if (!relevantSlot || (raw !== 'as per skin type' && raw !== 'skintype_default')) {
+    return cloneProduct(product);
+  }
+
+  const resolvedName = resolveAsPerSkinTypeName(slot as 'cleanser' | 'moisturizer' | 'sunscreen', profile, notes);
+  const resolved = instantiateProduct(resolvedName, slot);
+  return {
+    ...resolved,
+    rawName: resolvedName,
+    isDynamic: true,
+  };
 }
 
 interface RoutineState {
@@ -296,13 +493,13 @@ function instantiateProduct(name: string, slot: ProductSlot): MatrixProduct {
   };
 }
 
-function buildRoutineFromEntry(entry: MatrixEntry): RoutineState {
+function buildRoutineFromEntry(entry: MatrixEntry, profile: SkinProfile, notes: string[]): RoutineState {
   return {
-    cleanser: cloneProduct(entry.cleanser),
+    cleanser: resolveRoutineProduct(entry.cleanser, 'cleanser', profile, notes),
     coreSerum: cloneProduct(entry.coreSerum),
     secondarySerums: [],
-    moisturizer: cloneProduct(entry.moisturizer),
-    sunscreen: cloneProduct(entry.sunscreen),
+    moisturizer: resolveRoutineProduct(entry.moisturizer, 'moisturizer', profile, notes),
+    sunscreen: resolveRoutineProduct(entry.sunscreen, 'sunscreen', profile, notes),
   };
 }
 
@@ -315,6 +512,16 @@ function buildSkinTypeFallbackRoutine(skinType: SkinTypeKey, notes: string[]): R
     secondarySerums: [],
     moisturizer: instantiateProduct(defaults.moisturizer, 'moisturizer'),
     sunscreen: instantiateProduct(defaults.sunscreen, 'sunscreen'),
+  };
+}
+
+function cloneRoutineState(routine: RoutineState): RoutineState {
+  return {
+    cleanser: cloneProduct(routine.cleanser),
+    coreSerum: cloneProduct(routine.coreSerum),
+    secondarySerums: routine.secondarySerums.map(cloneProduct),
+    moisturizer: cloneProduct(routine.moisturizer),
+    sunscreen: cloneProduct(routine.sunscreen),
   };
 }
 
@@ -405,9 +612,10 @@ function tryAppendSecondarySerum(
   context: RecommendationContext,
   notes: string[],
   source: string,
+  options?: { limit?: number },
 ): SerumAppendResult {
-  const limit = parseSerumComfort(context);
-  const currentCount = 1 + routine.secondarySerums.length;
+  const limit = typeof options?.limit === 'number' ? options.limit : parseSerumComfort(context);
+  const currentCount = routine.secondarySerums.length;
   if (currentCount >= limit) {
     notes.push(`Serum comfort limit reached; skipped ${candidate.name} from ${source}.`);
     return { added: false, reason: 'comfort-limit', detail: 'serum comfort limit reached' };
@@ -563,14 +771,15 @@ function augmentSerumsForAdditionalConcerns(
   context: RecommendationContext,
   skinType: SkinTypeKey,
   notes: string[],
+  limitOverride?: number,
 ): void {
-  const limit = parseSerumComfort(context);
-  if (1 + routine.secondarySerums.length >= limit) return;
+  const limit = typeof limitOverride === 'number' ? limitOverride : parseSerumComfort(context);
+  if (routine.secondarySerums.length >= limit) return;
 
   const describeConcern = (concern: ConcernSelection): string => `${concern.concern} ${concern.subtype}`;
 
   for (const concern of additionalConcerns) {
-    if (1 + routine.secondarySerums.length >= limit) break;
+    if (routine.secondarySerums.length >= limit) break;
     const entry = fetchMatrixEntry(concern, skinType, notes);
     if (!entry) {
       notes.push(`Missing matrix entry for ${describeConcern(concern)}; unable to add serum.`);
@@ -591,7 +800,14 @@ function augmentSerumsForAdditionalConcerns(
       : false;
 
     if (!secondaryProduct && coreProduct) {
-      const coreOnlyResult = tryAppendSecondarySerum(routine, coreProduct, context, notes, `${sourceLabel} (core only)`);
+      const coreOnlyResult = tryAppendSecondarySerum(
+        routine,
+        coreProduct,
+        context,
+        notes,
+        `${sourceLabel} (core only)`,
+        { limit },
+      );
       if (!coreOnlyResult.added) {
         const detail = coreOnlyResult.detail ? ` (${coreOnlyResult.detail})` : '';
         notes.push(`Core serum ${coreProduct.name} for ${concernLabel} could not be added${detail}.`);
@@ -600,7 +816,14 @@ function augmentSerumsForAdditionalConcerns(
     }
 
     if (secondaryProduct && productsAreSame) {
-      const singleResult = tryAppendSecondarySerum(routine, secondaryProduct, context, notes, sourceLabel);
+      const singleResult = tryAppendSecondarySerum(
+        routine,
+        secondaryProduct,
+        context,
+        notes,
+        sourceLabel,
+        { limit },
+      );
       if (!singleResult.added) {
         const detail = singleResult.detail ? ` (${singleResult.detail})` : '';
         notes.push(`Serum ${secondaryProduct.name} for ${concernLabel} could not be added${detail}.`);
@@ -609,13 +832,27 @@ function augmentSerumsForAdditionalConcerns(
     }
 
     if (secondaryProduct) {
-      const secondaryResult = tryAppendSecondarySerum(routine, secondaryProduct, context, notes, sourceLabel);
+      const secondaryResult = tryAppendSecondarySerum(
+        routine,
+        secondaryProduct,
+        context,
+        notes,
+        sourceLabel,
+        { limit },
+      );
       if (secondaryResult.added) {
         continue;
       }
 
       if (secondaryResult.reason === 'compatibility' && coreProduct) {
-        const coreResult = tryAppendSecondarySerum(routine, coreProduct, context, notes, `${sourceLabel} (core fallback)`);
+        const coreResult = tryAppendSecondarySerum(
+          routine,
+          coreProduct,
+          context,
+          notes,
+          `${sourceLabel} (core fallback)`,
+          { limit },
+        );
         if (coreResult.added) {
           const detail = secondaryResult.detail ? ` (${secondaryResult.detail})` : '';
           notes.push(
@@ -641,6 +878,57 @@ function augmentSerumsForAdditionalConcerns(
       notes.push(`Secondary serum ${secondaryProduct.name} for ${concernLabel} could not be added${detail}.`);
     }
   }
+}
+
+function addCoreSerumsOnlyForConcerns(
+  routine: RoutineState,
+  concerns: ConcernSelection[],
+  context: RecommendationContext,
+  skinType: SkinTypeKey,
+  notes: string[],
+  limitOverride?: number,
+): string[] {
+  const conflicts: string[] = [];
+  const limit = typeof limitOverride === 'number' ? limitOverride : parseSerumComfort(context);
+  if (routine.secondarySerums.length >= limit) return conflicts;
+
+  const describeConcern = (concern: ConcernSelection): string => `${concern.concern} ${concern.subtype}`;
+
+  for (const concern of concerns) {
+    if (routine.secondarySerums.length >= limit) break;
+    const entry = fetchMatrixEntry(concern, skinType, notes);
+    if (!entry) {
+      notes.push(`Missing matrix entry for ${describeConcern(concern)}; unable to add core serum.`);
+      continue;
+    }
+    if (!entry.coreSerum) {
+      notes.push(`No core serum defined for ${describeConcern(concern)}.`);
+      continue;
+    }
+
+    const coreProduct = cloneProduct(entry.coreSerum);
+    const result = tryAppendSecondarySerum(
+      routine,
+      coreProduct,
+      context,
+      notes,
+      `additional concern ${describeConcern(concern)} (core only)`,
+      { limit },
+    );
+
+    if (!result.added) {
+      const detail = result.detail ? ` (${result.detail})` : '';
+      if (result.reason === 'compatibility') {
+        const conflictMessage = result.detail || `${coreProduct.name} incompatibility`;
+        conflicts.push(conflictMessage);
+        notes.push(`Comprehensive plan unavailable: ${coreProduct.name} conflicted${detail}.`);
+        break;
+      }
+      notes.push(`Core serum ${coreProduct.name} for ${describeConcern(concern)} could not be added${detail}.`);
+    }
+  }
+
+  return conflicts;
 }
 
 type SerumTiming = 'am' | 'pm' | 'both';
@@ -721,6 +1009,7 @@ function routineToRecommendation(
   otherConcerns: ConcernSelection[],
   context: RecommendationContext,
   notes: string[],
+  options?: { serumComfortOverride?: number },
 ): EnhancedRecommendation {
   const { am, pm } = buildAmPmRoutines(routine);
   const serumCount = 1 + routine.secondarySerums.length;
@@ -778,6 +1067,10 @@ function routineToRecommendation(
       const scheduleSecondaryProduct = secondaryKey
         ? routine.secondarySerums[0]
         : (tertiaryKey ? routine.secondarySerums[1] : undefined);
+      const tertiaryProduct = routine.secondarySerums[1];
+      const additionalProducts = routine.secondarySerums.slice(2);
+      const serumComfortForSchedule = options?.serumComfortOverride ?? parseSerumComfort(context);
+      const sensitivitySnapshot = computeSensitivityFromForm(context.formData || {});
       const { plan, customerView } = buildWeeklyPlan({
         cleanser: recommendation.cleanser,
         coreSerumKey: coreKey,
@@ -786,6 +1079,14 @@ function routineToRecommendation(
         secondarySerumKey: scheduleSecondaryKey,
         secondarySerumName: scheduleSecondaryProduct?.name,
         secondarySerumRawName: scheduleSecondaryProduct?.rawName,
+        tertiarySerumKey: tertiaryKey,
+        tertiarySerumName: tertiaryProduct?.name,
+        tertiarySerumRawName: tertiaryProduct?.rawName,
+        additionalSerums: additionalProducts.map(product => ({
+          key: serumKeyFromProduct(product),
+          name: product?.name,
+          rawName: product?.rawName,
+        })),
         moisturizer: recommendation.moisturizer,
         sunscreen: recommendation.sunscreen,
         flags: {
@@ -795,7 +1096,8 @@ function routineToRecommendation(
           pregnancy: isPregnancySafe(context),
           sensitivity: isSensitive(context),
           sensitivityBand: (deriveEffectiveBands(context).sensitivity as 'green' | 'blue' | 'yellow' | 'red') || 'green',
-          serumComfort: parseSerumComfort(context),
+          serumComfort: serumComfortForSchedule,
+          sensitivityScore: sensitivitySnapshot?.score,
         },
       });
       recommendation.schedule = { ...plan, customerView };
@@ -855,69 +1157,238 @@ function buildDermReferralRecommendation(): EnhancedRecommendation {
   };
 }
 
-export function generateRecommendations(context: RecommendationContext): EnhancedRecommendation {
-  const notes: string[] = [];
+export function generateRecommendations(context: RecommendationContext): RoutineOptionsResponse {
+  const sharedNotes: string[] = [];
 
   if (hasSevereCysticGate(context)) {
-    return buildDermReferralRecommendation();
+    const referral = buildDermReferralRecommendation();
+    const variant: RoutineVariant = {
+      ...referral,
+      type: 'referral',
+      label: 'Dermatologist referral',
+      description: 'Severe cystic acne flagged for specialist care before prescribing actives.',
+      irritationRisk: 'higher',
+      recommended: true,
+      available: false,
+    };
+    return { routines: [variant], selectedIndex: 0 };
   }
 
   if (hasBarrierStressHighGate(context)) {
-    return buildBarrierFirstRoutine(context);
+    const barrierFirst = buildBarrierFirstRoutine(context);
+    const variant: RoutineVariant = {
+      ...barrierFirst,
+      type: 'barrier-first',
+      label: 'Barrier-first reset',
+      description: 'Focuses exclusively on repairing the skin barrier before layering actives.',
+      irritationRisk: 'low',
+      recommended: true,
+      available: true,
+    };
+    return { routines: [variant], selectedIndex: 0 };
   }
 
   const concerns = collectConcernSelections(context);
-  const { primary, others } = selectPrimaryConcern(concerns, notes);
+  const { primary, others } = selectPrimaryConcern(concerns, sharedNotes);
   const skinType = deriveSkinTypeKey(context);
+  const skinProfile = deriveSkinProfile(context, skinType);
 
-  if (!primary) {
-    notes.push('No primary concern detected; defaulting to skin-type routine.');
-    const fallbackPrimary: ConcernSelection = {
+  let primaryConcern = primary;
+  if (!primaryConcern) {
+    sharedNotes.push('No primary concern detected; defaulting to skin-type routine.');
+    primaryConcern = {
       concern: 'texture',
       subtype: 'General',
       band: 'blue',
       priority: 999,
       source: 'decision',
     };
-    const routine = buildSkinTypeFallbackRoutine(skinType, notes);
-    return routineToRecommendation(routine, fallbackPrimary, [], context, notes);
   }
 
-  const entry = fetchMatrixEntry(primary, skinType, notes);
-  let routine: RoutineState;
+  const entry = fetchMatrixEntry(primaryConcern, skinType, sharedNotes);
+  let baseRoutine: RoutineState;
+  let primarySecondary: MatrixProduct | null = null;
+  let fallbackSecondary: MatrixProduct | null = null;
+
   if (!entry) {
-    notes.push(`Matrix entry missing for ${primary.concern} ${primary.subtype}.`);
-    routine = buildSkinTypeFallbackRoutine(skinType, notes);
-    const fallbackDefaults = SKIN_TYPE_DEFAULTS[skinType];
-    if (fallbackDefaults?.secondarySerum) {
-      const fallbackSecondary = instantiateProduct(fallbackDefaults.secondarySerum, 'secondarySerum');
-      tryAppendSecondarySerum(routine, fallbackSecondary, context, notes, 'skin type fallback');
+    sharedNotes.push(`Matrix entry missing for ${primaryConcern.concern} ${primaryConcern.subtype}.`);
+    baseRoutine = buildSkinTypeFallbackRoutine(skinType, sharedNotes);
+    const defaults = SKIN_TYPE_DEFAULTS[skinType];
+    if (defaults?.secondarySerum) {
+      fallbackSecondary = instantiateProduct(defaults.secondarySerum, 'secondarySerum');
     }
   } else if (entry.cleanser.isReferral || entry.coreSerum.isReferral || entry.sunscreen.isReferral) {
-    notes.push('Matrix row indicates dermatologist referral.');
-    return buildDermReferralRecommendation();
+    const referral = buildDermReferralRecommendation();
+    const variant: RoutineVariant = {
+      ...referral,
+      type: 'referral',
+      label: 'Dermatologist referral',
+      description: 'Matrix guidance requires escalation to a dermatologist for this presentation.',
+      irritationRisk: 'higher',
+      recommended: true,
+      available: false,
+    };
+    return { routines: [variant], selectedIndex: 0 };
   } else {
-    routine = buildRoutineFromEntry(entry);
+    baseRoutine = buildRoutineFromEntry(entry, skinProfile, sharedNotes);
     if (entry.secondarySerum) {
-      const primarySecondary = cloneProduct(entry.secondarySerum);
-      tryAppendSecondarySerum(
-        routine,
-        primarySecondary,
-        context,
-        notes,
-        `primary concern ${primary.concern} ${primary.subtype}`,
-      );
+      primarySecondary = cloneProduct(entry.secondarySerum);
     } else {
-      notes.push(`No secondary serum defined for primary concern ${primary.concern} ${primary.subtype}.`);
+      sharedNotes.push(`No secondary serum defined for primary concern ${primaryConcern.concern} ${primaryConcern.subtype}.`);
     }
   }
 
-  augmentSerumsForAdditionalConcerns(routine, others, context, skinType, notes);
-  applyPregnancySafety(routine, context, notes);
-  applyIsotretinoinSafety(routine, context, notes);
-  applyAllergySafety(routine, context, notes);
+  const variantDefinitions = [
+    {
+      type: 'conservative' as const,
+      label: 'Conservative',
+      description: 'Keeps to a single gentle serum for barrier stability and easy adherence.',
+      irritationRisk: 'low' as const,
+      serumComfort: 1,
+      includePrimarySecondary: false,
+      additionalConcerns: [] as ConcernSelection[],
+      additionalMode: 'none' as const,
+      recommended: false,
+    },
+    {
+      type: 'balanced' as const,
+      label: 'Balanced',
+      description: 'Core treatment plus one support serum for the next most pressing concern.',
+      irritationRisk: 'moderate' as const,
+      serumComfort: 2,
+      includePrimarySecondary: true,
+      additionalConcerns: others.slice(0, 1),
+      additionalMode: 'secondaryWithFallback' as const,
+      recommended: true,
+    },
+    {
+      type: 'comprehensive' as const,
+      label: 'Comprehensive',
+      description: 'Layered routine addressing up to three priorities when tolerance allows.',
+      irritationRisk: 'higher' as const,
+      serumComfort: 3,
+      includePrimarySecondary: true,
+      additionalConcerns: others,
+      additionalMode: 'coreOnly' as const,
+      recommended: false,
+    },
+  ];
 
-  return routineToRecommendation(routine, primary, others, context, notes);
+  const routines: RoutineVariant[] = [];
+  let recommendedIndex = -1;
+  const primaryLabel = `${primaryConcern.concern} ${primaryConcern.subtype}`;
+
+  for (const def of variantDefinitions) {
+    const variantNotes = [...sharedNotes];
+    const workingRoutine = cloneRoutineState(baseRoutine);
+    const limit = def.serumComfort;
+    let comprehensiveConflicts: string[] = [];
+
+    variantNotes.push(`${def.label} plan generated (serum comfort ${limit}).`);
+
+    if (def.includePrimarySecondary) {
+      let addedPrimary = false;
+      if (primarySecondary) {
+        const result = tryAppendSecondarySerum(
+          workingRoutine,
+          cloneProduct(primarySecondary),
+          context,
+          variantNotes,
+          `primary concern ${primaryLabel}`,
+          { limit },
+        );
+        addedPrimary = result.added;
+      }
+
+      if (!addedPrimary && fallbackSecondary) {
+        tryAppendSecondarySerum(
+          workingRoutine,
+          cloneProduct(fallbackSecondary),
+          context,
+          variantNotes,
+          'skin type fallback',
+          { limit },
+        );
+      }
+
+      if (!primarySecondary && !fallbackSecondary) {
+        variantNotes.push('No compatible secondary serum available for the primary concern.');
+      }
+    } else {
+      variantNotes.push('Conservative variant: retaining only the core serum for the primary concern.');
+    }
+
+    if (def.additionalMode === 'secondaryWithFallback' && def.additionalConcerns.length) {
+      augmentSerumsForAdditionalConcerns(
+        workingRoutine,
+        def.additionalConcerns,
+        context,
+        skinType,
+        variantNotes,
+        limit,
+      );
+    }
+
+    if (def.additionalMode === 'coreOnly' && def.additionalConcerns.length) {
+      comprehensiveConflicts = addCoreSerumsOnlyForConcerns(
+        workingRoutine,
+        def.additionalConcerns,
+        context,
+        skinType,
+        variantNotes,
+        limit,
+      );
+    }
+
+    applyPregnancySafety(workingRoutine, context, variantNotes);
+    applyIsotretinoinSafety(workingRoutine, context, variantNotes);
+    applyAllergySafety(workingRoutine, context, variantNotes);
+
+    const recommendation = routineToRecommendation(
+      workingRoutine,
+      primaryConcern,
+      others,
+      context,
+      variantNotes,
+      { serumComfortOverride: limit },
+    );
+
+    const variant: RoutineVariant = {
+      ...recommendation,
+      type: def.type,
+      label: def.label,
+      description: def.description,
+      irritationRisk: def.irritationRisk,
+      recommended: def.recommended || undefined,
+      available: true,
+    };
+
+    if (def.additionalMode === 'coreOnly' && comprehensiveConflicts.length) {
+      variant.available = false;
+      variant.conflictReason = comprehensiveConflicts.join('; ');
+      variant.notes.push('Comprehensive option unavailable due to serum compatibility conflicts.');
+    }
+
+    routines.push(variant);
+    if (def.recommended) {
+      recommendedIndex = routines.length - 1;
+      variant.recommended = true;
+    }
+  }
+
+  if (recommendedIndex === -1) {
+    recommendedIndex = 0;
+  }
+
+  return { routines, selectedIndex: recommendedIndex };
+}
+
+export function generateSingleRoutine(context: RecommendationContext): EnhancedRecommendation {
+  const result = generateRecommendations(context);
+  const preferred = result.routines.find(r => r.recommended && r.available)
+    || result.routines.find(r => r.available)
+    || result.routines[0];
+  return preferred;
 }
 
 function deriveSkinTypeKey(context: RecommendationContext): SkinTypeKey {

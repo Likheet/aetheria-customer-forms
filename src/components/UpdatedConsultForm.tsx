@@ -15,7 +15,7 @@ import type { MachineScanBands } from '../lib/decisionEngine';
 import { UpdatedConsultData, AcneCategory } from '../types';
 import ProductAutocomplete from './ProductAutocomplete';
 import { SKIN_TYPE_OPTIONS } from '../lib/consultAutoFill';
-import { generateRecommendations, RecommendationContext } from '../services/recommendationEngine';
+import { generateRecommendations, RecommendationContext, RoutineOptionsResponse } from '../services/recommendationEngine';
 import RecommendationDisplay from './RecommendationDisplay';
 
 interface UpdatedConsultFormProps {
@@ -410,7 +410,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const [formData, setFormData] = useState<UpdatedConsultData>(buildInitialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [recommendation, setRecommendation] = useState<any>(null);
+  const [recommendation, setRecommendation] = useState<RoutineOptionsResponse | null>(null);
   const [decisionAuditState, setDecisionAuditState] = useState<any>(null);
   const [triageOutcomesState, setTriageOutcomesState] = useState<any[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -1621,7 +1621,11 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const handleFinalizeSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const payload = { ...(formData as any), triageOutcomes: triageOutcomesState, decisionAudit: decisionAuditState };
+      const payload: any = { ...(formData as any), triageOutcomes: triageOutcomesState, decisionAudit: decisionAuditState };
+      if (recommendation) {
+        payload.routineOptions = recommendation;
+        payload.selectedRoutine = recommendation.routines[recommendation.selectedIndex] ?? null;
+      }
       console.log('Finalizing consultation save:', payload);
       const createdSessionId = await saveConsultationData(payload, { sessionId });
       console.log('Consultation saved successfully with session ID:', createdSessionId);
@@ -1696,10 +1700,12 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       return (
         <RecommendationDisplay 
           recommendation={recommendation}
+          userName={formData.name || 'Guest'}
           onComplete={onComplete}
           onSubmit={handleFinalizeSubmit}
           submitting={isSubmitting}
           onBackToEdit={() => setIsSubmitted(false)}
+          onRoutineSelect={(_, index) => setRecommendation(prev => (prev ? { ...prev, selectedIndex: index } : prev))}
         />
       );
     }

@@ -14,6 +14,8 @@ export type IngredientTag =
   | 'tranexamic'
   | 'ceramides'
   | 'sunscreen'
+  | 'clay'
+  | 'silicone'
 
 export type Compatibility = 'allow' | 'disallow' | 'caution'
 
