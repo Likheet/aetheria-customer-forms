@@ -7,6 +7,7 @@ import {
   MatrixProduct,
   ProductSlot,
   getProductInfo,
+  assertConcernMatrixLoaded,
 } from '../data/concernMatrix';
 import { buildWeeklyPlan } from './scheduler';
 import { pairCompatibility, IngredientTag } from './ingredientInteractions';
@@ -1158,6 +1159,7 @@ function buildDermReferralRecommendation(): EnhancedRecommendation {
 }
 
 export function generateRecommendations(context: RecommendationContext): RoutineOptionsResponse {
+  assertConcernMatrixLoaded();
   const sharedNotes: string[] = [];
 
   if (hasSevereCysticGate(context)) {

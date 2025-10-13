@@ -16,6 +16,11 @@ import { UpdatedConsultData, AcneCategory } from '../types';
 import ProductAutocomplete from './ProductAutocomplete';
 import { SKIN_TYPE_OPTIONS } from '../lib/consultAutoFill';
 import { generateRecommendations, RecommendationContext, RoutineOptionsResponse } from '../services/recommendationEngine';
+import {
+  loadConcernMatrixData,
+  isConcernMatrixLoaded,
+  getConcernMatrixLoadError,
+} from '../data/concernMatrix';
 import RecommendationDisplay from './RecommendationDisplay';
 
 interface UpdatedConsultFormProps {
@@ -405,6 +410,43 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     
     return base as UpdatedConsultData
   }
+
+  const matrixPreloaded = isConcernMatrixLoaded();
+  const matrixInitialError = getConcernMatrixLoadError();
+
+  const [matrixReady, setMatrixReady] = useState(matrixPreloaded);
+  const [matrixLoading, setMatrixLoading] = useState(!matrixPreloaded && !matrixInitialError);
+  const [matrixLoadError, setMatrixLoadError] = useState<string | null>(
+    matrixInitialError?.message ?? null
+  );
+
+  useEffect(() => {
+    let active = true;
+    if (matrixReady || matrixLoadError) {
+      setMatrixLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    setMatrixLoading(true);
+    loadConcernMatrixData()
+      .then(() => {
+        if (!active) return;
+        setMatrixReady(true);
+        setMatrixLoading(false);
+        setMatrixLoadError(null);
+      })
+      .catch(err => {
+        if (!active) return;
+        setMatrixLoading(false);
+        setMatrixLoadError(err instanceof Error ? err.message : String(err));
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [matrixReady, matrixLoadError]);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<UpdatedConsultData>(buildInitialFormData);
@@ -1504,6 +1546,20 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     }
   };
 
+  const handleRetryMatrixLoad = async () => {
+    try {
+      setMatrixLoadError(null);
+      setMatrixLoading(true);
+      await loadConcernMatrixData(true);
+      setMatrixReady(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setMatrixLoadError(message);
+    } finally {
+      setMatrixLoading(false);
+    }
+  };
+
   // Make Escape act as Back for this form: capture phase to stop App's global Escape handler
   useEffect(() => {
     const escapeHandler = (e: KeyboardEvent) => {
@@ -1525,6 +1581,22 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
   // Build preview (decision audit + recommendations) without saving
   const handlePreview = async () => {
+    if (!isConcernMatrixLoaded()) {
+      try {
+        setMatrixLoading(true);
+        await loadConcernMatrixData();
+        setMatrixReady(true);
+        setMatrixLoadError(null);
+        setMatrixLoading(false);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setMatrixLoadError(message);
+        alert('Unable to load the product catalogue. Please retry in a moment.');
+        setMatrixLoading(false);
+        return;
+      }
+    }
+
     try {
       let decisionAudit: any = {};
       let triageOutcomes: any[] = [];
@@ -1694,6 +1766,40 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     }
     updateFormData({ mainConcerns: newConcerns, concernPriority: nextPriority });
   };
+
+  if (matrixLoadError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center space-y-4">
+        <div className="max-w-md space-y-3">
+          <h2 className="text-xl font-semibold text-red-700">We couldn't load the product catalogue.</h2>
+          <p className="text-sm text-red-600">
+            {matrixLoadError}
+          </p>
+          <p className="text-sm text-gray-600">
+            Check your connection and try again. The dashboard data has to be available before recommendations can be generated.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleRetryMatrixLoad}
+          className="px-5 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition"
+          disabled={matrixLoading}
+        >
+          {matrixLoading ? 'Retrying…' : 'Retry loading data'}
+        </button>
+      </div>
+    );
+  }
+
+  if (matrixLoading || !matrixReady) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center space-y-3">
+        <div className="w-14 h-14 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
+        <p className="text-lg font-semibold text-amber-900">Loading product catalogue…</p>
+        <p className="text-sm text-amber-800/80">Fetching the latest routines and products from Supabase.</p>
+      </div>
+    );
+  }
 
   if (isSubmitted) {
     if (recommendation) {

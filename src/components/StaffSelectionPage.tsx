@@ -1,5 +1,5 @@
 import React from "react";
-import { Star, ClipboardList, PenSquare, Scan } from "lucide-react";
+import { Star, ClipboardList, PenSquare, Scan, Settings2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -9,6 +9,7 @@ interface StaffSelectionPageProps {
   onSelectConsultantInput: () => void;
   onSelectUpdatedConsult: () => void;
   onSelectMachineIntake: () => void;
+  onSelectAdmin: () => void;
 }
 
 type Option = {
@@ -24,6 +25,7 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
   onSelectConsultantInput,
   onSelectUpdatedConsult,
   onSelectMachineIntake,
+  onSelectAdmin,
 }) => {
   const options: Option[] = [
     {
@@ -54,6 +56,13 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
       icon: Scan,
       action: onSelectMachineIntake,
     },
+    {
+      id: "admin-dashboard",
+      label: "Product & Matrix Studio",
+      description: "Manage the recommendation catalogue, edit matrix slots, and refine skin-type defaults.",
+      icon: Settings2,
+      action: onSelectAdmin,
+    },
   ];
 
   return (
@@ -75,7 +84,7 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
           </p>
         </header>
 
-  <section className="relative z-10 mx-auto grid w-full max-w-none gap-10 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 items-stretch px-6 sm:px-10 lg:px-20">
+  <section className="relative z-10 mx-auto grid w-full max-w-none gap-10 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 items-stretch px-6 sm:px-10 lg:px-20">
           {options.map(({ id, label, description, icon: Icon, action }) => {
             const handleActivate = () => action();
             const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {

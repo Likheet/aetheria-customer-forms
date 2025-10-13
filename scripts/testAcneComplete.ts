@@ -13,6 +13,7 @@ import {
   type EnhancedRecommendation,
   type DecisionEngineFlags,
 } from '../src/services/recommendationEngine';
+import { loadConcernMatrixData } from '../src/data/concernMatrix';
 import type { UpdatedConsultData } from '../src/types';
 import {
   evaluateAcneSubtypeFlow,
@@ -22,6 +23,8 @@ import {
   type AcneFlowQuestion,
   type AcneSubtypeKey,
 } from '../src/lib/acneFlowEvaluator';
+
+await loadConcernMatrixData();
 
 interface ScenarioExpectations {
   acneBand?: Band4;
