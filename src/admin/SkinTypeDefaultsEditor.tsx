@@ -1,20 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Group,
-  Loader,
-  Select,
-  Space,
-  Stack,
-  Table,
-  Text,
-} from '@mantine/core';
 import { RefreshCcw, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { ProductSlot, SkinTypeKey } from '../data/concernMatrix';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Spinner } from '@/components/ui/spinner';
 
 type SkinDefaultRow = {
   id: string;
@@ -162,97 +155,111 @@ const SkinTypeDefaultsEditor: React.FC = () => {
   };
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-      <Stack spacing="xl">
-        <Group position="apart">
-          <div>
-            <Text weight={600} size="lg">
-              Dynamic fallbacks
-            </Text>
-            <Stack spacing={4}>
-              <Text size="sm" color="dimmed">
-                These defaults power the matrix whenever a slot points to the fallback token below.
-              </Text>
-              <Badge color="violet" variant="light" radius="sm">
-                SKINTYPE_DEFAULT
-              </Badge>
-            </Stack>
+    <div className="space-y-6">
+      <div className="flex items-start justify-between">
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-slate-900">Dynamic fallbacks</h3>
+          <div className="space-y-2">
+            <p className="text-sm text-slate-600">
+              These defaults power the matrix whenever a slot points to the fallback token below.
+            </p>
+            <Badge className="bg-purple-600 text-white border-purple-700">
+              SKINTYPE_DEFAULT
+            </Badge>
           </div>
-          <Group>
-            <Button
-              variant="subtle"
-              leftSection={<RefreshCcw size={16} />}
-              onClick={() => void loadData()}
-            >
-              Refresh
-            </Button>
-            <Button
-              leftSection={<Save size={16} />}
-              disabled={!hasDrafts}
-              loading={saving}
-              onClick={() => void saveChanges()}
-              variant="gradient"
-              gradient={{ from: 'indigo', to: 'cyan', deg: 135 }}
-            >
-              Save defaults
-            </Button>
-          </Group>
-        </Group>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            size="default"
+            onClick={() => void loadData()}
+            className="bg-slate-700 hover:bg-slate-800 text-white gap-2"
+          >
+            <RefreshCcw className="h-4 w-4" />
+            Refresh
+          </Button>
+          <Button
+            disabled={!hasDrafts || saving}
+            onClick={() => void saveChanges()}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
+          >
+            {saving && <Spinner className="h-4 w-4" />}
+            <Save className="h-4 w-4" />
+            Save defaults
+          </Button>
+        </div>
+      </div>
 
-        {error && (
-          <Alert color="red" variant="light">
-            {error}
-          </Alert>
-        )}
+      {error && (
+        <Alert variant="destructive" className="border-rose-200 bg-rose-50">
+          <AlertDescription className="text-rose-800">{error}</AlertDescription>
+        </Alert>
+      )}
 
-        {loading ? (
-          <Group position="center">
-            <Loader />
-            <Text color="dimmed">Loading defaults…</Text>
-          </Group>
-        ) : (
-          <Card radius="lg" withBorder className="border border-gray-200 bg-gray-50">
-            <Table highlightOnHover>
-              <thead>
-                <tr>
-                  <th>Skin type</th>
-                  {SLOTS.map(slot => (
-                    <th key={slot.slot}>{slot.label}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {SKIN_TYPES.map(skinType => (
-                  <tr key={skinType}>
-                    <td>
-                      <Text weight={600}>
-                        {skinType}
-                      </Text>
-                    </td>
+      {loading ? (
+        <div className="flex items-center justify-center gap-3 py-12">
+          <Spinner className="h-6 w-6" />
+          <span className="text-slate-600">Loading defaults…</span>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Skin type</TableHead>
                     {SLOTS.map(slot => (
-                      <td key={slot.slot}>
-                        <Select
-                          data={productOptions}
-                          placeholder="Select product"
-                          searchable
-                          nothingFoundMessage="No products"
-                          value={valueFor(skinType, slot.slot)}
-                          onChange={value => markDraft(skinType, slot.slot, value)}
-                        />
-                      </td>
+                      <TableHead key={slot.slot}>{slot.label}</TableHead>
                     ))}
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </Card>
-        )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {SKIN_TYPES.map(skinType => (
+                    <TableRow key={skinType}>
+                      <TableCell>
+                        <span className="font-semibold text-slate-900">{skinType}</span>
+                      </TableCell>
+                      {SLOTS.map(slot => (
+                        <TableCell key={slot.slot}>
+                          <Select
+                            value={valueFor(skinType, slot.slot) ?? undefined}
+                            onValueChange={value => markDraft(skinType, slot.slot, value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select product" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {productOptions.map((option) => {
+                                if ('group' in option) {
+                                  return (
+                                    <SelectGroup key={option.group}>
+                                      <SelectLabel>{option.group}</SelectLabel>
+                                      {option.items.map(item => (
+                                        <SelectItem key={item.value} value={item.value}>
+                                          {item.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectGroup>
+                                  );
+                                }
+                                return (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+      )}
 
-        <Space h="sm" />
-        <Text size="xs" color="dimmed">
-          Tip: use the Product Library tab to ensure each fallback product is well described and tagged for search.
-        </Text>
-      </Stack>
+      <p className="text-xs text-slate-600">
+        Tip: use the Product Library tab to ensure each fallback product is well described and tagged for search.
+      </p>
     </div>
   );
 };

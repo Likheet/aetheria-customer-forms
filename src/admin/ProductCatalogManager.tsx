@@ -1,31 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  ActionIcon,
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Center,
-  Divider,
-  Group,
-  Loader,
-  Modal,
-  MultiSelect,
-  ScrollArea,
-  SegmentedControl,
-  Select,
-  Space,
-  Stack,
-  Switch,
-  Table,
-  Text,
-  TextInput,
-  Textarea,
-  Title,
-  Tooltip,
-} from '@mantine/core';
-import { Pencil, Plus, RefreshCcw, ShieldAlert, ShieldCheck, Trash2 } from 'lucide-react';
+import { Pencil, Plus, RefreshCcw, ShieldAlert, ShieldCheck, Trash2, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Spinner } from '@/components/ui/spinner';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type PriceTier = 'affordable' | 'mid' | 'premium' | '';
 
@@ -232,215 +221,241 @@ const ProductCatalogManager: React.FC = () => {
   };
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white px-6 py-6 shadow-sm">
-      <Stack spacing="xl">
-        <Group position="apart">
-          <div>
-            <Title order={4}>
-              Product library
-            </Title>
-            <Text size="sm" color="dimmed">
-              Curate the cleansers, serums, moisturizers, and sunscreens that feed the recommendation engine.
-            </Text>
+    <div className="space-y-6">
+      <div className="flex items-start justify-between">
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold text-slate-900">Product library</h3>
+          <p className="text-sm text-slate-600">
+            Curate the cleansers, serums, moisturizers, and sunscreens that feed the recommendation engine.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            size="default"
+            onClick={() => void loadProducts()}
+            className="bg-slate-700 hover:bg-slate-800 text-white gap-2"
+          >
+            <RefreshCcw className="h-4 w-4" />
+            Refresh
+          </Button>
+          <Button
+            onClick={() => openEditor()}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add product
+          </Button>
+        </div>
+      </div>
+
+      {error && (
+        <Alert variant="destructive" className="border-rose-200 bg-rose-50">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Unable to load catalogue</AlertTitle>
+          <AlertDescription className="text-rose-800">{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <Card className="border-slate-200 bg-white">
+        <CardContent className="pt-6">
+          <div className="flex gap-4 items-end">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="search-input">Search catalogue</Label>
+              <Input
+                id="search-input"
+                placeholder="Search name or brand"
+                value={search}
+                onChange={event => setSearch(event.currentTarget.value)}
+              />
+            </div>
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="category-select">Category</Label>
+              <Select
+                value={categoryFilter ?? undefined}
+                onValueChange={value => setCategoryFilter(value === "_all_" ? null : value)}
+              >
+                <SelectTrigger id="category-select">
+                  <SelectValue placeholder="All categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all_">All categories</SelectItem>
+                  {categories.map(category => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="tier-select">Tier</Label>
+              <Select
+                value={tierFilter || undefined}
+                onValueChange={value => setTierFilter(value === "_any_" ? '' : (value as PriceTier))}
+              >
+                <SelectTrigger id="tier-select">
+                  <SelectValue placeholder="Any tier" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_any_">Any tier</SelectItem>
+                  {DEFAULT_TIER_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <Group>
-            <Button
-              variant="subtle"
-              leftSection={<RefreshCcw size={16} />}
-              onClick={() => void loadProducts()}
-            >
-              Refresh
-            </Button>
-            <Button
-              leftSection={<Plus size={18} />}
-              onClick={() => openEditor()}
-              variant="gradient"
-              gradient={{ from: 'violet', to: 'cyan', deg: 135 }}
-            >
-              Add product
-            </Button>
-          </Group>
-        </Group>
+        </CardContent>
+      </Card>
 
-        {error && (
-          <Alert color="red" title="Unable to load catalogue" variant="light">
-            {error}
-          </Alert>
-        )}
-
-        <Card radius="lg" withBorder className="border border-gray-200 bg-gray-50">
-          <Group spacing="md" align="flex-end">
-            <TextInput
-              label="Search catalogue"
-              placeholder="Search name or brand"
-              value={search}
-              onChange={event => setSearch(event.currentTarget.value)}
-              className="flex-1"
-            />
-            <Select
-              label="Category"
-              placeholder="All categories"
-              data={categories.map(category => ({ value: category, label: category }))}
-              value={categoryFilter}
-              onChange={value => setCategoryFilter(value)}
-              clearable
-            />
-            <Select
-              label="Tier"
-              placeholder="Any tier"
-              data={DEFAULT_TIER_OPTIONS}
-              value={tierFilter || null}
-              onChange={value => setTierFilter((value as PriceTier) || '')}
-              clearable
-            />
-          </Group>
-        </Card>
-
-        {loading ? (
-          <Center py="xl">
-            <Loader />
-          </Center>
-        ) : (
-          <ScrollArea style={{ maxHeight: '60vh' }}>
-            <Table highlightOnHover verticalSpacing="sm" fontSize="sm">
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>Brand</th>
-                  <th>Category</th>
-                  <th>Subcategory</th>
-                  <th>Tier</th>
-                  <th>Usage</th>
-                  <th>Safety</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Spinner className="h-6 w-6" />
+        </div>
+      ) : (
+        <ScrollArea className="h-[60vh]">
+          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Brand</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Subcategory</TableHead>
+                  <TableHead>Tier</TableHead>
+                  <TableHead>Usage</TableHead>
+                  <TableHead>Safety</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filteredProducts.map(product => {
                   const keywords = product.ingredient_keywords ?? [];
                   const tier = extractToken(keywords, 'tier:') as PriceTier;
                   const subcategory = extractToken(keywords, 'subcat:');
                   return (
-                    <tr key={product.id} className="cursor-pointer transition hover:bg-gray-100" onClick={() => openEditor(product)}>
-                      <td>
-                        <Stack spacing={2}>
-                          <Text weight={600}>
+                    <TableRow key={product.id} className="cursor-pointer" onClick={() => openEditor(product)}>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="font-semibold text-slate-900">
                             {product.display_name}
-                          </Text>
+                          </div>
                           {product.notes && (
-                            <Text size="xs" color="dimmed">
+                            <div className="text-xs text-slate-600">
                               {product.notes}
-                            </Text>
+                            </div>
                           )}
-                        </Stack>
-                      </td>
-                      <td>{product.brand || <Text color="dimmed">—</Text>}</td>
-                      <td>{product.category || <Text color="dimmed">—</Text>}</td>
-                      <td>{subcategory || <Text color="dimmed">—</Text>}</td>
-                      <td>
+                        </div>
+                      </TableCell>
+                      <TableCell>{product.brand || <span className="text-slate-400">—</span>}</TableCell>
+                      <TableCell>{product.category || <span className="text-slate-400">—</span>}</TableCell>
+                      <TableCell>{subcategory || <span className="text-slate-400">—</span>}</TableCell>
+                      <TableCell>
                         {tier ? (
-                          <Badge radius="sm" color={tier === 'premium' ? 'grape' : tier === 'mid' ? 'cyan' : 'lime'}>
+                          <Badge className={
+                            tier === 'premium' ? 'bg-purple-600 text-white border-purple-700' :
+                            tier === 'mid' ? 'bg-cyan-600 text-white border-cyan-700' :
+                            'bg-lime-600 text-white border-lime-700'
+                          }>
                             {TIER_LABELS[tier]}
                           </Badge>
                         ) : (
-                          <Text color="gray.4">—</Text>
+                          <span className="text-slate-400">—</span>
                         )}
-                      </td>
-                      <td>{product.default_usage?.toUpperCase() ?? 'Both'}</td>
-                      <td>
-                        <Group spacing="xs">
+                      </TableCell>
+                      <TableCell>{product.default_usage?.toUpperCase() ?? 'BOTH'}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1.5 flex-wrap">
                           {product.pregnancy_unsafe && (
-                            <Tooltip label="Pregnancy unsafe">
-                              <Badge color="red" size="sm" radius="sm">
-                                Pregnancy
-                              </Badge>
-                            </Tooltip>
-                          )}
-                          {product.isotretinoin_unsafe && (
-                            <Tooltip label="Avoid during isotretinoin">
-                              <Badge color="yellow" size="sm" radius="sm">
-                                Isotretinoin
-                              </Badge>
-                            </Tooltip>
-                          )}
-                          {product.barrier_unsafe && (
-                            <Tooltip label="Skip for compromised barriers">
-                              <Badge color="orange" size="sm" radius="sm">
-                                Barrier
-                              </Badge>
-                            </Tooltip>
-                          )}
-                          {!product.pregnancy_unsafe && !product.isotretinoin_unsafe && !product.barrier_unsafe && (
-                            <Badge color="teal" size="sm" radius="sm" variant="light">
-                              General safe
+                            <Badge className="bg-red-600 text-white text-xs" title="Pregnancy unsafe">
+                              Pregnancy
                             </Badge>
                           )}
-                        </Group>
-                      </td>
-                      <td>
-                        <ActionIcon variant="subtle" color="gray">
-                          <Pencil size={18} />
-                        </ActionIcon>
-                      </td>
-                    </tr>
+                          {product.isotretinoin_unsafe && (
+                            <Badge className="bg-orange-600 text-white text-xs" title="Avoid during isotretinoin">
+                              Isotretinoin
+                            </Badge>
+                          )}
+                          {product.barrier_unsafe && (
+                            <Badge className="bg-amber-600 text-white text-xs" title="Skip for compromised barriers">
+                              Barrier
+                            </Badge>
+                          )}
+                          {!product.pregnancy_unsafe && !product.isotretinoin_unsafe && !product.barrier_unsafe && (
+                            <Badge variant="outline" className="border-slate-300 text-slate-600 text-xs">
+                              Safe
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
+              </TableBody>
             </Table>
             {!filteredProducts.length && (
-              <Center py="xl">
-                <Text color="dimmed">No products match the filters yet.</Text>
-              </Center>
+              <div className="flex items-center justify-center py-12">
+                <span className="text-slate-600">No products match the filters yet.</span>
+              </div>
             )}
-          </ScrollArea>
-        )}
-      </Stack>
+          </div>
+        </ScrollArea>
+      )}
 
-      <Modal
-        opened={editorState.open}
-        onClose={closeEditor}
-        centered
-        size="lg"
-        title={
-          <Group spacing="xs">
-            <ShieldCheck size={18} />
-            <Text weight={600}>{editorState.product?.id ? 'Edit product' : 'Create product'}</Text>
-          </Group>
-        }
-      >
-        {editorState.product && (
-          <ProductForm
-            draft={editorState.product}
-            onCancel={closeEditor}
-            onSave={handleSave}
-            onDelete={() => setDeleteQueue(editorState.product?.id ?? null)}
-            saving={saving}
-            allowDelete={Boolean(editorState.product.id)}
-            categorySuggestions={categories}
-          />
-        )}
-      </Modal>
+      <Dialog open={editorState.open} onOpenChange={(open) => !open && closeEditor()}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5" />
+              {editorState.product?.id ? 'Edit product' : 'Create product'}
+            </DialogTitle>
+          </DialogHeader>
+          {editorState.product && (
+            <ProductForm
+              draft={editorState.product}
+              onCancel={closeEditor}
+              onSave={handleSave}
+              onDelete={() => setDeleteQueue(editorState.product?.id ?? null)}
+              saving={saving}
+              allowDelete={Boolean(editorState.product.id)}
+              categorySuggestions={categories}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
-      <Modal
-        opened={Boolean(deleteQueue)}
-        onClose={() => setDeleteQueue(null)}
-        title="Delete product"
-        centered
-      >
-        <Stack spacing="md">
-          <Alert icon={<ShieldAlert size={16} />} color="red" variant="light">
-            Deleting removes the product from the library and the matrix. Handle with care.
-          </Alert>
-          <Group position="apart">
-            <Button variant="default" onClick={() => setDeleteQueue(null)}>
-              Cancel
-            </Button>
-            <Button color="red" onClick={() => void handleDelete()} loading={saving}>
-              Delete product
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
+      <Dialog open={Boolean(deleteQueue)} onOpenChange={(open) => !open && setDeleteQueue(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete product</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Alert variant="destructive" className="border-rose-200 bg-rose-50">
+              <ShieldAlert className="h-4 w-4" />
+              <AlertTitle>Warning</AlertTitle>
+              <AlertDescription className="text-rose-800">
+                Deleting removes the product from the library and the matrix. Handle with care.
+              </AlertDescription>
+            </Alert>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteQueue(null)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={() => void handleDelete()} disabled={saving}>
+                {saving && <Spinner className="h-4 w-4 mr-2" />}
+                Delete product
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -490,141 +505,188 @@ function ProductForm({ draft, onSave, onCancel, onDelete, saving, allowDelete, c
   const tierValue: PriceTier = state.priceTier;
 
   return (
-    <Stack spacing="md">
+    <div className="space-y-4">
       {validationError && (
-        <Alert color="red" variant="light">
-          {validationError}
+        <Alert variant="destructive" className="border-rose-200 bg-rose-50">
+          <AlertDescription className="text-rose-800">{validationError}</AlertDescription>
         </Alert>
       )}
 
-      <TextInput
-        label="Product name"
-        placeholder="e.g. Cetaphil Oily Skin Cleanser"
-        value={state.display_name}
-        onChange={event => updateField('display_name', event.currentTarget.value)}
-        required
-      />
-
-      <Group grow>
-        <TextInput
-          label="Brand"
-          placeholder="e.g. Galderma"
-          value={state.brand ?? ''}
-          onChange={event => updateField('brand', event.currentTarget.value)}
+      <div className="space-y-2">
+        <Label htmlFor="product-name" className="text-slate-900 font-medium">Product name <span className="text-rose-500">*</span></Label>
+        <Input
+          id="product-name"
+          placeholder="e.g. Cetaphil Oily Skin Cleanser"
+          value={state.display_name}
+          onChange={event => updateField('display_name', event.currentTarget.value)}
+          className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
         />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="brand" className="text-slate-900 font-medium">Brand</Label>
+          <Input
+            id="brand"
+            placeholder="e.g. Galderma"
+            value={state.brand ?? ''}
+            onChange={event => updateField('brand', event.currentTarget.value)}
+            className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="usage" className="text-slate-900 font-medium">Usage</Label>
+          <Select
+            value={state.default_usage ?? 'both'}
+            onValueChange={value => updateField('default_usage', (value as ProductDraft['default_usage']) ?? 'both')}
+          >
+            <SelectTrigger id="usage" className="bg-white border-slate-300 text-slate-900">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DEFAULT_USAGE_OPTIONS.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="category" className="text-slate-900 font-medium">Category <span className="text-rose-500">*</span></Label>
         <Select
-          label="Usage"
-          data={DEFAULT_USAGE_OPTIONS}
-          value={state.default_usage ?? 'both'}
-          onChange={value => updateField('default_usage', (value as ProductDraft['default_usage']) ?? 'both')}
+          value={state.category ?? undefined}
+          onValueChange={value => updateField('category', value ?? '')}
+        >
+          <SelectTrigger id="category" className="bg-white border-slate-300 text-slate-900">
+            <SelectValue placeholder="Select or type…" />
+          </SelectTrigger>
+          <SelectContent>
+            {categorySuggestions.map(category => (
+              <SelectItem key={category} value={category}>
+                {category}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="subcategory" className="text-slate-900 font-medium">Subcategory</Label>
+        <Input
+          id="subcategory"
+          placeholder="e.g. Foaming gel cleanser"
+          value={state.subcategory}
+          onChange={event => updateField('subcategory', event.currentTarget.value)}
+          className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
         />
-      </Group>
+      </div>
 
-      <Select
-        label="Category"
-        placeholder="Select or type…"
-        data={categorySuggestions.map(category => ({ value: category, label: category }))}
-        value={state.category ?? ''}
-        searchable
-        creatable
-        getCreateLabel={query => `Create "${query}"`}
-        onChange={value => updateField('category', value ?? '')}
-        onCreate={query => {
-          const item = query.trim();
-          updateField('category', item);
-          return item;
-        }}
-        required
-      />
+      <div className="space-y-2">
+        <Label className="text-slate-900 font-medium">Price tier</Label>
+        <div className="flex gap-2">
+          {[
+            { label: 'No tier', value: '' },
+            { label: 'Affordable', value: 'affordable' },
+            { label: 'Mid range', value: 'mid' },
+            { label: 'Premium', value: 'premium' },
+          ].map(option => (
+            <Button
+              key={option.value}
+              type="button"
+              variant={tierValue === option.value ? 'default' : 'outline'}
+              onClick={() => updateField('priceTier', option.value as PriceTier)}
+              className={tierValue === option.value ? 'flex-1 bg-amber-500 hover:bg-amber-600 text-white' : 'flex-1 bg-white border-slate-300 hover:bg-slate-50 text-slate-900'}
+            >
+              {option.label}
+            </Button>
+          ))}
+        </div>
+      </div>
 
-      <TextInput
-        label="Subcategory"
-        placeholder="e.g. Foaming gel cleanser"
-        value={state.subcategory}
-        onChange={event => updateField('subcategory', event.currentTarget.value)}
-      />
+      <div className="space-y-2">
+        <Label htmlFor="remarks" className="text-slate-900 font-medium">Remarks</Label>
+        <Textarea
+          id="remarks"
+          placeholder="Retail notes, availability, consultant reminders"
+          rows={3}
+          value={state.notes ?? ''}
+          onChange={event => updateField('notes', event.currentTarget.value)}
+          className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
+        />
+      </div>
 
-      <SegmentedControl
-        fullWidth
-        value={tierValue}
-        onChange={value => updateField('priceTier', value as PriceTier)}
-        data={[
-          { label: 'No tier', value: '' },
-          { label: 'Affordable', value: 'affordable' },
-          { label: 'Mid range', value: 'mid' },
-          { label: 'Premium', value: 'premium' },
-        ]}
-      />
+      <div className="space-y-2">
+        <Label htmlFor="keywords" className="text-slate-900 font-medium">Search keywords</Label>
+        <p className="text-sm text-slate-600">Optional helper terms to improve lookup (aliases, nicknames).</p>
+        <Input
+          id="keywords"
+          placeholder="Enter keywords (comma-separated)"
+          value={state.ingredient_keywords.join(', ')}
+          onChange={event => updateField('ingredient_keywords', event.currentTarget.value.split(',').map(k => k.trim()).filter(Boolean))}
+          className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
+        />
+      </div>
 
-      <Textarea
-        label="Remarks"
-        placeholder="Retail notes, availability, consultant reminders"
-        minRows={3}
-        value={state.notes ?? ''}
-        onChange={event => updateField('notes', event.currentTarget.value)}
-      />
+      <Separator />
 
-      <MultiSelect
-        label="Search keywords"
-        description="Optional helper terms to improve lookup (aliases, nicknames)."
-        placeholder="Add keywords"
-        searchable
-        data={[]}
-        value={state.ingredient_keywords}
-        onChange={value => updateField('ingredient_keywords', value)}
-        nothingFoundMessage="Type and press enter"
-        creatable
-        getCreateLabel={query => `Add "${query}"`}
-      />
+      <div className="flex items-start justify-between">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="pregnancy"
+              checked={Boolean(state.pregnancy_unsafe)}
+              onCheckedChange={checked => updateField('pregnancy_unsafe', checked)}
+            />
+            <Label htmlFor="pregnancy" className="cursor-pointer text-slate-900 font-medium">Pregnancy unsafe</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="isotretinoin"
+              checked={Boolean(state.isotretinoin_unsafe)}
+              onCheckedChange={checked => updateField('isotretinoin_unsafe', checked)}
+            />
+            <Label htmlFor="isotretinoin" className="cursor-pointer text-slate-900 font-medium">Isotretinoin unsafe</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="barrier"
+              checked={Boolean(state.barrier_unsafe)}
+              onCheckedChange={checked => updateField('barrier_unsafe', checked)}
+            />
+            <Label htmlFor="barrier" className="cursor-pointer text-slate-900 font-medium">Barrier unsafe</Label>
+          </div>
+        </div>
 
-      <Divider opacity={0.1} />
-
-      <Group position="apart">
-        <Stack spacing={6}>
-          <Switch
-            label="Pregnancy unsafe"
-            checked={Boolean(state.pregnancy_unsafe)}
-            onChange={event => updateField('pregnancy_unsafe', event.currentTarget.checked)}
-          />
-          <Switch
-            label="Isotretinoin unsafe"
-            checked={Boolean(state.isotretinoin_unsafe)}
-            onChange={event => updateField('isotretinoin_unsafe', event.currentTarget.checked)}
-          />
-          <Switch
-            label="Barrier unsafe"
-            checked={Boolean(state.barrier_unsafe)}
-            onChange={event => updateField('barrier_unsafe', event.currentTarget.checked)}
-          />
-        </Stack>
-
-        <Group>
+        <div className="flex gap-2">
           {allowDelete && (
             <Button
-              variant="outline"
-              color="red"
-              leftSection={<Trash2 size={16} />}
+              variant="destructive"
               onClick={onDelete}
               disabled={saving}
+              className="gap-2"
             >
+              <Trash2 className="h-4 w-4" />
               Delete
             </Button>
           )}
-          <Button variant="default" onClick={onCancel} disabled={saving}>
+          <Button variant="outline" onClick={onCancel} disabled={saving}>
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
-            loading={saving}
-            leftSection={<Plus size={16} />}
-            variant="gradient"
-            gradient={{ from: 'violet', to: 'cyan', deg: 135 }}
+            disabled={saving}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
           >
+            {saving && <Spinner className="h-4 w-4" />}
+            <Plus className="h-4 w-4" />
             Save changes
           </Button>
-        </Group>
-      </Group>
-    </Stack>
+        </div>
+      </div>
+    </div>
   );
 }
 

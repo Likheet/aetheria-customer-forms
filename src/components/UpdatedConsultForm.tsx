@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CheckCircle, ArrowLeft, ArrowRight, FileText, Droplets, Shield, Heart, Sparkles, Sun, Clock } from 'lucide-react';
+import { CheckCircle, ArrowLeft, ArrowRight, FileText, Droplets, Shield, Heart, Sparkles, Sun, Clock, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { DatePicker } from '@mantine/dates';
 import { saveConsultationData } from '../services/newConsultationService';
 import {
@@ -474,6 +475,11 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const [gateRemarks, setGateRemarks] = useState<string[]>([]);
   const prevMainConcernsRef = useRef<string[]>([]);
   const [calculatedAge, setCalculatedAge] = useState<number | null>(computeAgeFromDOB(formData.dateOfBirth));
+  
+  // Sidebar state - slide in/out from right, default open on desktop, closed on mobile
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
+  const [isMachineBandOpen, setIsMachineBandOpen] = useState(true);
+  const [isEffectiveBandOpen, setIsEffectiveBandOpen] = useState(true);
 
   useEffect(() => {
     setCalculatedAge(computeAgeFromDOB(formData.dateOfBirth));
@@ -3476,12 +3482,45 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
       <div className="container mx-auto px-4 py-8">
-        {/* Dev: Machine Bands Box */}
+        {/* Dev: Sidebar Toggle Button - Only visible on mobile/tablet */}
         {machine && (
-          <div className="fixed top-24 right-6 w-80 z-50 space-y-4 max-h-[calc(100vh-8rem)] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#CBD5E1 #F1F5F9' }}>
-            <div className="bg-white/95 border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-              <div className="px-4 py-2 bg-gray-800 text-white text-sm font-semibold">Machine Bands (Dev)</div>
-              <div className="p-4 text-sm text-gray-800 space-y-1">
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={`fixed top-32 z-50 bg-gray-800 hover:bg-gray-700 text-white p-3 rounded-lg shadow-xl transition-all lg:hidden ${
+              isSidebarOpen ? 'right-[21rem]' : 'right-4'
+            }`}
+            aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+          >
+            {isSidebarOpen ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+          </button>
+        )}
+        
+        {/* Dev: Machine Bands Sidebar - Slides in from right */}
+        {machine && (
+          <>
+            {/* Overlay for mobile */}
+            {isSidebarOpen && (
+              <div
+                className="fixed inset-0 bg-black/20 z-40 lg:hidden"
+                onClick={() => setIsSidebarOpen(false)}
+              />
+            )}
+            
+            {/* Sidebar Panel */}
+            <div 
+              className={`fixed top-24 right-0 w-80 z-50 h-[calc(100vh-6rem)] bg-white/95 shadow-2xl transition-transform duration-300 ease-in-out ${
+                isSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
+              }`}
+            >
+              <div className="h-full overflow-y-auto p-4 space-y-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#CBD5E1 #F1F5F9' }}>
+            <Collapsible open={isMachineBandOpen} onOpenChange={setIsMachineBandOpen}>
+              <div className="bg-white/95 border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+                <CollapsibleTrigger className="w-full px-4 py-2 bg-gray-800 text-white text-sm font-semibold flex items-center justify-between hover:bg-gray-700 transition-colors">
+                  <span>Machine Bands (Dev)</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isMachineBandOpen ? 'rotate-180' : ''}`} />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="p-4 text-sm text-gray-800 space-y-1">
                 <div><span className="font-medium">Moisture:</span> {machine.moisture || '-'} {machineRaw?.moisture !== undefined && <span className="text-gray-500">(val: {String(machineRaw.moisture)})</span>}</div>
                 <div><span className="font-medium">Sebum:</span> {machine.sebum || '-'} {machineRaw?.sebum !== undefined && <span className="text-gray-500">(val: {String(machineRaw.sebum)})</span>}</div>
                 <div><span className="font-medium">Texture:</span> {machine.texture || '-'} {machineRaw?.texture !== undefined && <span className="text-gray-500">(val: {String(machineRaw.texture)})</span>}</div>
@@ -3508,11 +3547,18 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                   )
                 })()}
                 <div><span className="font-medium">Sensitivity:</span> {machine.sensitivity || '-'} {machineRaw?.sensitivity !== undefined && <span className="text-gray-500">(val: {String(machineRaw.sensitivity)})</span>}</div>
+                  </div>
+                </CollapsibleContent>
               </div>
-            </div>
-            <div className="bg-white/95 border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-              <div className="px-4 py-2 bg-gray-800 text-white text-sm font-semibold">Effective Bands (Dev)</div>
-              <div className="p-4 text-sm text-gray-800 space-y-1">
+            </Collapsible>
+            <Collapsible open={isEffectiveBandOpen} onOpenChange={setIsEffectiveBandOpen}>
+              <div className="bg-white/95 border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+                <CollapsibleTrigger className="w-full px-4 py-2 bg-gray-800 text-white text-sm font-semibold flex items-center justify-between hover:bg-gray-700 transition-colors">
+                  <span>Effective Bands (Dev)</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isEffectiveBandOpen ? 'rotate-180' : ''}`} />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="p-4 text-sm text-gray-800 space-y-1">
                 <div><span className="font-medium">Moisture:</span> {effectiveBands?.moisture || '-'}</div>
                 <div><span className="font-medium">Sebum:</span> {effectiveBands?.sebum || '-'}</div>
                 <div><span className="font-medium">Texture:</span> {effectiveBands?.texture || '-'}</div>
@@ -3599,8 +3645,10 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                     })()}
                   </div>
                 </div>
+                  </div>
+                </CollapsibleContent>
               </div>
-            </div>
+            </Collapsible>
             {/* Editable Follow-ups list for quick access */}
             <div className="bg-white/95 border border-gray-200 rounded-xl shadow-xl overflow-hidden">
               <div className="px-4 py-2 bg-gray-800 text-white text-sm font-semibold">Follow-ups (Editable)</div>
@@ -3627,8 +3675,11 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                 })()}
               </div>
             </div>
-          </div>
+              </div>
+            </div>
+          </>
         )}
+        
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <button
