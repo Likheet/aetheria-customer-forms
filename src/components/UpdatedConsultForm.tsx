@@ -246,6 +246,23 @@ const AUTO_FILL_FORM_TEMPLATE: UpdatedConsultData = {
   medications: 'None',
 };
 
+type LegalDisclaimerField =
+  | 'legalDisclaimerNotMedical'
+  | 'legalDisclaimerConsultDermatologist'
+  | 'legalDisclaimerPatchTest'
+  | 'legalDisclaimerDiscontinueUse'
+  | 'legalDisclaimerDiscloseInfo'
+  | 'legalDisclaimerNoLiability';
+
+const LEGAL_DISCLAIMER_KEYS: LegalDisclaimerField[] = [
+  'legalDisclaimerNotMedical',
+  'legalDisclaimerConsultDermatologist',
+  'legalDisclaimerPatchTest',
+  'legalDisclaimerDiscontinueUse',
+  'legalDisclaimerDiscloseInfo',
+  'legalDisclaimerNoLiability',
+];
+
 const AUTO_FILL_FOLLOWUP_ANSWERS: Record<string, Record<string, string | string[]>> = {
   sebum_machineOily_customerNormal: {
     Q1: 'Yes',
@@ -408,6 +425,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     }
 
     base.calculatedAge = computeAgeFromDOB(base.dateOfBirth) ?? null;
+    const infoComplete = LEGAL_DISCLAIMER_KEYS.every((key) => Boolean(base[key]));
+    base.legalDisclaimerAgreed = infoComplete;
     
     return base as UpdatedConsultData
   }
@@ -624,8 +643,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     return () => clearTimeout(timer);
   }, [currentStep]);
 
-  const updateFormData = (updates: Partial<UpdatedConsultData>) => {
-    // If skinType is being updated, also update skinTypeFlag
+  const updateFormData = (incomingUpdates: Partial<UpdatedConsultData>) => {
+    const updates: Partial<UpdatedConsultData> = { ...incomingUpdates };
+
     if (updates.skinType) {
       updates.skinTypeFlag = deriveSkinTypeFlag(updates.skinType);
     }
@@ -635,10 +655,32 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       updates.calculatedAge = computedAge;
       setCalculatedAge(computedAge);
     }
-    
-    setFormData(prev => ({ ...prev, ...updates }));
-    // Clear related errors when user starts typing
-    Object.keys(updates).forEach(key => {
+
+    let legalDisclaimerAgreedChanged = false;
+    const disclaimerTouched =
+      LEGAL_DISCLAIMER_KEYS.some((key) => Object.prototype.hasOwnProperty.call(updates, key)) ||
+      Object.prototype.hasOwnProperty.call(updates, 'legalDisclaimerAgreed');
+
+    setFormData(prev => {
+      const next = { ...prev, ...updates };
+
+      if (disclaimerTouched) {
+        const allChecked = LEGAL_DISCLAIMER_KEYS.every((key) => Boolean(next[key]));
+        if (next.legalDisclaimerAgreed !== allChecked) {
+          next.legalDisclaimerAgreed = allChecked;
+          legalDisclaimerAgreedChanged = true;
+        }
+      }
+
+      return next;
+    });
+
+    const keysToClear = new Set(Object.keys(updates));
+    if (legalDisclaimerAgreedChanged) {
+      keysToClear.add('legalDisclaimerAgreed');
+    }
+
+    keysToClear.forEach(key => {
       if (errors[key]) {
         setErrors(prev => {
           const newErrors = { ...prev };
@@ -1440,7 +1482,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         } else if (currentConcernStep === 'moisturizer-texture') {
           if (!formData.moisturizerTexture.trim()) newErrors.moisturizerTexture = 'Please select your preferred moisturizer texture';
         } else if (currentConcernStep === 'legal-disclaimer') {
-          const allChecked = formData.legalDisclaimerNotMedical && formData.legalDisclaimerConsultDermatologist && formData.legalDisclaimerPatchTest && formData.legalDisclaimerDiscontinueUse && formData.legalDisclaimerDiscloseInfo && formData.legalDisclaimerNoLiability;
+          const allChecked = LEGAL_DISCLAIMER_KEYS.every((key) => formData[key]);
           if (!allChecked) newErrors.legalDisclaimerAgreed = 'You must acknowledge all disclaimer points to continue';
         // brand-preference validation removed
         } else if (currentConcernStep && typeof currentConcernStep === 'object') {
@@ -2633,10 +2675,20 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               <label className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-red-300 transition-all duration-300">
                 <input
                   type="checkbox"
-                  checked={formData.legalDisclaimerNotMedical && formData.legalDisclaimerConsultDermatologist && formData.legalDisclaimerPatchTest && formData.legalDisclaimerDiscontinueUse && formData.legalDisclaimerDiscloseInfo && formData.legalDisclaimerNoLiability}
-                  onChange={() => {}} // Read-only, automatically checked when all individual checkboxes are checked
+                  checked={formData.legalDisclaimerAgreed}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    const disclaimerUpdates: Partial<Pick<UpdatedConsultData, LegalDisclaimerField | 'legalDisclaimerAgreed'>> = {
+                      legalDisclaimerAgreed: checked,
+                    };
+
+                    LEGAL_DISCLAIMER_KEYS.forEach((key) => {
+                      disclaimerUpdates[key] = checked;
+                    });
+
+                    updateFormData(disclaimerUpdates as Partial<UpdatedConsultData>);
+                  }}
                   className="mr-3 h-5 w-5 text-red-600 border-gray-300 focus:ring-red-400"
-                  disabled
                 />
                 <span className="text-lg text-gray-700">All disclaimer points acknowledged</span>
               </label>
