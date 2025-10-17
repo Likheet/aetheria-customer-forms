@@ -148,8 +148,11 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({
     if (!options || options.length === 0) return undefined;
     const byTier = (tier: ProductOption["tier"]) => options.find(option => option.tier === tier);
     if (mode === "budget") {
+      // Budget: prefer affordable, then mid-range, then premium, then any available
       return byTier("affordable") || byTier("mid-range") || byTier("premium") || options[0];
     }
+    // Luxury: prefer premium, then mid-range, then affordable, then any available
+    // IMPORTANT: Always return something if available, never leave blank
     return byTier("premium") || byTier("mid-range") || byTier("affordable") || options[0];
   }, []);
 
@@ -161,32 +164,56 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({
       const projected: RoutineVariant = { ...routine };
 
       try {
+        // CLEANSER: lookup by key, fallback to raw name
         if (keys.cleanserType && PRODUCT_DATABASE.cleanser[keys.cleanserType]) {
           const product = pickByMode(PRODUCT_DATABASE.cleanser[keys.cleanserType], priceMode);
           if (product) projected.cleanser = formatProduct(product);
+        } else if (routine.cleanser && !projected.cleanser) {
+          projected.cleanser = routine.cleanser;
         }
+
+        // CORE SERUM: lookup by key, fallback to raw name
         if (keys.core && PRODUCT_DATABASE.serum[keys.core]) {
           const product = pickByMode(PRODUCT_DATABASE.serum[keys.core], priceMode);
           if (product) projected.coreSerum = formatProduct(product);
+        } else if (routine.coreSerum && !projected.coreSerum) {
+          projected.coreSerum = routine.coreSerum;
         }
+
+        // SECONDARY SERUM: lookup by key, fallback to raw name
         if (keys.secondary && PRODUCT_DATABASE.serum[keys.secondary]) {
           const product = pickByMode(PRODUCT_DATABASE.serum[keys.secondary], priceMode);
           if (product) projected.secondarySerum = formatProduct(product);
+        } else if (routine.secondarySerum && !projected.secondarySerum) {
+          projected.secondarySerum = routine.secondarySerum;
         }
+
+        // TERTIARY SERUM: lookup by key, fallback to raw name
         if (keys.tertiary && PRODUCT_DATABASE.serum[keys.tertiary]) {
           const product = pickByMode(PRODUCT_DATABASE.serum[keys.tertiary], priceMode);
           if (product) projected.tertiarySerum = formatProduct(product);
+        } else if (routine.tertiarySerum && !projected.tertiarySerum) {
+          projected.tertiarySerum = routine.tertiarySerum;
         }
+
+        // MOISTURIZER: lookup by key, fallback to raw name
         if (keys.moisturizerType && PRODUCT_DATABASE.moisturizer[keys.moisturizerType]) {
           const product = pickByMode(PRODUCT_DATABASE.moisturizer[keys.moisturizerType], priceMode);
           if (product) projected.moisturizer = formatProduct(product);
+        } else if (routine.moisturizer && !projected.moisturizer) {
+          projected.moisturizer = routine.moisturizer;
         }
+
+        // SUNSCREEN: always try to pick from database; fallback to raw name
         if (PRODUCT_DATABASE.sunscreen["general"]) {
           const product = pickByMode(PRODUCT_DATABASE.sunscreen["general"], priceMode);
           if (product) projected.sunscreen = formatProduct(product);
+        } else if (routine.sunscreen && !projected.sunscreen) {
+          projected.sunscreen = routine.sunscreen;
         }
-      } catch {
+      } catch (e) {
         // Fail soft: keep original strings
+        console.warn('Error projecting routine:', e);
       }
 
       return projected;
