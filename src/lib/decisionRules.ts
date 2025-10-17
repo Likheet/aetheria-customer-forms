@@ -120,7 +120,7 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
     questions: [
       { id: 'Q1', prompt: 'Any new bumps in last 2 weeks?', options: ['None', '1-2', 'Several'] },
       { id: 'Q2', prompt: 'Any red/brown spots without a raised bump?', options: ['Yes', 'No'] },
-      { id: 'Q2a', prompt: 'If yes, are the spots red or brown?', options: ['Red', 'Brown'] },
+      { id: 'Q2a', prompt: 'If yes, are the spots red or brown?', options: ['Red', 'Brown', 'NA'] },
       { id: 'Q3', prompt: 'Do you get monthly breakouts around periods/jawline?', options: ['Yes', 'No', 'NA'] },
       { id: 'Q4', prompt: 'Do you frequently notice tiny bumps, blackheads, or whiteheads?', options: ['Yes', 'No'] },
       { id: 'Q5', prompt: 'Do you have any inflamed pimples now?', options: ['None', '1-5', '6-15', '>15'] },

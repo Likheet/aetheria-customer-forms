@@ -989,14 +989,29 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     if (!activeFollowUp) return;
     
     try {
-      // Ensure all questions answered
-      const allAnswered = (activeFollowUp.questions || []).every(q => 
-        followUpLocal[q.id] !== undefined && 
-        (Array.isArray(followUpLocal[q.id]) 
-          ? (followUpLocal[q.id] as any[]).length > 0 
-          : String(followUpLocal[q.id]).length > 0
-        )
-      );
+      // Ensure all visible questions answered (skip Q2a if Q2 != 'Yes', skip Q4 for texture if Q1 != 'Forehead')
+      const allAnswered = (activeFollowUp.questions || []).every(q => {
+        // Skip Q2a if Q2 is not "Yes"
+        if (q.id === 'Q2a' && followUpLocal['Q2'] !== 'Yes') {
+          return true; // Not required since it's hidden
+        }
+        
+        // Skip Q4 (dandruff question) if Q1 is not "Forehead" for texture_machineBumpy_customerSmooth
+        if (q.id === 'Q4' && activeFollowUp.ruleId === 'texture_machineBumpy_customerSmooth' && followUpLocal['Q1'] !== 'Forehead') {
+          return true; // Not required since it's hidden
+        }
+        
+        // Skip Q3 (dandruff question) if Q2 is not "Forehead" for texture_machineSmooth_customerBumpy
+        if (q.id === 'Q3' && activeFollowUp.ruleId === 'texture_machineSmooth_customerBumpy' && followUpLocal['Q2'] !== 'Forehead') {
+          return true; // Not required since it's hidden
+        }
+        
+        return followUpLocal[q.id] !== undefined && 
+          (Array.isArray(followUpLocal[q.id]) 
+            ? (followUpLocal[q.id] as any[]).length > 0 
+            : String(followUpLocal[q.id]).length > 0
+          );
+      });
       if (!allAnswered) return; // required
       
       const ruleId = activeFollowUp.ruleId;
@@ -3593,7 +3608,23 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                     <div className="text-xs text-amber-800/80">Resolve machine vs customer difference</div>
                   </div>
                   <div className="px-6 py-5 space-y-5">
-                    {activeFollowUp.questions.map((q) => (
+                    {activeFollowUp.questions.map((q) => {
+                      // Conditional rendering: Skip Q2a if Q2 is not "Yes"
+                      if (q.id === 'Q2a' && followUpLocal['Q2'] !== 'Yes') {
+                        return null;
+                      }
+                      
+                      // Conditional rendering: Skip Q4 (dandruff question) if Q1 is not "Forehead" in texture_machineBumpy_customerSmooth
+                      if (q.id === 'Q4' && activeFollowUp.ruleId === 'texture_machineBumpy_customerSmooth' && followUpLocal['Q1'] !== 'Forehead') {
+                        return null;
+                      }
+                      
+                      // Conditional rendering: Skip Q3 (dandruff question) if Q2 is not "Forehead" in texture_machineSmooth_customerBumpy
+                      if (q.id === 'Q3' && activeFollowUp.ruleId === 'texture_machineSmooth_customerBumpy' && followUpLocal['Q2'] !== 'Forehead') {
+                        return null;
+                      }
+                      
+                      return (
                       <div key={q.id}>
                         <div className="text-sm font-medium text-gray-900 mb-2">{q.prompt}</div>
                         {!q.multi ? (
@@ -3628,7 +3659,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                           </div>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>

@@ -571,6 +571,15 @@ function serumKeyFromProduct(product: MatrixProduct | undefined): string | undef
   return undefined;
 }
 
+function isSalicylicProduct(product: MatrixProduct | undefined): boolean {
+  if (!product) return false;
+  if ((product.ingredientTags || []).includes('bha')) return true;
+  const reference = `${product.rawName || ''} ${product.name || ''}`.toLowerCase();
+  if (reference.includes('salicylic')) return true;
+  const keywords = product.ingredientKeywords || [];
+  return keywords.some(keyword => keyword.toLowerCase().includes('salic'));
+}
+
 interface CompatibilityResult {
   allowed: boolean;
   cautions: string[];
@@ -1345,6 +1354,13 @@ export function generateRecommendations(context: RecommendationContext): Routine
     applyPregnancySafety(workingRoutine, context, variantNotes);
     applyIsotretinoinSafety(workingRoutine, context, variantNotes);
     applyAllergySafety(workingRoutine, context, variantNotes);
+    enforceSingleSalicylicProductLimit(workingRoutine, {
+      context,
+      skinType,
+      notes: variantNotes,
+      limit,
+      additionalConcerns: def.additionalConcerns,
+    });
 
     const recommendation = routineToRecommendation(
       workingRoutine,
@@ -1560,6 +1576,93 @@ function selectPrimaryConcern(concerns: ConcernSelection[], notes: string[]): { 
   }
   const [first, ...rest] = concerns;
   return { primary: first, others: rest };
+}
+
+function tryAddNonSalicylicSecondaryFromConcerns(
+  routine: RoutineState,
+  concerns: ConcernSelection[],
+  context: RecommendationContext,
+  skinType: SkinTypeKey,
+  notes: string[],
+  limit: number,
+): boolean {
+  if (!concerns.length) return false;
+  if (routine.secondarySerums.length >= limit) return false;
+
+  for (const concern of concerns) {
+    const entry = fetchMatrixEntry(concern, skinType, []);
+    if (!entry?.secondarySerum) continue;
+    const candidate = cloneProduct(entry.secondarySerum);
+    if (isSalicylicProduct(candidate)) continue;
+    const result = tryAppendSecondarySerum(
+      routine,
+      candidate,
+      context,
+      notes,
+      `next priority ${concern.concern} ${concern.subtype}`,
+      { limit },
+    );
+    if (result.added) {
+      notes.push(`Salicylic overuse guard: substituted ${candidate.name} from ${concern.concern} ${concern.subtype}.`);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function enforceSingleSalicylicProductLimit(
+  routine: RoutineState,
+  options: {
+    context: RecommendationContext;
+    skinType: SkinTypeKey;
+    notes: string[];
+    limit: number;
+    additionalConcerns: ConcernSelection[];
+  },
+): void {
+  const { context, skinType, notes, limit, additionalConcerns } = options;
+  const cleanserWasSalicylic = isSalicylicProduct(routine.cleanser);
+  const coreWasSalicylic = isSalicylicProduct(routine.coreSerum);
+
+  if (cleanserWasSalicylic && coreWasSalicylic) {
+    routine.cleanser = instantiateProduct('Gentle foaming cleanser', 'cleanser');
+    notes.push('Salicylic overuse guard: swapped cleanser to Gentle foaming cleanser because core serum already uses salicylic acid.');
+  }
+
+  const salicylicSecondaries = routine.secondarySerums
+    .map((serum, idx) => ({ serum, idx }))
+    .filter(item => isSalicylicProduct(item.serum));
+
+  if (salicylicSecondaries.length) {
+    salicylicSecondaries
+      .sort((a, b) => b.idx - a.idx)
+      .forEach(({ idx, serum }) => {
+        routine.secondarySerums.splice(idx, 1);
+        notes.push(`Salicylic overuse guard: removed ${serum.name} from the secondary lineup.`);
+      });
+
+    if (routine.secondarySerums.length < limit) {
+      const replaced = tryAddNonSalicylicSecondaryFromConcerns(
+        routine,
+        additionalConcerns,
+        context,
+        skinType,
+        notes,
+        limit,
+      );
+      if (!replaced && additionalConcerns.length) {
+        notes.push('Salicylic overuse guard: no non-salicylic replacement available from next priority concerns.');
+      }
+    }
+  }
+
+  const salicylicCount = [routine.cleanser, routine.coreSerum, ...routine.secondarySerums]
+    .filter(isSalicylicProduct).length;
+
+  if (salicylicCount > 1) {
+    notes.push('Salicylic overuse guard: residual routine still contains multiple salicylic products; please review matrix configuration.');
+  }
 }
 
 function bandFallbackOrder(band: BandColor): BandColor[] {
