@@ -149,6 +149,8 @@ export default function ChooseProfile({ onBack }: { onBack: () => void }) {
                 moisture: readBand('moisture_band'),
                 sebum: readBand('sebum_band'),
                 texture: readBand('texture_band'),
+                textureAging: readBand('texture_aging_band'),
+                textureBumpy: readBand('texture_bumpy_band'),
                 pores: readBand('pores_band'),
                 acne: readBand('acne_band'),
                 acneDetails: (rawMetrics['acne_details'] as MachineScanBands['acneDetails']) ?? undefined,

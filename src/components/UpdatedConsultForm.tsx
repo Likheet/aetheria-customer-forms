@@ -134,6 +134,8 @@ const AUTO_FILL_MACHINE_FALLBACK: MachineScanBands = {
   moisture: 'yellow',
   sebum: 'red',
   texture: 'yellow',
+  textureAging: 'yellow',
+  textureBumpy: 'yellow',
   pores: 'blue',
   acne: 'blue',
   pigmentation_brown: 'blue',
@@ -298,6 +300,22 @@ const ACNE_TYPE_OPTIONS = [
   'Large painful bumps (deep cystic acne)',
   'Mostly around jawline/chin, often before periods (hormonal)',
 ];
+
+const ensureTextureAggregate = (bands: Record<string, any>) => {
+  const order: Record<string, number> = { green: 0, blue: 1, yellow: 2, red: 3 }
+  const normalizeBand = (value: any) => String(value || '').toLowerCase()
+  const candidates = [normalizeBand(bands.texture), normalizeBand(bands.textureAging), normalizeBand(bands.textureBumpy)].filter(Boolean)
+  if (!candidates.length) return
+  let worst = candidates[0]
+  for (const candidate of candidates) {
+    if ((order[candidate] ?? -1) > (order[worst] ?? -1)) {
+      worst = candidate
+    }
+  }
+  if (worst) {
+    bands.texture = worst
+  }
+}
 
 const SENSITIVITY_QUESTION_CONFIG = [
   {
@@ -479,16 +497,20 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   // RULE_SPECS runtime state
   const [runtimeSelf, setRuntimeSelf] = useState<any>({});
   // queued follow-up (next to show when user clicks Next)
-  const [followUp, setFollowUp] = useState<null | { ruleId: string; category: string; dimension?: 'brown'|'red'; questions: Array<{ id: string; prompt: string; options: string[]; multi?: boolean }> }>(null);
+  const [followUp, setFollowUp] = useState<null | { ruleId: string; category: string; dimension?: 'brown' | 'red' | 'aging' | 'bumpy'; questions: Array<{ id: string; prompt: string; options: string[]; multi?: boolean }> }>(null);
   // active follow-up currently being displayed
-  const [activeFollowUp, setActiveFollowUp] = useState<null | { ruleId: string; category: string; dimension?: 'brown'|'red'; questions: Array<{ id: string; prompt: string; options: string[]; multi?: boolean }> }>(null);
+  const [activeFollowUp, setActiveFollowUp] = useState<null | { ruleId: string; category: string; dimension?: 'brown' | 'red' | 'aging' | 'bumpy'; questions: Array<{ id: string; prompt: string; options: string[]; multi?: boolean }> }>(null);
   const [followUpAnswers, setFollowUpAnswers] = useState<Record<string, Record<string, string | string[]>>>({});
   const [followUpLocal, setFollowUpLocal] = useState<Record<string, string | string[]>>({});
   // Drafts store in-progress answers for each follow-up (not yet submitted)
   const [followUpDrafts, setFollowUpDrafts] = useState<Record<string, Record<string, string | string[]>>>({});
   const [pendingAutoFill, setPendingAutoFill] = useState<null | { answers: Record<string, Record<string, string | string[]>> }>(null);
   // Track order of applied follow-up decisions to support undo on Back (removed for now)
-  const [effectiveBands, setEffectiveBands] = useState<any>(machine || {});
+  const [effectiveBands, setEffectiveBands] = useState<any>(() => {
+    const seed = { ...(machine || {}) } as Record<string, any>
+    ensureTextureAggregate(seed)
+    return seed
+  });
   const [computedSensitivity, setComputedSensitivity] = useState<{ score: number; tier: string; band: string; remark: string } | null>(null);
   const [decisions, setDecisions] = useState<any[]>([]);
   const [gateRemarks, setGateRemarks] = useState<string[]>([]);
@@ -588,7 +610,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   // and prerequisite fields for that concern are answered. Moisture/Grease remain global.
   const MAIN_CONCERNS_STEP = 19;
 
-  const isCategoryReady = (category: string, _dimension?: 'brown' | 'red') => {
+  const isCategoryReady = (category: string, dimension?: 'brown' | 'red' | 'aging' | 'bumpy') => {
     const concerns: string[] = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : []
     const acneBreakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : []
     switch (category) {
@@ -613,6 +635,14 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       case 'Texture': {
         const wantsWrinkles = concerns.includes('Fine lines & wrinkles')
         const wantsBumpy = concerns.includes('Bumpy skin')
+        if (dimension === 'aging') {
+          if (!wantsWrinkles) return false
+          return !!String(formData.wrinklesType || '').trim()
+        }
+        if (dimension === 'bumpy') {
+          if (!wantsBumpy) return false
+          return !!String(formData.textureType || '').trim()
+        }
         if (!wantsWrinkles && !wantsBumpy) return false
         if (wantsWrinkles && !String(formData.wrinklesType || '').trim()) return false
         if (wantsBumpy && !String(formData.textureType || '').trim()) return false
@@ -734,7 +764,18 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       switch (cat) {
         case 'Moisture': mBand = norm(m.moisture); sBand = norm(self.moisture); break
         case 'Grease': mBand = norm(m.sebum); sBand = norm(self.sebum); break
-        case 'Texture': mBand = norm(m.texture); sBand = norm(self.texture); break
+        case 'Texture':
+          if (dim === 'aging') {
+            mBand = norm((m as any).textureAging ?? m.texture)
+            sBand = norm((self as any).textureAging ?? self.texture)
+          } else if (dim === 'bumpy') {
+            mBand = norm((m as any).textureBumpy ?? m.texture)
+            sBand = norm((self as any).textureBumpy ?? self.texture)
+          } else {
+            mBand = norm(m.texture)
+            sBand = norm(self.texture)
+          }
+          break
         case 'Pores': mBand = norm(m.pores); sBand = norm(self.pores); break
         case 'Acne': mBand = norm(m.acne); sBand = norm(self.acne); break
         case 'Pigmentation':
@@ -757,7 +798,13 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           extra = [acneKey].join('~') // Acne follow-ups depend on acne breakouts, not necessarily main concerns
           break
         case 'Texture':
-          extra = [norm(formData.textureType), norm(formData.wrinklesType)].join('~')
+          if (dim === 'aging') {
+            extra = norm(formData.wrinklesType)
+          } else if (dim === 'bumpy') {
+            extra = norm(formData.textureType)
+          } else {
+            extra = [norm(formData.textureType), norm(formData.wrinklesType)].join('~')
+          }
           break
         case 'Pores':
           extra = [norm(formData.poresType)].join('~')
@@ -816,7 +863,11 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       let bandValue = ''
       switch (cat) {
         case 'Acne': bandValue = norm(m.acne) || norm(self.acne); break
-        case 'Texture': bandValue = norm(m.texture) || norm(self.texture); break
+        case 'Texture':
+          if (dim === 'aging') bandValue = norm((m as any).textureAging ?? m.texture) || norm((self as any).textureAging ?? self.texture)
+          else if (dim === 'bumpy') bandValue = norm((m as any).textureBumpy ?? m.texture) || norm((self as any).textureBumpy ?? self.texture)
+          else bandValue = norm(m.texture) || norm(self.texture)
+          break
         case 'Pores': bandValue = norm(m.pores) || norm(self.pores); break
         case 'Pigmentation':
           if (dim === 'red') bandValue = norm(m.pigmentation_red) || norm(self.pigmentation_red)
@@ -834,14 +885,18 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   if (next) setFollowUpLocal(followUpDrafts[next.ruleId] || filteredAnswers[next.ruleId] || {})
     setDecisions(newDecisions)
     // Compute sensitivity band from form inputs and merge into effective bands
-    const sens = computeSensitivityFromForm(formData as any, ctx)
-    setComputedSensitivity(sens as any)
-    setEffectiveBands({ ...m, ...updates, sensitivity: sens.band })
+  const sens = computeSensitivityFromForm(formData as any, ctx)
+  setComputedSensitivity(sens as any)
+  const combinedBands = { ...m, ...updates, sensitivity: sens.band }
+  ensureTextureAggregate(combinedBands)
+  setEffectiveBands(combinedBands)
     setFollowUpAnswers(filteredAnswers)
     } catch (error) {
       console.error('Failed to recompute engine:', error);
       // Set fallback state to prevent crashes
-      setEffectiveBands(machine || {});
+        const fallback = { ...(machine || {}) }
+        ensureTextureAggregate(fallback)
+        setEffectiveBands(fallback);
     }
   }
 
@@ -1021,7 +1076,11 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       } as any) || { updates: {} };
       
       setDecisions(prev => [...prev, { ruleId, ...decision, decidedAt: new Date().toISOString(), specVersion: 'live' }]);
-      setEffectiveBands((prev: any) => ({ ...prev, ...(decision.updates || {}) }));
+      setEffectiveBands((prev: any) => {
+        const next = { ...prev, ...(decision.updates || {}) } as Record<string, any>
+        ensureTextureAggregate(next)
+        return next
+      });
       
       // Route handling: if rule indicates routing to Acne, ensure Acne follow-ups appear by injecting concern
       const flags: string[] = Array.isArray((decision as any).flags) ? (decision as any).flags as string[] : [];
@@ -1313,7 +1372,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     setActiveFollowUp(null);
     setRuntimeSelf(derivedSelf);
     setDecisions(allDecisions.decisions || []);
-    setEffectiveBands({ ...allDecisions.effectiveBands, sensitivity: sensitivityResult.band });
+  const aggregateBands = { ...allDecisions.effectiveBands, sensitivity: sensitivityResult.band } as Record<string, any>
+  ensureTextureAggregate(aggregateBands)
+  setEffectiveBands(aggregateBands);
     setComputedSensitivity(sensitivityResult as any);
     setTriageOutcomesState(allDecisions.decisions || []);
     setDecisionAuditState({
@@ -1688,11 +1749,14 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       setDecisionAuditState(decisionAudit);
       setTriageOutcomesState(triageOutcomes);
       // Build effective bands for context: prefer latest state (with sensitivity merged); fallback to audit bands and merge sensitivity now
-      let effectiveForContext: any = effectiveBands && Object.keys(effectiveBands || {}).length ? effectiveBands : (decisionAudit.effectiveBands || {});
+      let effectiveForContext: any = effectiveBands && Object.keys(effectiveBands || {}).length ? { ...effectiveBands } : { ...(decisionAudit.effectiveBands || {}) };
       try {
         const sens = computeSensitivityFromForm(formData as any, { dateOfBirth: formData.dateOfBirth, pregnancyBreastfeeding: formData.pregnancyBreastfeeding } as any);
         effectiveForContext = { ...(effectiveForContext || {}), sensitivity: sens.band };
       } catch {}
+      if (effectiveForContext) {
+        ensureTextureAggregate(effectiveForContext);
+      }
 
       // Derive acne categories from selected breakout types; include cystic flag from severeCysticAcne gate
       const acneCategories: string[] = (() => {
@@ -1711,6 +1775,42 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         return acneCategories[0];
       })();
 
+      const textureSubtypeFlag = (() => {
+        const concerns = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : [];
+        const lowered = concerns
+          .filter((concern: unknown): concern is string => typeof concern === 'string')
+          .map((c: string) => c.toLowerCase());
+        const wantsWrinkles = lowered.some((c: string) => c.includes('wrinkle'));
+        const wantsBumpy = lowered.some((c: string) => c.includes('bumpy'));
+        const priorityList = Array.isArray(formData.concernPriority) ? formData.concernPriority : [];
+        const findPriorityIndex = (needle: string) => priorityList.findIndex(item => typeof item === 'string' && item.toLowerCase().includes(needle));
+        const priorityWrinkles = findPriorityIndex('wrinkle');
+        const priorityBumpy = findPriorityIndex('bumpy');
+        const normalize = (value: any) => String(value || '').toLowerCase();
+        const order: Record<string, number> = { green: 0, blue: 1, yellow: 2, red: 3 };
+        const agingBand = order[normalize(effectiveForContext?.textureAging)] ?? -1;
+        const bumpyBand = order[normalize(effectiveForContext?.textureBumpy)] ?? -1;
+
+        if (wantsWrinkles && wantsBumpy) {
+          if (priorityWrinkles >= 0 && priorityBumpy >= 0) {
+            return priorityWrinkles <= priorityBumpy ? 'Aging,Bumpy' : 'Bumpy,Aging';
+          }
+          if (agingBand > bumpyBand && agingBand >= 0) return 'Aging,Bumpy';
+          if (bumpyBand > agingBand && bumpyBand >= 0) return 'Bumpy,Aging';
+          return 'Aging,Bumpy';
+        }
+        if (wantsWrinkles) return 'Aging';
+        if (wantsBumpy) return 'Bumpy';
+
+        const wrinkleType = normalize((formData as any).wrinklesType);
+        const textureType = normalize((formData as any).textureType);
+        if (wrinkleType.includes('wrinkle')) return 'Aging';
+        if (textureType.includes('bump')) return 'Bumpy';
+        if (agingBand > bumpyBand && agingBand >= 0) return 'Aging';
+        if (bumpyBand > agingBand && bumpyBand >= 0) return 'Bumpy';
+        return '';
+      })();
+
       const decisionEngineInput = {
         effectiveBands: effectiveForContext || {},
         flags: {
@@ -1718,7 +1818,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           acneHormonal: acneCategories.includes('Hormonal acne'),
           dermatologistReferral: String(formData.severeCysticAcne || '').trim() === 'Yes',
           barrierOverride: String(formData.barrierStressHigh || '').trim() === 'Yes',
-          textureSubtype: formData.textureType || formData.wrinklesType || '',
+          textureSubtype: textureSubtypeFlag,
           pigmentationSubtype: formData.pigmentationType || '',
         },
       };
@@ -3401,6 +3501,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                 <div><span className="font-medium">Moisture:</span> {machine.moisture || '-'} {machineRaw?.moisture !== undefined && <span className="text-gray-500">(val: {String(machineRaw.moisture)})</span>}</div>
                 <div><span className="font-medium">Sebum:</span> {machine.sebum || '-'} {machineRaw?.sebum !== undefined && <span className="text-gray-500">(val: {String(machineRaw.sebum)})</span>}</div>
                 <div><span className="font-medium">Texture:</span> {machine.texture || '-'} {machineRaw?.texture !== undefined && <span className="text-gray-500">(val: {String(machineRaw.texture)})</span>}</div>
+                <div><span className="font-medium">Texture (Aging):</span> {machine.textureAging || '-'} {machineRaw?.texture_aging !== undefined && <span className="text-gray-500">(val: {String(machineRaw.texture_aging)})</span>}</div>
+                <div><span className="font-medium">Texture (Bumpy):</span> {machine.textureBumpy || '-'} {machineRaw?.texture_bumpy !== undefined && <span className="text-gray-500">(val: {String(machineRaw.texture_bumpy)})</span>}</div>
                 <div><span className="font-medium">Pores:</span> {machine.pores || '-'} {machineRaw?.pores !== undefined && <span className="text-gray-500">(val: {String(machineRaw.pores)})</span>}</div>
                 <div><span className="font-medium">Acne:</span> {machine.acne || '-'} {machineRaw?.acne !== undefined && <span className="text-gray-500">(val: {String(machineRaw.acne)})</span>}</div>
                 {machine.acneDetails?.breakouts?.length ? (

@@ -1,9 +1,11 @@
-import { RULE_SPECS, DecisionRuleSpec, QuestionSpec, Band, Category } from './decisionRules'
+import { RULE_SPECS, QuestionSpec, Band, Category } from './decisionRules'
 
 export type MachineBands = {
   moisture?: Band
   sebum?: Band
   texture?: Band
+  texture_aging?: Band
+  texture_bumpy?: Band
   pores?: Band
   acne?: Band
   pigmentation_brown?: Band
@@ -14,6 +16,8 @@ export type SelfBands = {
   moisture?: Band
   sebum?: Band
   texture?: Band
+  texture_aging?: Band
+  texture_bumpy?: Band
   pores?: Band
   acne?: Band
   pigmentation_brown?: Band
@@ -28,17 +32,20 @@ export type Context = {
 export type RuleQuestionSet = {
   ruleId: string
   category: Category
-  dimension?: 'brown' | 'red'
+  dimension?: 'brown' | 'red' | 'aging' | 'bumpy'
   questions: QuestionSpec[]
 }
 
 export type BandUpdates = Partial<MachineBands>
 
-function getCategoryMachineBand(cat: Category, machine: MachineBands, dim?: 'brown' | 'red'): Band | undefined {
+function getCategoryMachineBand(cat: Category, machine: MachineBands, dim?: 'brown' | 'red' | 'aging' | 'bumpy'): Band | undefined {
   switch (cat) {
     case 'Moisture': return machine.moisture
     case 'Grease': return machine.sebum
-    case 'Texture': return machine.texture
+    case 'Texture':
+      if (dim === 'aging') return machine.texture_aging ?? machine.texture
+      if (dim === 'bumpy') return machine.texture_bumpy ?? machine.texture
+      return machine.texture
     case 'Pores': return machine.pores
     case 'Acne': return machine.acne
     case 'Pigmentation':
@@ -48,11 +55,14 @@ function getCategoryMachineBand(cat: Category, machine: MachineBands, dim?: 'bro
   }
 }
 
-function getCategorySelfBand(cat: Category, self: SelfBands, dim?: 'brown' | 'red'): Band | undefined {
+function getCategorySelfBand(cat: Category, self: SelfBands, dim?: 'brown' | 'red' | 'aging' | 'bumpy'): Band | undefined {
   switch (cat) {
     case 'Moisture': return self.moisture
     case 'Grease': return self.sebum
-    case 'Texture': return self.texture
+    case 'Texture':
+      if (dim === 'aging') return self.texture_aging ?? self.texture
+      if (dim === 'bumpy') return self.texture_bumpy ?? self.texture
+      return self.texture
     case 'Pores': return self.pores
     case 'Acne': return self.acne
     case 'Pigmentation':
@@ -235,6 +245,8 @@ function parseUpdateToken(token: string): { key: keyof MachineBands; band: Band 
   const k = left.toLowerCase()
   if (k.startsWith('moisture')) return { key: 'moisture', band }
   if (k.startsWith('grease') || k.startsWith('sebum') || k.startsWith('oil')) return { key: 'sebum', band }
+  if (k.startsWith('texture (aging') || k.includes('texture') && k.includes('aging')) return { key: 'texture_aging', band }
+  if (k.startsWith('texture (bumpy') || (k.includes('texture') && k.includes('bumpy'))) return { key: 'texture_bumpy', band }
   if (k.startsWith('texture')) return { key: 'texture', band }
   if (k.startsWith('pores')) return { key: 'pores', band }
   if (k.startsWith('acne')) return { key: 'acne', band }

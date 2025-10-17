@@ -564,6 +564,8 @@ export async function getSessionProfile(sessionId: string) {
       moisture, moisture_band,
       sebum, sebum_band,
       texture, texture_band,
+      texture_aging, texture_aging_band,
+      texture_bumpy, texture_bumpy_band,
       pigmentation_uv, pigmentation_uv_band,
       redness, redness_band,
       pores, pores_band,

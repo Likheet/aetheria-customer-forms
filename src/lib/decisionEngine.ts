@@ -31,6 +31,8 @@ export interface MachineScanBands {
   moisture?: Band;         // from machine_analysis.moisture_band
   sebum?: Band;            // machine_analysis.sebum_band
   texture?: Band;
+  textureAging?: Band;
+  textureBumpy?: Band;
   pores?: Band;
   acne?: Band;
   acneDetails?: MachineAcneReading;
@@ -44,6 +46,8 @@ export interface SelfBands {
   moisture?: Band;   // from Hydration Levels choice
   sebum?: Band;      // from Oil Levels choice
   texture?: Band;    // from Dullness / bumpy claims when present
+  textureAging?: Band;
+  textureBumpy?: Band;
   pores?: Band;      // from “Large pores” concern choice if user flags it
   acne_claim?: Band; // green/blue = none/mild, yellow/red = user says acne present
   pigmentation_brown_claim?: Band;
@@ -167,6 +171,7 @@ export function deriveSelfBandsFromForm(form: {
   poresType?: string;
   pigmentationType?: string;
   textureType?: string;
+  wrinklesType?: string;
 }): SelfBands {
   const self: SelfBands = {};
   self.moisture = containsBand(form.hydrationLevels);
@@ -178,18 +183,27 @@ export function deriveSelfBandsFromForm(form: {
   const acneSelected = Array.from(concerns).some(label => label.toLowerCase().includes('acne'));
   if (!acneSelected) self.acne_claim = 'green';
   if (concerns.has('Large pores')) self.pores = 'yellow';
-  if (concerns.has('Dullness')) self.texture = 'yellow';
-  if (concerns.has('Bumpy skin')) self.texture = 'yellow';
+  const concernLabels = Array.from(concerns).map(c => c.toLowerCase());
+  const wantsWrinkles = concernLabels.some(label => label.includes('wrinkle'));
+  const wantsBumpy = concernLabels.some(label => label.includes('bumpy'));
+  const wantsDullness = concernLabels.some(label => label.includes('dullness'));
+  if (wantsWrinkles || wantsDullness) self.textureAging = 'yellow';
+  if (wantsBumpy) self.textureBumpy = 'yellow';
 
   // If a texture selection contains a band hint, use it
   const tBand = containsBand(form.textureType);
-  if (tBand) self.texture = tBand;
+  if (tBand) self.textureBumpy = tBand;
+  const wBand = containsBand(form.wrinklesType);
+  if (wBand) self.textureAging = wBand;
   if (concerns.has('Pigmentation')) {
     // If user chose brown vs red in its follow-up, use that
     const t = (form.pigmentationType || '').toLowerCase();
     if (t.includes('pie') || t.includes('red')) self.pigmentation_red_claim = 'yellow';
     if (t.includes('pih') || t.includes('brown') || t.includes('melasma')) self.pigmentation_brown_claim = 'yellow';
   }
+
+  const combinedTexture = elevateBand(self.textureAging, self.textureBumpy);
+  if (combinedTexture) self.texture = combinedTexture;
   return self;
 }
 
@@ -634,13 +648,17 @@ const RULES: Rule[] = [
   {
     id: 'texture_MSmooth_CAging',
     scope: 'Texture',
-    when: (m, s) => (m.texture === 'green' || m.texture === 'blue') && (s.texture === 'yellow' || s.texture === 'red'), // uses “Dullness/aging” signal as present
+    when: (m, s) => {
+      const machineBand = m.textureAging ?? m.texture
+      const selfBand = s.textureAging ?? s.texture
+      return (machineBand === 'green' || machineBand === 'blue') && (selfBand === 'yellow' || selfBand === 'red')
+    },
     decide: (_a, ctx) => {
       const age = ageFromDOB(ctx.dateOfBirth);
       if (typeof age === 'number' && age > 35) {
-        return { scope: 'Texture', verdict: 'Age-related concern — start anti-aging routine.', updatedBand: 'yellow' };
+        return { scope: 'Texture', verdict: 'Age-related concern — start anti-aging routine.', updatedBand: 'yellow', flags: ['textureSubtype:Aging'] };
       }
-      return { scope: 'Texture', verdict: 'No aging indication by age gate; mild brightening ok.', updatedBand: 'blue' };
+      return { scope: 'Texture', verdict: 'No aging indication by age gate; mild brightening ok.', updatedBand: 'blue', flags: ['textureSubtype:Aging'] };
     },
   },
 
@@ -648,7 +666,10 @@ const RULES: Rule[] = [
   {
     id: 'texture_MSmooth_CBumpy',
     scope: 'Texture',
-    when: (m, _s) => (m.texture === 'green' || m.texture === 'blue'), // customer will answer "bumpy" specifics below
+    when: (m, _s) => {
+      const machineBand = m.textureBumpy ?? m.texture
+      return machineBand === 'green' || machineBand === 'blue'
+    },
     questions: [
       { id: 'q1', prompt: 'When you say “bumpy,” do you mean:', options: ['Pimples / breakouts', 'Tiny uneven dots (not pimples)', 'Just feels uneven to touch'] },
       { id: 'q2', prompt: 'Where do you notice this most?', options: ['Forehead', 'Chin', 'Cheeks', 'All over'] },
@@ -657,15 +678,15 @@ const RULES: Rule[] = [
       const q1 = String(a.q1);
       const q2 = String(a.q2);
       if (q1.startsWith('Pimples')) {
-        return { scope: 'Texture', verdict: 'Route to ACNE questions.', flags: ['route:acne'] };
+        return { scope: 'Texture', verdict: 'Route to ACNE questions.', flags: ['route:acne', 'textureSubtype:Bumpy'] };
       }
       if (q1.startsWith('Tiny') && q2 === 'Forehead') {
-        return { scope: 'Texture', verdict: 'Possible scalp-origin bumps — consider scalp analysis.', flags: ['suggest:scalp-analysis'] };
+        return { scope: 'Texture', verdict: 'Possible scalp-origin bumps — consider scalp analysis.', flags: ['suggest:scalp-analysis', 'textureSubtype:Bumpy'] };
       }
       if (q1.startsWith('Tiny') && (q2 === 'Chin' || q2 === 'Cheeks' || q2 === 'All over')) {
-        return { scope: 'Texture', verdict: 'Oil-related bumps (clogged pores).', updatedBand: 'yellow', flags: ['clogged-pores'] };
+        return { scope: 'Texture', verdict: 'Oil-related bumps (clogged pores).', updatedBand: 'yellow', flags: ['clogged-pores', 'textureSubtype:Bumpy'] };
       }
-      return { scope: 'Texture', verdict: 'Mild unevenness — texture polish only.', updatedBand: 'blue' };
+      return { scope: 'Texture', verdict: 'Mild unevenness — texture polish only.', updatedBand: 'blue', flags: ['textureSubtype:Bumpy'] };
     },
   },
 
@@ -673,7 +694,10 @@ const RULES: Rule[] = [
   {
     id: 'texture_MRough_CSmooth',
     scope: 'Texture',
-    when: (m, _s) => (m.texture === 'yellow' || m.texture === 'red'),
+    when: (m, _s) => {
+      const machineBand = m.textureBumpy ?? m.texture
+      return machineBand === 'yellow' || machineBand === 'red'
+    },
     questions: [
       { id: 'q1', prompt: 'Do you notice any unevenness in particular areas (tiny bumps)?', options: ['Cheeks', 'Chin', 'Forehead', 'Other', 'No'] },
       { id: 'q2', prompt: 'Do you have any old acne scars or marks that haven’t faded yet?', options: ['Yes', 'No'] },
@@ -684,15 +708,15 @@ const RULES: Rule[] = [
       const q2 = String(a.q2);
       const q3 = String(a.q3);
 
-      if (q1 === 'Forehead') return { scope: 'Texture', verdict: 'Check dandruff/oily scalp → scalp analysis.', flags: ['suggest:scalp-analysis'] };
+      if (q1 === 'Forehead') return { scope: 'Texture', verdict: 'Check dandruff/oily scalp → scalp analysis.', flags: ['suggest:scalp-analysis', 'textureSubtype:Bumpy'] };
       if (q1 === 'Cheeks' || q1 === 'Chin' || q1 === 'Other') {
-        return { scope: 'Texture', verdict: 'Oil-related bumps (clogged pores).', updatedBand: 'yellow', flags: ['clogged-pores'] };
+        return { scope: 'Texture', verdict: 'Oil-related bumps (clogged pores).', updatedBand: 'yellow', flags: ['clogged-pores', 'textureSubtype:Bumpy'] };
       }
-      if (q2 === 'Yes') return { scope: 'Texture', verdict: 'Acne scars present — branch to scar type.', flags: ['followup:scar-type'] };
+      if (q2 === 'Yes') return { scope: 'Texture', verdict: 'Acne scars present — branch to scar type.', flags: ['followup:scar-type', 'textureSubtype:Bumpy'] };
       if (q1 === 'No' && q2 === 'No' && q3 === 'Yes') {
-        return { scope: 'Texture', verdict: 'Anti-aging routine.', updatedBand: 'yellow' };
+        return { scope: 'Texture', verdict: 'Anti-aging routine.', updatedBand: 'yellow', flags: ['textureSubtype:Aging'] };
       }
-      return { scope: 'Texture', verdict: 'No texture action needed.', updatedBand: 'green' };
+      return { scope: 'Texture', verdict: 'No texture action needed.', updatedBand: 'green', flags: ['textureSubtype:Bumpy'] };
     },
   },
 
@@ -789,6 +813,8 @@ export type RuntimeMachineBands = {
   moisture?: Band4
   sebum?: Band4
   texture?: Band4
+  textureAging?: Band4
+  textureBumpy?: Band4
   pores?: Band4
   acne?: Band4
   pigmentation_brown?: Band4
@@ -807,7 +833,7 @@ export type RuntimeContext = {
 export type FollowUp = {
   ruleId: string
   category: 'Moisture' | 'Grease' | 'Acne' | 'Pores' | 'Texture' | 'Pigmentation' | 'Sensitivity'
-  dimension?: 'brown' | 'red'
+  dimension?: 'brown' | 'red' | 'aging' | 'bumpy'
   questions: { id: string; prompt: string; options: string[]; multi?: boolean }[]
 }
 
@@ -886,16 +912,29 @@ export function deriveSelfBands(form: any, _ctx: RuntimeContext = {}): RuntimeSe
     self.pores = 'yellow'
   }
 
-  // Texture baseline from wrinkles/aging and bumpy-skin concern
-  const wrinklesType = normalizeOptionLabel(form?.wrinklesType || form?.textureType || '')
-  if (wrinklesType) {
-    self.texture = toBand(wrinklesType) || (
-      wrinklesType.includes('deep wrinkles') || wrinklesType.includes('obvious sagging') ? 'red' :
-      wrinklesType.includes('wrinkles') || wrinklesType.includes('sagging in several areas') ? 'yellow' :
-      wrinklesType.includes('few fine lines') || wrinklesType.includes('slight looseness') ? 'blue' : 'green'
+  const wrinklesTypeRaw = normalizeOptionLabel(form?.wrinklesType || '')
+  if (wrinklesTypeRaw) {
+    self.textureAging = toBand(wrinklesTypeRaw) || (
+      wrinklesTypeRaw.includes('deep wrinkle') || wrinklesTypeRaw.includes('obvious sagging') ? 'red' :
+      wrinklesTypeRaw.includes('wrinkle') || wrinklesTypeRaw.includes('sagging in several areas') ? 'yellow' :
+      wrinklesTypeRaw.includes('few fine lines') || wrinklesTypeRaw.includes('slight looseness') ? 'blue' : 'green'
     )
-  } else if (has('texture') || has('dullness') || has('bumpy skin') || has('wrinkles')) {
-    self.texture = 'yellow'
+  } else if (has('wrinkle') || has('fine lines') || has('dullness')) {
+    self.textureAging = 'yellow'
+  }
+
+  const textureTypeRaw = normalizeOptionLabel(form?.textureType || '')
+  if (textureTypeRaw) {
+    self.textureBumpy = toBand(textureTypeRaw) || (
+      textureTypeRaw.includes('several areas') || textureTypeRaw.includes('rough patches') || textureTypeRaw.includes('all over') ? 'yellow' :
+      textureTypeRaw.includes('few small areas') || textureTypeRaw.includes('tiny bumps') ? 'blue' : 'green'
+    )
+  } else if (has('bumpy skin') || has('texture')) {
+    self.textureBumpy = 'yellow'
+  }
+
+  if (has('dullness')) {
+    self.textureAging = elevateBand(self.textureAging, 'yellow')
   }
 
   // Pigmentation baseline from user-selected type/severity
@@ -949,6 +988,11 @@ export function deriveSelfBands(form: any, _ctx: RuntimeContext = {}): RuntimeSe
   const sens = normalizeOptionLabel(form?.sensitivity || '')
   if (sens) {
     self.sensitivity = toBand(sens) || (sens.includes('high') ? 'red' : sens.includes('medium') ? 'yellow' : sens.includes('low') ? 'blue' : 'green')
+  }
+
+  const combinedTexture = elevateBand(self.textureAging, self.textureBumpy)
+  if (combinedTexture) {
+    self.texture = elevateBand(self.texture, combinedTexture)
   }
 
   return self
@@ -1020,7 +1064,17 @@ export function computeSensitivityFromForm(
 // ---- getFollowUpQuestions(machine, self)
 export function getFollowUpQuestions(machine: RuntimeMachineBands, self: RuntimeSelfBands): FollowUp[] {
   // Delegate matching to util built on RULE_SPECS
-  const qsets = specGetFollowUps(machine as any, self as any)
+  const machineForSpec = {
+    ...machine,
+    texture_aging: machine.textureAging ?? machine.texture,
+    texture_bumpy: machine.textureBumpy ?? machine.texture,
+  }
+  const selfForSpec = {
+    ...self,
+    texture_aging: self.textureAging ?? self.texture,
+    texture_bumpy: self.textureBumpy ?? self.texture,
+  }
+  const qsets = specGetFollowUps(machineForSpec as any, selfForSpec as any)
   return qsets.map(q => ({ ruleId: q.ruleId, category: q.category, dimension: q.dimension, questions: q.questions }))
 }
 
@@ -1042,7 +1096,40 @@ export function decideBandUpdates(ruleId: string, answers: Record<string, string
       }
     }
   }
-  return { updates: (out?.updates || {}) as Partial<RuntimeMachineBands>, verdict: out?.verdict, flags, safety }
+  const updates = mapSpecUpdates(out?.updates || {})
+  return { updates, verdict: out?.verdict, flags, safety }
+}
+
+function applyTextureAggregation(target: Partial<RuntimeMachineBands>): void {
+  const worst = (current?: Band4, candidate?: Band4): Band4 | undefined => {
+    if (!candidate) return current
+    if (!current) return candidate
+    return BAND_ORDER[candidate] > BAND_ORDER[current] ? candidate : current
+  }
+  const combined = worst(target.textureAging, target.textureBumpy)
+  if (combined) {
+    target.texture = worst(target.texture, combined)
+  }
+}
+
+function mapSpecUpdates(updates: Partial<Record<string, Band>>): Partial<RuntimeMachineBands> {
+  const mapped: Partial<RuntimeMachineBands> = {}
+  for (const [rawKey, value] of Object.entries(updates)) {
+    if (!value) continue
+    switch (rawKey) {
+      case 'texture_aging':
+        mapped.textureAging = value as Band4
+        break
+      case 'texture_bumpy':
+        mapped.textureBumpy = value as Band4
+        break
+      default:
+        mapped[rawKey as keyof RuntimeMachineBands] = value as Band4
+        break
+    }
+  }
+  applyTextureAggregation(mapped)
+  return mapped
 }
 
 // ---- mergeBands(base, updates) worst-wins
@@ -1057,6 +1144,7 @@ export function mergeBands(base: Partial<RuntimeMachineBands>, updates: Partial<
       out[k] = ub
     }
   }
+  applyTextureAggregation(out)
   return out
 }
 
@@ -1084,10 +1172,12 @@ export function decideAllBandUpdates(
 
   // Apply decided updates over machine bands (override as per rule decision)
   const effective: RuntimeMachineBands = { ...machine }
+  applyTextureAggregation(effective)
   for (const key of Object.keys(merged) as (keyof RuntimeMachineBands)[]) {
     const u = merged[key]
     if (u) effective[key] = u
   }
+  applyTextureAggregation(effective)
 
   return { effectiveBands: effective, decisions }
 }

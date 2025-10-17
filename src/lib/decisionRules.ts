@@ -33,7 +33,7 @@ export interface DecisionRuleSpec {
   category: Category
   machineInput: Band[] // match bands on machine for this rule
   customerInput: Band[] // match bands on customer/self-report for this rule
-  dimension?: 'brown' | 'red' // optional sub-dimension (pigmentation split)
+  dimension?: 'brown' | 'red' | 'aging' | 'bumpy' // optional sub-dimension (pigmentation/texture split)
   questions?: QuestionSpec[]
   outcomes?: OutcomeSpec[]
   notes?: string
@@ -231,16 +231,18 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
   {
     id: 'texture_machineSmooth_customerAging',
     category: 'Texture',
+    dimension: 'aging',
     machineInput: ['green', 'blue'],
     customerInput: ['red', 'yellow'],
     outcomes: [
-      { when: 'age > 35', updates: ['Texture: Yellow'], verdict: 'Age-related texture concerns - introduce anti-aging routine.' },
-      { when: '-', updates: ['Texture: Blue'], verdict: 'No age-based escalation needed; focus on brightening/polish.' },
+      { when: 'age > 35', updates: ['Texture (Aging): Yellow'], verdict: 'Age-related texture concerns - introduce anti-aging routine.' },
+      { when: '-', updates: ['Texture (Aging): Blue'], verdict: 'No age-based escalation needed; focus on brightening/polish.' },
     ],
   },
   {
     id: 'texture_machineSmooth_customerBumpy',
     category: 'Texture',
+    dimension: 'bumpy',
     machineInput: ['green', 'blue'],
     customerInput: ['red', 'yellow'],
     questions: [
@@ -250,16 +252,17 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
     ],
     outcomes: [
       { when: 'Q1=Pimples / breakouts', updates: [], verdict: 'Route to ACNE questions.', flags: ['route:acne'] },
-      { when: 'Q1=Tiny uneven dots (not pimples) AND Q2=Forehead AND Q3=Yes', updates: ['Texture: Blue'], verdict: 'Possible scalp-triggered congestion - check scalp health.', flags: ['suggest:scalp-analysis'] },
-      { when: 'Q1=Tiny uneven dots (not pimples) AND Q2=Forehead AND Q3=No', updates: ['Texture: Blue'], verdict: 'Localized uneven texture - gentle polish recommended.' },
-      { when: 'Q1=Tiny uneven dots (not pimples) AND Q2 in {Chin, Cheeks, All over}', updates: ['Pores: Yellow'], verdict: 'Comedonal acne - treat congestion.' },
-      { when: 'Q1=Just feels uneven to touch AND Q2=Forehead', updates: ['Texture: Blue'], verdict: 'Check for dandruff or scalp issues.', flags: ['suggest:scalp-analysis'] },
-      { when: 'Q1=Just feels uneven to touch AND Q2 in {Chin, Cheeks, All over}', updates: ['Texture: Yellow'], verdict: 'Bumpy skin texture - smoothing routine recommended.' },
+      { when: 'Q1=Tiny uneven dots (not pimples) AND Q2=Forehead AND Q3=Yes', updates: ['Texture (Bumpy): Blue'], verdict: 'Possible scalp-triggered congestion - check scalp health.', flags: ['suggest:scalp-analysis'] },
+      { when: 'Q1=Tiny uneven dots (not pimples) AND Q2=Forehead AND Q3=No', updates: ['Texture (Bumpy): Blue'], verdict: 'Localized uneven texture - gentle polish recommended.' },
+  { when: 'Q1=Tiny uneven dots (not pimples) AND Q2 in {Chin, Cheeks, All over}', updates: ['Pores: Yellow'], verdict: 'Comedonal acne - treat congestion.' },
+  { when: 'Q1=Just feels uneven to touch AND Q2=Forehead', updates: ['Texture (Bumpy): Blue'], verdict: 'Check for dandruff or scalp issues.', flags: ['suggest:scalp-analysis'] },
+      { when: 'Q1=Just feels uneven to touch AND Q2 in {Chin, Cheeks, All over}', updates: ['Texture (Bumpy): Yellow'], verdict: 'Bumpy skin texture - smoothing routine recommended.' },
     ],
   },
   {
     id: 'texture_machineBumpy_customerSmooth',
     category: 'Texture',
+    dimension: 'bumpy',
     machineInput: ['red', 'yellow'],
     customerInput: ['green', 'blue'],
     questions: [
@@ -269,11 +272,11 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
       { id: 'Q4', prompt: 'Do you have dandruff or an oily scalp?', options: ['Yes', 'No'] },
     ],
     outcomes: [
-      { when: 'Q1=Forehead AND Q4=Yes', updates: ['Texture: Blue'], verdict: 'Scalp link suspected - recommend scalp analysis.', flags: ['suggest:scalp-analysis'] },
+      { when: 'Q1=Forehead AND Q4=Yes', updates: ['Texture (Bumpy): Blue'], verdict: 'Scalp link suspected - recommend scalp analysis.', flags: ['suggest:scalp-analysis'] },
       { when: 'Q1 in {Chin, Cheeks, Other}', updates: ['Pores: Yellow'], verdict: 'Oil-related bumps (comedonal)' },
-      { when: 'Q2=Yes', updates: ['Texture: Blue'], verdict: 'Acne scars present - branch to scar type.', flags: ['followup:scar-type'] },
-      { when: 'Q1=No AND Q2=No AND Q3=Yes', updates: ['Texture: Yellow'], verdict: 'Age-related texture - introduce anti-aging routine.' },
-      { when: '-', updates: ['Texture: Green'], verdict: 'No textural action needed - monitor.' },
+  { when: 'Q2=Yes', updates: ['Texture (Bumpy): Blue'], verdict: 'Acne scars present - branch to scar type.', flags: ['followup:scar-type'] },
+      { when: 'Q1=No AND Q2=No AND Q3=Yes', updates: ['Texture (Aging): Yellow'], verdict: 'Age-related texture - introduce anti-aging routine.' },
+      { when: '-', updates: ['Texture (Bumpy): Green'], verdict: 'No textural action needed - monitor.' },
     ],
   },
 

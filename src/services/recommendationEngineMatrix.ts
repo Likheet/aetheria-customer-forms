@@ -1460,9 +1460,20 @@ function inferAcneSubtype(context: RecommendationContext): string {
 }
 
 function inferTextureSubtype(context: RecommendationContext): string {
-  const flags = String(context.decisionEngine?.flags?.textureSubtype || '').toLowerCase();
-  if (flags.includes('aging')) return 'Aging';
-  if (flags.includes('bumpy')) return 'Bumpy';
+  const flagsRaw = String(context.decisionEngine?.flags?.textureSubtype || '').toLowerCase();
+  if (flagsRaw.includes(',')) {
+    const ordered = flagsRaw
+      .split(',')
+      .map(part => part.trim())
+      .filter(Boolean);
+    if (ordered.length) {
+      const primary = ordered[0];
+      if (primary.includes('bumpy')) return 'Bumpy';
+      if (primary.includes('aging')) return 'Aging';
+    }
+  }
+  if (flagsRaw.includes('bumpy')) return 'Bumpy';
+  if (flagsRaw.includes('aging')) return 'Aging';
   const mainConcerns = Array.isArray(context.formData.mainConcerns) ? context.formData.mainConcerns : [];
   const lowered = mainConcerns.map(c => c.toLowerCase());
   if (lowered.some(c => c.includes('fine lines') || c.includes('wrinkle'))) return 'Aging';
