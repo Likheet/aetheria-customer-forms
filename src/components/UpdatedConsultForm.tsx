@@ -1233,14 +1233,14 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       totalSteps += 1;
     }
     
-    // Add lifestyle questions: 5 (diet, water, sleep, stress, environment)
-    totalSteps += 5;
+    // Section E - Lifestyle questions REMOVED: 5 (diet, water, sleep, stress, environment)
     
-  // Add preference questions: 3 (routine-steps, serum-comfort, moisturizer-texture)
-  totalSteps += 3;
+    // Add preference questions: 2 (routine-steps, serum-comfort)
+    // moisturizer-texture question REMOVED
+    totalSteps += 2;
   
-  // Add legal disclaimer step
-  totalSteps += 1;
+    // Add legal disclaimer step
+    totalSteps += 1;
     
     return totalSteps;
   };
@@ -1340,21 +1340,16 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     const priorityStepIndex = 20 + concernSteps.length; // immediately after concern follow-ups
     const lifestyleStartStep = priorityStepIndex + (hasPriorityStep ? 1 : 0); // Start after priority (if present)
     
-    // Individual lifestyle questions (5 questions)
-    if (currentStep === lifestyleStartStep) return 'diet';
-    if (currentStep === lifestyleStartStep + 1) return 'water-intake';
-    if (currentStep === lifestyleStartStep + 2) return 'sleep-hours';
-    if (currentStep === lifestyleStartStep + 3) return 'stress-levels';
-    if (currentStep === lifestyleStartStep + 4) return 'environment';
+    // Lifestyle questions REMOVED: diet, water-intake, sleep-hours, stress-levels, environment
     
-  // Individual preference questions (3 questions)
-    const preferenceStartStep = lifestyleStartStep + 5;
+    // Individual preference questions (2 questions)
+    // moisturizer-texture question REMOVED
+    const preferenceStartStep = lifestyleStartStep;
     if (currentStep === preferenceStartStep) return 'routine-steps';
     if (currentStep === preferenceStartStep + 1) return 'serum-comfort';
-    if (currentStep === preferenceStartStep + 2) return 'moisturizer-texture';
     
     // Legal disclaimer
-    if (currentStep === preferenceStartStep + 3) return 'legal-disclaimer';
+    if (currentStep === preferenceStartStep + 2) return 'legal-disclaimer';
   // brand-preference question removed
     
     const concernIndex = currentStep - 20; // Start after main concerns step (19)
@@ -1393,7 +1388,10 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         break;
       // Gate Questions (Safety Screening)
       case 5: // Pregnancy Gate
-        if (!formData.pregnancy || formData.pregnancy.trim() === '') newErrors.pregnancy = 'Please answer the pregnancy question';
+        // Skip validation for males - they are automatically marked as "No"
+        if (formData.gender !== 'Male') {
+          if (!formData.pregnancy || formData.pregnancy.trim() === '') newErrors.pregnancy = 'Please answer the pregnancy question';
+        }
         break;
       case 6: // Isotretinoin Gate
         if (!formData.recentIsotretinoin || formData.recentIsotretinoin.trim() === '') newErrors.recentIsotretinoin = 'Please answer the isotretinoin question';
@@ -1454,7 +1452,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         if (formData.mainConcerns.length > 3) newErrors.mainConcerns = 'Please select a maximum of 3 main concerns';
         break;
       default: // Dynamic steps
-        // Individual lifestyle questions
+        // Individual lifestyle questions removed
         if (currentConcernStep === 'concern-priority') {
           // Must have a ranking assigned for all selected concerns
           const selected = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : [];
@@ -1464,23 +1462,11 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           if (!acnePinnedOk) newErrors.concernPriority = 'Acne must be the top priority when selected.';
           else if (!coveredAll) newErrors.concernPriority = 'Please order all selected concerns.';
         }
-        if (currentConcernStep === 'diet') {
-          if (!formData.diet.trim()) newErrors.diet = 'Please select your diet type';
-        } else if (currentConcernStep === 'water-intake') {
-          if (!formData.waterIntake.trim()) newErrors.waterIntake = 'Please select your water intake level';
-        } else if (currentConcernStep === 'sleep-hours') {
-          if (!formData.sleepHours.trim()) newErrors.sleepHours = 'Please select your sleep hours';
-        } else if (currentConcernStep === 'stress-levels') {
-          if (!formData.stressLevels.trim()) newErrors.stressLevels = 'Please select your stress level';
-        } else if (currentConcernStep === 'environment') {
-          if (!formData.environment.trim()) newErrors.environment = 'Please select your environment type';
         // Individual preference questions
-        } else if (currentConcernStep === 'routine-steps') {
+        if (currentConcernStep === 'routine-steps') {
           if (!formData.routineSteps.trim()) newErrors.routineSteps = 'Please select your preferred routine steps';
         } else if (currentConcernStep === 'serum-comfort') {
           if (!formData.serumComfort.trim()) newErrors.serumComfort = 'Please select your serum comfort level';
-        } else if (currentConcernStep === 'moisturizer-texture') {
-          if (!formData.moisturizerTexture.trim()) newErrors.moisturizerTexture = 'Please select your preferred moisturizer texture';
         } else if (currentConcernStep === 'legal-disclaimer') {
           const allChecked = LEGAL_DISCLAIMER_KEYS.every((key) => formData[key]);
           if (!allChecked) newErrors.legalDisclaimerAgreed = 'You must acknowledge all disclaimer points to continue';
@@ -1555,7 +1541,19 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     }
     if (validateStep(currentStep)) {
       if (currentStep < getTotalSteps()) {
-        setCurrentStep(prev => prev + 1);
+        let nextStep = currentStep + 1;
+        
+        // Skip pregnancy gate (step 5) for males
+        if (nextStep === 5 && formData.gender === 'Male') {
+          // Auto-set pregnancy to "No" for males
+          if (!formData.pregnancy || formData.pregnancy.trim() === '') {
+            updateFormData({ pregnancy: 'No' });
+          }
+          // Skip to step 6 (isotretinoin gate)
+          nextStep = 6;
+        }
+        
+        setCurrentStep(nextStep);
       } else {
         handlePreview();
       }
@@ -1583,7 +1581,15 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     // Do NOT clear previously answered follow-ups on Back.
     // Back should simply navigate steps (or exit form on step 1) while preserving answers.
     if (currentStep > 1) {
-      setCurrentStep(prev => prev - 1);
+      let prevStep = currentStep - 1;
+      
+      // Skip pregnancy gate (step 5) for males when going back
+      if (prevStep === 5 && formData.gender === 'Male') {
+        // Skip to step 4 (gender)
+        prevStep = 4;
+      }
+      
+      setCurrentStep(prevStep);
       return
     }
     // At the first step, delegate to external back handler (if any)
@@ -2324,174 +2330,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         </div>
       );
     }
-    if (currentConcernStep === 'diet') {
-      return (
-        <div className="space-y-12 flex flex-col justify-center h-full py-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-              <Heart className="w-8 h-8 text-amber-600" />
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-              What type of diet do you follow?
-            </h2>
-          </div>
-          <div className="max-w-2xl mx-auto w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {['Balanced', 'Oily/Spicy', 'Vegetarian', 'High Sugar'].map((option) => (
-                <label key={option} className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-amber-300 transition-all duration-300">
-                  <input
-                    type="radio"
-                    name="diet"
-                    value={option}
-                    checked={formData.diet === option}
-                    onChange={(e) => updateFormData({ diet: e.target.value })}
-                    className="mr-3 h-5 w-5 text-amber-600 border-gray-300 focus:ring-amber-400"
-                  />
-                  <span className="text-lg text-gray-700">{option}</span>
-                </label>
-              ))}
-            </div>
-            {errors.diet && <p className="text-red-500 text-sm mt-2">{errors.diet}</p>}
-          </div>
-        </div>
-      );
-    }
-
-    if (currentConcernStep === 'water-intake') {
-      return (
-        <div className="space-y-12 flex flex-col justify-center h-full py-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-              <Droplets className="w-8 h-8 text-amber-600" />
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-              How much water do you typically drink daily?
-            </h2>
-          </div>
-
-          <div className="max-w-2xl mx-auto w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {['Low', 'Medium', 'High'].map((option) => (
-                <label key={option} className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-amber-300 transition-all duration-300">
-                  <input
-                    type="radio"
-                    name="waterIntake"
-                    value={option}
-                    checked={formData.waterIntake === option}
-                    onChange={(e) => updateFormData({ waterIntake: e.target.value })}
-                    className="mr-3 h-5 w-5 text-amber-600 border-gray-300 focus:ring-amber-400"
-                  />
-                  <span className="text-lg text-gray-700">{option}</span>
-                </label>
-              ))}
-            </div>
-            {errors.waterIntake && <p className="text-red-500 text-sm mt-2">{errors.waterIntake}</p>}
-          </div>
-        </div>
-      );
-    }
-
-    if (currentConcernStep === 'sleep-hours') {
-      return (
-        <div className="space-y-12 flex flex-col justify-center h-full py-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-              <Clock className="w-8 h-8 text-amber-600" />
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-              How many hours do you sleep on average?
-            </h2>
-          </div>
-
-          <div className="max-w-2xl mx-auto w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {['Less than 5', '5-7', '7+'].map((option) => (
-                <label key={option} className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-amber-300 transition-all duration-300">
-                  <input
-                    type="radio"
-                    name="sleepHours"
-                    value={option}
-                    checked={formData.sleepHours === option}
-                    onChange={(e) => updateFormData({ sleepHours: e.target.value })}
-                    className="mr-3 h-5 w-5 text-amber-600 border-gray-300 focus:ring-amber-400"
-                  />
-                  <span className="text-lg text-gray-700">{option}</span>
-                </label>
-              ))}
-            </div>
-            {errors.sleepHours && <p className="text-red-500 text-sm mt-2">{errors.sleepHours}</p>}
-          </div>
-        </div>
-      );
-    }
-
-    if (currentConcernStep === 'stress-levels') {
-      return (
-        <div className="space-y-12 flex flex-col justify-center h-full py-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-              <Heart className="w-8 h-8 text-amber-600" />
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-              How would you rate your typical stress levels?
-            </h2>
-          </div>
-
-          <div className="max-w-2xl mx-auto w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {['Low', 'Medium', 'High'].map((option) => (
-                <label key={option} className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-amber-300 transition-all duration-300">
-                  <input
-                    type="radio"
-                    name="stressLevels"
-                    value={option}
-                    checked={formData.stressLevels === option}
-                    onChange={(e) => updateFormData({ stressLevels: e.target.value })}
-                    className="mr-3 h-5 w-5 text-amber-600 border-gray-300 focus:ring-amber-400"
-                  />
-                  <span className="text-lg text-gray-700">{option}</span>
-                </label>
-              ))}
-            </div>
-            {errors.stressLevels && <p className="text-red-500 text-sm mt-2">{errors.stressLevels}</p>}
-          </div>
-        </div>
-      );
-    }
-
-    if (currentConcernStep === 'environment') {
-      return (
-        <div className="space-y-12 flex flex-col justify-center h-full py-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-              <Sun className="w-8 h-8 text-amber-600" />
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-              What type of environment do you spend most time in?
-            </h2>
-          </div>
-
-          <div className="max-w-2xl mx-auto w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {['Polluted city', 'Humid climate', 'Dry weather', 'Indoors A/C', 'Outdoors sun'].map((option) => (
-                <label key={option} className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-amber-300 transition-all duration-300">
-                  <input
-                    type="radio"
-                    name="environment"
-                    value={option}
-                    checked={formData.environment === option}
-                    onChange={(e) => updateFormData({ environment: e.target.value })}
-                    className="mr-3 h-5 w-5 text-amber-600 border-gray-300 focus:ring-amber-400"
-                  />
-                  <span className="text-lg text-gray-700">{option}</span>
-                </label>
-              ))}
-            </div>
-            {errors.environment && <p className="text-red-500 text-sm mt-2">{errors.environment}</p>}
-          </div>
-        </div>
-      );
-    }
+    // Section E - Lifestyle questions REMOVED (diet, water-intake, sleep-hours, stress-levels, environment)
 
     // Handle individual preference questions
     if (currentConcernStep === 'routine-steps') {
@@ -2557,40 +2396,6 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               ))}
             </div>
             {errors.serumComfort && <p className="text-red-500 text-sm mt-2">{errors.serumComfort}</p>}
-          </div>
-        </div>
-      );
-    }
-
-    if (currentConcernStep === 'moisturizer-texture') {
-      return (
-        <div className="space-y-12 flex flex-col justify-center h-full py-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-              <Droplets className="w-8 h-8 text-amber-600" />
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-              What texture do you prefer for your moisturizer?
-            </h2>
-          </div>
-
-          <div className="max-w-2xl mx-auto w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {['Gel', 'Lotion', 'Cream', 'Rich Balm'].map((option) => (
-                <label key={option} className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-amber-300 transition-all duration-300">
-                  <input
-                    type="radio"
-                    name="moisturizerTexture"
-                    value={option}
-                    checked={formData.moisturizerTexture === option}
-                    onChange={(e) => updateFormData({ moisturizerTexture: e.target.value })}
-                    className="mr-3 h-5 w-5 text-amber-600 border-gray-300 focus:ring-amber-400"
-                  />
-                  <span className="text-lg text-gray-700">{option}</span>
-                </label>
-              ))}
-            </div>
-            {errors.moisturizerTexture && <p className="text-red-500 text-sm mt-2">{errors.moisturizerTexture}</p>}
           </div>
         </div>
       );
@@ -2903,6 +2708,11 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
       // Section 0 - Gates (Steps 5-9)
       case 5: // Pregnancy
+        // Skip rendering this step for males - it's handled by step skipping in handleNext/handleBack
+        if (formData.gender === 'Male') {
+          return null;
+        }
+        
         return (
           <div className="space-y-12 flex flex-col justify-center h-full py-8">
             <div className="text-center">
