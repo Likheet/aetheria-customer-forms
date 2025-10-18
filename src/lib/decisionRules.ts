@@ -27,6 +27,7 @@ export interface OutcomeSpec {
   updates?: string[] // e.g., ["Moisture: Yellow", "Grease: Red"]
   flags?: string[]   // e.g., ["acne-category:Comedonal", "refer-derm"]
   verdict?: string   // short description
+  safety?: string[]  // e.g., ["refer-derm", "refer-professional-scars"]
 }
 export interface DecisionRuleSpec {
   id: string
@@ -311,5 +312,167 @@ export const RULE_SPECS: DecisionRuleSpec[] = [
       { when: '—', updates: ['Pigmentation (Red): Yellow'] },
     ],
   },
+
+  // Post Acne Scarring (No machine band; purely follow-up based)
+  {
+    id: 'postacne_scar_type_and_severity',
+    category: 'Acne',  // Grouped under Acne for now (could be its own category later)
+    machineInput: [],  // No machine input for scarring
+    customerInput: [],
+    questions: [
+      {
+        id: 'Q1',
+        prompt: 'What type of marks do you notice on your skin after acne heals?',
+        options: [
+          'Small, shallow, round or pitted scars (Ice pick / pitted)',
+          'Broad, shallow depressions (Rolling scars)',
+          'Flat or slightly raised dark marks (Post-inflammatory pigmentation)',
+          'Raised, thick scars (Keloid / hypertrophic scars)',
+        ],
+      },
+    ],
+    outcomes: [
+      {
+        when: "Q1 includes 'Ice pick'",
+        updates: [],
+        verdict: 'Ice pick scars detected - follow-up on severity.',
+        flags: ['scarringSubtype:IcePick'],
+      },
+      {
+        when: "Q1 includes 'Rolling'",
+        updates: [],
+        verdict: 'Rolling scars detected - follow-up on severity.',
+        flags: ['scarringSubtype:Rolling'],
+      },
+      {
+        when: "Q1 includes 'Post-inflammatory'",
+        updates: [],
+        verdict: 'Post-inflammatory pigmentation detected - follow-up on color.',
+        flags: ['scarringSubtype:PostInflammatoryPigmentation'],
+      },
+      {
+        when: "Q1 includes 'Keloid'",
+        updates: [],
+        verdict: 'Keloid / hypertrophic scars detected - follow-up on severity.',
+        flags: ['scarringSubtype:Keloid'],
+      },
+    ],
+  },
+
+  // Post-Acne Scarring - Severity determination
+  {
+    id: 'postacne_scar_severity_depressed',
+    category: 'Acne',
+    machineInput: [],
+    customerInput: [],
+    questions: [
+      {
+        id: 'Q1',
+        prompt: 'How severe are the depressed scars (ice pick or rolling)?',
+        options: [
+          'Mild: Less than 10% of face affected, slight visibility, slight uneven texture (Blue)',
+          'Moderate: 10–30% of face affected, noticeable at normal distance, moderate bumps/indentations (Yellow)',
+          'Severe: More than 30% of face affected, very prominent, deep pits or thick raised scars (Red)',
+        ],
+      },
+    ],
+    outcomes: [
+      {
+        when: 'Q1 includes Mild',
+        updates: [],
+        verdict: 'Mild depressed scarring - supportive routine recommended.',
+        flags: ['scarnessLevel:Blue', 'scarringNeeds:smoothing-polishing'],
+      },
+      {
+        when: 'Q1 includes Moderate',
+        updates: [],
+        verdict: 'Moderate depressed scarring - active treatment routine recommended.',
+        flags: ['scarnessLevel:Yellow', 'scarringNeeds:active-treatment'],
+      },
+      {
+        when: 'Q1 includes Severe',
+        updates: [],
+        verdict: 'Severe depressed scarring - refer to professional treatments (laser/microneedling).',
+        flags: ['scarnessLevel:Red', 'scarringNeeds:professional-treatment', 'refer-professional-scars'],
+        safety: ['refer-professional-scars'],
+      },
+    ],
+  },
+
+  // Post-Acne Scarring - Post-inflammatory pigmentation color
+  {
+    id: 'postacne_pih_color',
+    category: 'Acne',
+    machineInput: [],
+    customerInput: [],
+    questions: [
+      {
+        id: 'Q1',
+        prompt: 'What colour are your post-acne marks?',
+        options: ['Red (Active / recent marks)', 'Brown (Pigmented / older marks)', 'Both (Combination)'],
+      },
+    ],
+    outcomes: [
+      {
+        when: "Q1 includes 'Red'",
+        updates: ['Pigmentation (Red): Yellow'],
+        verdict: 'Red post-inflammatory marks - active soothing + depigmenting routine.',
+        flags: ['pihColor:Red', 'scarringNeeds:anti-inflammatory'],
+      },
+      {
+        when: "Q1 includes 'Brown'",
+        updates: ['Pigmentation (Brown): Yellow'],
+        verdict: 'Brown post-inflammatory marks - depigmenting + brightening routine.',
+        flags: ['pihColor:Brown', 'scarringNeeds:brightening'],
+      },
+      {
+        when: "Q1 includes 'Both'",
+        updates: ['Pigmentation (Red): Yellow', 'Pigmentation (Brown): Yellow'],
+        verdict: 'Mixed red and brown marks - combined anti-inflammatory + depigmenting routine.',
+        flags: ['pihColor:Both', 'scarringNeeds:anti-inflammatory-brightening'],
+      },
+    ],
+  },
+
+  // Post-Acne Scarring - Keloid/Hypertrophic severity
+  {
+    id: 'postacne_keloid_severity',
+    category: 'Acne',
+    machineInput: [],
+    customerInput: [],
+    questions: [
+      {
+        id: 'Q1',
+        prompt: 'How severe are the raised scars (keloid / hypertrophic)?',
+        options: [
+          'Mild: Few scars, slightly raised, only noticeable on close inspection (Blue)',
+          'Moderate: Several scars, moderately raised, visible at normal distance (Yellow)',
+          'Severe: Many or widespread scars, very raised, prominent from afar (Red)',
+        ],
+      },
+    ],
+    outcomes: [
+      {
+        when: 'Q1 includes Mild',
+        updates: [],
+        verdict: 'Mild raised scarring - supportive routine recommended.',
+        flags: ['scarnessLevel:Blue', 'scarringNeeds:supporting'],
+      },
+      {
+        when: 'Q1 includes Moderate',
+        updates: [],
+        verdict: 'Moderate raised scarring - supportive routine + possible professional treatments.',
+        flags: ['scarnessLevel:Yellow', 'scarringNeeds:professional-treatment'],
+      },
+      {
+        when: 'Q1 includes Severe',
+        updates: [],
+        verdict: 'Severe raised scarring - refer to dermatologist for professional treatments (steroid injections, laser).',
+        flags: ['scarnessLevel:Red', 'scarringNeeds:professional-treatment-urgent', 'refer-professional-scars'],
+        safety: ['refer-professional-scars'],
+      },
+    ],
+  },
 ]
+
 

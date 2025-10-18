@@ -18,6 +18,12 @@ export type AcneSubtypeKey =
   | 'Nodulocystic'
   | 'Situational';
 
+export type PostAcneScarringSubtype =
+  | 'IcePick'
+  | 'Rolling'
+  | 'PostInflammatoryPigmentation'
+  | 'Keloid';
+
 export interface AcneBreakoutDetail {
   type: string;
   severity: string;
@@ -84,6 +90,12 @@ export interface UpdatedConsultData {
   oilinessDuration: string;
   drynessType: string;
   drynessDuration: string;
+  
+  // Post Acne Scarring
+  postAcneScarringType?: string; // "Ice pick", "Rolling", "Post-inflammatory pigmentation", "Keloid"
+  postAcneScarringSubtype?: PostAcneScarringSubtype; // Specific category
+  postAcneScarringSeverity?: string; // Blue/Yellow/Red based on severity
+  postAcneScarringColor?: string; // For pigmentation: "Red", "Brown", "Both"
   
   // Sensitivity questions
   sensitivityRedness: string;

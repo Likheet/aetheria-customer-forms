@@ -46,6 +46,10 @@ export const PRODUCT_DATABASE: ProductDatabase = {
     'bumpy-skin': [
       { name: 'CeraVe SA Smoothing Cleanser', brand: 'Loreal', tier: 'mid-range' },
     ],
+    'cream': [
+      { name: 'Cetaphil Gentle Skin Cleanser', brand: 'Galderma', tier: 'affordable' },
+      { name: 'CeraVe Hydrating Cleanser', brand: 'Loreal', tier: 'affordable' },
+    ],
   },
   serum: {
     'niacinamide': [
@@ -98,6 +102,16 @@ export const PRODUCT_DATABASE: ProductDatabase = {
       { name: 'Minimalist 10% Multi Peptide Face Serum', brand: 'Minimalist', tier: 'affordable' },
       { name: 'Cosrx Peptide Booster', brand: 'Cosrx', tier: 'mid-range' },
     ],
+    'vitamin-c-ascorbic': [
+      { name: 'La Roche-Posay Pure Vitamin C10 Serum', brand: 'La Roche-Posay', tier: 'premium' },
+    ],
+    'bakuchiol': [
+      { name: 'Bakuchiol Peptide Serum', brand: 'Aeos', tier: 'mid-range' },
+      { name: 'Bakuchiol Peptide Treatment PM', brand: 'Aeos', tier: 'premium' },
+    ],
+    'gentl-aha': [
+      { name: 'Gentle AHA Serum', brand: 'Minimalist', tier: 'affordable' },
+    ],
   },
   moisturizer: {
     'gel': [
@@ -134,12 +148,37 @@ export const PRODUCT_DATABASE: ProductDatabase = {
       { name: 'Minimalist Vitamin B12 + Repair Complex', brand: 'Minimalist', tier: 'affordable' },
       { name: 'CeraVe Moisturizer Cream', brand: 'CeraVe', tier: 'mid-range' },
     ],
+    'smoothening': [
+      { name: 'CeraVe SA Lotion for Rough & Bumpy Skin', brand: 'CeraVe', tier: 'affordable' },
+    ],
   },
   sunscreen: {
-    'general': [
-      { name: 'Neutrogena Ultra Sheer Dry-Touch Sunscreen SPF 50', brand: 'Neutrogena', tier: 'affordable' },
-      { name: 'La Roche-Posay Anthelios Ultra Light Fluid SPF 50', brand: 'La Roche-Posay', tier: 'mid-range' },
-      { name: 'EltaMD UV Clear Broad-Spectrum SPF 46', brand: 'EltaMD', tier: 'premium' },
+    'chemical-gel-fluid': [
+      { name: 'Minimalist Light Fluid SPF 50 Face Sunscreen', brand: 'Minimalist', tier: 'affordable' },
+      { name: 'Re\'equil Ultra Matte Gel SPF50', brand: 'Re\'equil', tier: 'mid-range' },
+    ],
+    'hybrid-gentle-mineral': [
+      { name: 'Minimalist Light Fluid SPF 50 Face Sunscreen', brand: 'Minimalist', tier: 'affordable' },
+      { name: 'Re\'equil Sheer Zinc Tinted Sunscreen SPF 50 PA+++', brand: 'Re\'equil', tier: 'mid-range' },
+      { name: 'Bioderma Photoderm Crème SPF50+', brand: 'Bioderma', tier: 'premium' },
+    ],
+    'chemical-hybrid-fluid': [
+      { name: 'Minimalist Light Fluid SPF 50 Face Sunscreen', brand: 'Minimalist', tier: 'affordable' },
+      { name: 'Neutrogena Ultra Sheer SPF50+', brand: 'Neutrogena', tier: 'mid-range' },
+      { name: 'Bioderma Photoderm Crème SPF50+', brand: 'Bioderma', tier: 'premium' },
+    ],
+    'mineral-hybrid-cream': [
+      { name: 'Re\'equil Sheer Zinc Tinted Sunscreen SPF 50 PA+++', brand: 'Re\'equil', tier: 'mid-range' },
+      { name: 'Suncros SPF50', brand: 'Suncros', tier: 'mid-range' },
+      { name: 'Bioderma Photoderm Crème SPF50+', brand: 'Bioderma', tier: 'premium' },
+    ],
+    'pure-mineral': [
+      { name: 'Re\'equil Sheer Zinc Tinted Sunscreen SPF 50 PA+++', brand: 'Re\'equil', tier: 'affordable' },
+      { name: 'Suncros SPF50', brand: 'Suncros', tier: 'mid-range' },
+    ],
+    'tinted-mineral': [
+      { name: 'Re\'equil Sheer Zinc Tinted Sunscreen SPF 50 PA+++', brand: 'Re\'equil', tier: 'affordable' },
+      { name: 'Bioderma Photoderm M SPF50+', brand: 'Bioderma', tier: 'premium' },
     ],
   },
 };

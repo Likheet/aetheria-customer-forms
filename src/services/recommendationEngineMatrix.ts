@@ -1503,6 +1503,16 @@ function inferPigmentationSubtype(context: RecommendationContext, effectiveBands
 }
 
 function inferScarSubtype(context: RecommendationContext): string {
+  // First, check if Post Acne Scarring was explicitly selected in the form
+  const postAcneScarringSubtype = String(context.formData?.postAcneScarringSubtype || '').toLowerCase();
+  if (postAcneScarringSubtype.includes('icepick')) return 'IcePick';
+  if (postAcneScarringSubtype.includes('rolling')) return 'Rolling';
+  if (postAcneScarringSubtype.includes('keloid')) return 'Keloid';
+  if (postAcneScarringSubtype.includes('postinflammatory') || postAcneScarringSubtype.includes('pie') || postAcneScarringSubtype.includes('pih')) {
+    return 'PostInflammatoryPigmentation';
+  }
+  
+  // Fallback to texture flags (legacy behavior)
   const flags = String(context.decisionEngine?.flags?.textureSubtype || '').toLowerCase();
   if (flags.includes('pie')) return 'PIE';
   if (flags.includes('pih')) return 'PIH';

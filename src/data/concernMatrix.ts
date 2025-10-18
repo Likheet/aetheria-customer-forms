@@ -180,12 +180,19 @@ export async function loadConcernMatrixData(force = false): Promise<void> {
     assertSupabaseResult(subtypeResult, 'concern_subtype');
     assertSupabaseResult(matrixResult, 'matrix_entry');
 
-    const aliasMap = buildAliasMap(aliasResult.data ?? []);
-    const tagMap = buildTagMap(tagResult.data ?? []);
+    const products = (productsResult.data as unknown as ProductRow[]) || [];
+    const aliases = (aliasResult.data as unknown as AliasRow[]) || [];
+    const tags = (tagResult.data as unknown as ProductTagRow[]) || [];
+    const skinDefaults = (skinDefaultsResult.data as unknown as SkinTypeDefaultRow[]) || [];
+    const subtypes = (subtypeResult.data as unknown as ConcernSubtypeRow[]) || [];
+    const matrixEntries = (matrixResult.data as unknown as MatrixEntryRow[]) || [];
 
-    registerProducts(productsResult.data ?? [], aliasMap, tagMap);
-    registerSkinTypeDefaults(skinDefaultsResult.data ?? []);
-    matrixIndex = buildMatrixIndex(matrixResult.data ?? [], subtypeResult.data ?? []);
+    const aliasMap = buildAliasMap(aliases);
+    const tagMap = buildTagMap(tags);
+
+    registerProducts(products, aliasMap, tagMap);
+    registerSkinTypeDefaults(skinDefaults);
+    matrixIndex = buildMatrixIndex(matrixEntries, subtypes);
   };
 
   loadPromise = runner()

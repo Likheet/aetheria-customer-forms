@@ -92,6 +92,12 @@ const initialFormData: UpdatedConsultData = {
   drynessType: '',
   drynessDuration: '',
   
+  // Post Acne Scarring
+  postAcneScarringType: '',
+  postAcneScarringSubtype: undefined,
+  postAcneScarringSeverity: '',
+  postAcneScarringColor: '',
+  
   // Sensitivity questions
   sensitivityRedness: '',
   sensitivityDiagnosis: '',
@@ -292,6 +298,36 @@ const AUTO_FILL_FOLLOWUP_ANSWERS: Record<string, Record<string, string | string[
 };
 
 const deriveAcneCategory = (acneType: string): string => deriveAcneCategoryLabel(acneType) || '';
+
+// Helper to extract Post Acne Scarring subtype from display text
+const mapScarringTypeToSubtype = (displayText: string): string => {
+  if (displayText.includes('pitted scars') || displayText.includes('Ice pick')) {
+    return 'IcePick';
+  }
+  if (displayText.includes('shallow depressions') || displayText.includes('Rolling')) {
+    return 'Rolling';
+  }
+  if (displayText.includes('dark marks') || displayText.includes('post-inflammatory pigmentation')) {
+    return 'PostInflammatoryPigmentation';
+  }
+  if (displayText.includes('thick scars') || displayText.includes('Keloid')) {
+    return 'Keloid';
+  }
+  return '';
+};
+
+// Helper to extract severity/color from display text
+const mapScarringSeverityToValue = (displayText: string): string => {
+  // Format: "description → Color"
+  if (displayText.includes('→ Blue')) return 'Blue';
+  if (displayText.includes('→ Yellow')) return 'Yellow';
+  if (displayText.includes('→ Red') && !displayText.includes('Active')) return 'Red';
+  // Color selection format
+  if (displayText.includes('Red') && displayText.includes('Active')) return 'Red';
+  if (displayText.includes('Brown') && displayText.includes('Pigmented')) return 'Brown';
+  if (displayText.includes('Both') && displayText.includes('Combination')) return 'Both';
+  return '';
+};
 
 const ACNE_TYPE_OPTIONS = [
   'Blackheads (tiny dark dots in pores)',
@@ -1400,6 +1436,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       } else if (concern === 'Acne') {
         concernSteps.push({concern, step: 'type'});
         concernSteps.push({concern, step: 'severity'});
+      } else if (concern === 'Post Acne Scarring') {
+        concernSteps.push({concern, step: 'type'});
+        concernSteps.push({concern, step: 'severity'});
       } else {
         concernSteps.push({concern, step: 'severity'});
       }
@@ -1572,14 +1611,24 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                 'Fine lines & wrinkles': 'wrinkles',
                 'Large pores': 'pores',
                 'Bumpy skin': 'texture',
+                'Post Acne Scarring': 'postAcneScarring',
               }
               const base = baseMap[concern] || concern.toLowerCase().replace(/[^a-z]/g, '')
               const concernsWithType = ['Pigmentation']
+              const concernsWithColor = ['Post Acne Scarring']
               let key = ''
               if (stepType === 'type') {
                 key = base + 'Type'
               } else if (stepType === 'severity') {
-                if (concernsWithType.includes(concern)) {
+                if (concernsWithColor.includes(concern)) {
+                  // Post Acne Scarring can have either Color or Severity depending on type
+                  const scarType = formData.postAcneScarringType || '';
+                  if (scarType.includes('pigmentation') || scarType.includes('Post-inflammatory')) {
+                    key = base + 'Color'
+                  } else {
+                    key = base + 'Severity'
+                  }
+                } else if (concernsWithType.includes(concern)) {
                   key = base + 'Severity'
                 } else {
                   key = base + 'Type'
@@ -2026,6 +2075,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       // Helper to normalize base key
       const baseMap: Record<string, string> = {
         'Acne': 'acne',
+        'Post Acne Scarring': 'postAcneScarring',
         'Pigmentation': 'pigmentation',
         'Fine lines & wrinkles': 'wrinkles',
         'Large pores': 'pores',
@@ -2048,6 +2098,24 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           fieldKey: null,
           title: 'How noticeable are those breakouts?',
           subtitle: 'Choose a severity for each breakout type'
+        };
+      }
+
+      // Post Acne Scarring has a type first, then severity/color based on type
+      if (c === 'Post Acne Scarring') {
+        if (s === 'type') {
+          return {
+            fieldKey: null,
+            title: 'What type of marks do you notice on your skin after acne heals?',
+            subtitle: 'Select the option that matches your scars'
+          };
+        }
+        const scarType = formData.postAcneScarringType || '';
+        const isPigmentation = scarType.includes('pigmentation') || scarType.includes('Post-inflammatory');
+        return {
+          fieldKey: null,
+          title: isPigmentation ? 'What colour are your post acne marks?' : 'How would you describe the severity?',
+          subtitle: isPigmentation ? 'Select the color that best describes your marks' : 'Choose the severity that best fits your situation'
         };
       }
 
@@ -2102,6 +2170,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     const getConcernIcon = (concern: string) => {
       switch (concern) {
         case 'Acne': return <Shield className="w-8 h-8 text-amber-600" />;
+        case 'Post Acne Scarring': return <Sparkles className="w-8 h-8 text-purple-600" />;
         case 'Pigmentation': return <Sun className="w-8 h-8 text-amber-600" />;
   // 'Sensitivity' removed from main concerns; handled via universal screening
   case 'Sensitivity': return <FileText className="w-8 h-8 text-amber-600" />;
@@ -2165,6 +2234,32 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                 'Rough or bumpy texture across most of the face → Red',
               ]
             : [];
+        case 'Post Acne Scarring': {
+          if (stepType === 'type') {
+            return [
+              'Small, shallow, round or pitted scars → Ice pick / pitted scars',
+              'Broad, shallow depressions → Rolling scars',
+              'Flat or slightly raised dark marks → post-inflammatory pigmentation',
+              'Raised, thick scars → Keloid / hypertrophic scars',
+            ];
+          }
+          // For severity step, depends on scar type
+          const scarType = formData.postAcneScarringType || '';
+          if (scarType.includes('pigmentation') || scarType.includes('Post-inflammatory')) {
+            // Color selection for pigmentation
+            return [
+              'Red → Active / recent marks',
+              'Brown → Pigmented / older marks',
+              'Both → Combination',
+            ];
+          }
+          // Severity for ice pick/rolling/keloid
+          return [
+            'Less than 10% of face affected, slight visibility, slight uneven texture → Blue',
+            '10–30% of face affected, noticeable at normal distance, moderate bumps/indentations → Yellow',
+            'More than 30% of face affected, very prominent, deep pits or thick raised scars → Red',
+          ];
+        }
         default:
           return [];
       }
@@ -2322,6 +2417,106 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                 );
               })}
               {errors.acneBreakouts && <p className="text-red-500 text-sm">{errors.acneBreakouts}</p>}
+            </div>
+          </div>
+        );
+      }
+    }
+
+    // Post Acne Scarring handling
+    if (concern === 'Post Acne Scarring') {
+      if (stepType === 'type') {
+        const { title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
+        const options = getConcernOptions(concern, stepType, questionIndex);
+        return (
+          <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
+            <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+              <div className="inline-flex items-center px-3 py-1 rounded-full bg-purple-100 text-purple-800 text-sm font-medium border border-purple-200">
+                <span className="mr-1">{React.cloneElement(getConcernIcon(concern) as React.ReactElement, { className: 'w-4 h-4 text-purple-600' })}</span>
+                {concern}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-6">
+                {getConcernIcon(concern)}
+              </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">{title}</h2>
+              {subtitle && <p className="text-gray-600">{subtitle}</p>}
+            </div>
+            <div className="max-w-2xl mx-auto w-full space-y-3">
+              {options.map((option) => {
+                const isSelected = formData.postAcneScarringType === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => {
+                      const subtype = mapScarringTypeToSubtype(option);
+                      updateFormData({ postAcneScarringType: option, postAcneScarringSubtype: subtype as any, postAcneScarringSeverity: '', postAcneScarringColor: '' });
+                    }}
+                    className={`w-full px-6 py-4 rounded-xl border-2 text-left transition-all duration-300 ${
+                      isSelected
+                        ? 'border-purple-400 bg-purple-50 text-purple-900 shadow-lg'
+                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-purple-300'
+                    }`}
+                  >
+                    <span className="text-lg font-semibold">{option}</span>
+                  </button>
+                );
+              })}
+              {errors.postAcneScarringType && <p className="text-red-500 text-sm">{errors.postAcneScarringType}</p>}
+            </div>
+          </div>
+        );
+      } else if (stepType === 'severity') {
+        const { title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
+        const options = getConcernOptions(concern, stepType, questionIndex);
+        const scarType = formData.postAcneScarringType || '';
+        const isPigmentation = scarType.includes('pigmentation') || scarType.includes('Post-inflammatory');
+        
+        return (
+          <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
+            <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+              <div className="inline-flex items-center px-3 py-1 rounded-full bg-purple-100 text-purple-800 text-sm font-medium border border-purple-200">
+                <span className="mr-1">{React.cloneElement(getConcernIcon(concern) as React.ReactElement, { className: 'w-4 h-4 text-purple-600' })}</span>
+                {concern}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-6">
+                {getConcernIcon(concern)}
+              </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">{title}</h2>
+              {subtitle && <p className="text-gray-600">{subtitle}</p>}
+              <p className="text-sm text-purple-600 mt-2">{isPigmentation ? 'Select color' : 'Select severity'}</p>
+            </div>
+            <div className="max-w-2xl mx-auto w-full space-y-3">
+              {options.map((option) => {
+                const value = mapScarringSeverityToValue(option);
+                const isSelected = isPigmentation ? formData.postAcneScarringColor === value : formData.postAcneScarringSeverity === value;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => {
+                      if (isPigmentation) {
+                        updateFormData({ postAcneScarringColor: value });
+                      } else {
+                        updateFormData({ postAcneScarringSeverity: value });
+                      }
+                    }}
+                    className={`w-full px-6 py-4 rounded-xl border-2 text-left transition-all duration-300 ${
+                      isSelected
+                        ? 'border-purple-400 bg-purple-50 text-purple-900 shadow-lg'
+                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-purple-300'
+                    }`}
+                  >
+                    <span className="text-lg font-semibold">{option}</span>
+                  </button>
+                );
+              })}
+              {errors.postAcneScarringSeverity && <p className="text-red-500 text-sm">{errors.postAcneScarringSeverity}</p>}
+              {errors.postAcneScarringColor && <p className="text-red-500 text-sm">{errors.postAcneScarringColor}</p>}
             </div>
           </div>
         );
@@ -3386,8 +3581,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             <div className="max-w-2xl mx-auto w-full">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {((calculatedAge !== null && calculatedAge > 25)
-                  ? ['Acne', 'Pigmentation', 'Fine lines & wrinkles', 'Large pores', 'Bumpy skin']
-                  : ['Acne', 'Pigmentation', 'Large pores', 'Bumpy skin']
+                  ? ['Acne', 'Post Acne Scarring', 'Pigmentation', 'Fine lines & wrinkles', 'Large pores', 'Bumpy skin']
+                  : ['Acne', 'Post Acne Scarring', 'Pigmentation', 'Large pores', 'Bumpy skin']
                 ).map((concern) => {
                   const isSelected = formData.mainConcerns.includes(concern);
                   const isDisabled = !isSelected && formData.mainConcerns.length >= 3;
@@ -3609,6 +3804,12 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                           .map(entry => deriveAcneCategory(entry.type) || entry.category)
                           .filter(Boolean)
                         breakoutCategories.forEach(cat => extra.push(cat as string))
+                      }
+                      // Add Post Acne Scarring remark if selected
+                      const scarringSubtype = (formData as any).postAcneScarringSubtype
+                      const scarringColor = (formData as any).postAcneScarringSeverity || (formData as any).postAcneScarringColor
+                      if (scarringSubtype && scarringColor) {
+                        extra.push(`Post Acne Scarring: ${scarringSubtype} (${scarringColor})`)
                       }
                       // Add gate remarks
                       gateRemarks.forEach(remark => extra.push(remark))
