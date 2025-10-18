@@ -498,25 +498,25 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({
                                     return (
                                       <div
                                         key={day}
-                                        className={`rounded-[18px] border px-4 py-3 ${serumNight ? "border-border/40 bg-surface/70" : "border-amber-200 bg-amber-50/60"}`}
+                                        className={`rounded-[18px] border border-border/50 bg-surface px-4 py-3`}
                                       >
                                         <div className="mb-2 flex items-center justify-between">
-                                          <span className="text-xs font-semibold tracking-wide text-muted-foreground/80">{DAY_LABELS[day]}</span>
-                                          <div className="flex items-center gap-2 text-[11px] font-semibold text-primary/80">
+                                          <span className="text-xs font-semibold tracking-wide text-white">{DAY_LABELS[day]}</span>
+                                          <div className="flex items-center gap-2 text-[11px] font-semibold">
                                             {typeof nightlyCost === "number" && (
-                                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary/80">{nightlyCost} units</span>
+                                              <span className="rounded-full px-2 py-0.5 text-white" style={{backgroundColor: '#111423'}}>{nightlyCost} units</span>
                                             )}
                                             {!serumNight && (
-                                              <span className="rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                                              <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
                                                 Rest night
                                               </span>
                                             )}
                                           </div>
                                         </div>
-                                        <ol className="space-y-1 text-sm">
+                                        <ol className="space-y-2 text-sm">
                                           {steps.map((step, idx) => (
-                                            <li key={idx} className="flex items-start gap-2 text-muted-foreground/80">
-                                              <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted/40 text-xs text-muted-foreground">{step.step}</span>
+                                            <li key={idx} className="flex items-start gap-3">
+                                              <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{step.step}</span>
                                               <div>
                                                 <span className="font-medium text-foreground/90">{step.label}</span>
                                                 {step.product && <span className="text-muted-foreground/70">: {step.product}</span>}
@@ -525,7 +525,7 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({
                                           ))}
                                         </ol>
                                         {nightlyNotes.length ? (
-                                          <ul className="mt-2 list-disc space-y-1 rounded-lg bg-muted/20 px-4 py-2 text-xs text-muted-foreground/70">
+                                          <ul className="mt-2 list-disc space-y-1 rounded-lg bg-slate-800/50 px-4 py-2 text-xs text-slate-200">
                                             {nightlyNotes.map((note, idx) => (
                                               <li key={idx}>{note}</li>
                                             ))}
