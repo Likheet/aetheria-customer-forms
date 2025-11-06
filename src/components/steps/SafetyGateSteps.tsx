@@ -208,7 +208,7 @@ export const AllergyConflictStep: React.FC<StepProps> = ({
             value: 'Yes',
             label: 'Yes',
             intent: 'warning',
-            description: 'We'll ask for details and avoid those ingredients',
+            description: 'We will ask for details and avoid those ingredients',
           },
           {
             value: 'No',

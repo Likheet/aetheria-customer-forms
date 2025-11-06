@@ -2157,236 +2157,35 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     }
 
     // Handle individual lifestyle questions
+    // Common props for all step components
+    const stepProps = {
+      formData,
+      updateFormData,
+      errors,
+    };
+
+    // Concern priority step
     if (currentConcernStep === 'concern-priority') {
-      const selected = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : [];
-      let order = Array.isArray(formData.concernPriority) ? formData.concernPriority.filter(c => selected.includes(c)) : [];
-      // Ensure all selected present exactly once
-      selected.forEach(c => { if (!order.includes(c)) order.push(c); });
-      // Enforce Acne at top if selected
-      if (selected.includes('Acne')) {
-        order = ['Acne', ...order.filter(c => c !== 'Acne')];
-      }
-
-      const move = (c: string, dir: -1 | 1) => {
-        if (c === 'Acne' && selected.includes('Acne')) return; // Acne pinned
-        const idx = order.indexOf(c);
-        if (idx < 0) return;
-        const newIdx = idx + dir;
-        if (newIdx < (selected.includes('Acne') ? 1 : 0) || newIdx >= order.length) return;
-        const copy = [...order];
-        const [item] = copy.splice(idx, 1);
-        copy.splice(newIdx, 0, item);
-        updateFormData({ concernPriority: copy });
-      };
-
-      return (
-        <div className="space-y-12 flex flex-col justify-center h-full py-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-              <Sparkles className="w-8 h-8 text-amber-600" />
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-              What would you like to prioritize?
-            </h2>
-            <p className="text-gray-600">Drag to reorder or use the arrows. Acne stays #1 if selected.</p>
-          </div>
-          <div className="max-w-xl mx-auto w-full">
-            <ul className="space-y-2">
-              {order.map((c, idx) => (
-                <li key={c} className={`flex items-center justify-between p-3 rounded-xl border ${c==='Acne' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
-                  <div className="flex items-center gap-3">
-                    <span className={`w-8 h-8 inline-flex items-center justify-center rounded-full text-sm font-semibold ${idx===0 ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-700'}`}>{idx+1}</span>
-                    <span className={`text-lg ${c==='Acne' ? 'text-red-700' : 'text-gray-800'}`}>{c}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => move(c, -1)} disabled={idx === (selected.includes('Acne') ? 1 : 0) || c==='Acne'} className="px-2 py-1 text-sm border rounded disabled:opacity-40">↑</button>
-                    <button type="button" onClick={() => move(c, 1)} disabled={idx === order.length - 1} className="px-2 py-1 text-sm border rounded disabled:opacity-40">↓</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            {errors.concernPriority && <p className="text-red-500 text-sm mt-2">{errors.concernPriority}</p>}
-          </div>
-        </div>
-      );
+      return <ConcernPriorityStep {...stepProps} />;
     }
     // Section E - Lifestyle questions REMOVED (diet, water-intake, sleep-hours, stress-levels, environment)
 
-    // Handle individual preference questions
+    // Preference steps
     if (currentConcernStep === 'routine-steps') {
-      return (
-        <div className="space-y-12 flex flex-col justify-center h-full py-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-              <Sparkles className="w-8 h-8 text-amber-600" />
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-              How many steps do you want in your skincare routine?
-            </h2>
-          </div>
-
-          <div className="max-w-2xl mx-auto w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {['3-step', '4-step', '5+ step'].map((option) => (
-                <label key={option} className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-amber-300 transition-all duration-300">
-                  <input
-                    type="radio"
-                    name="routineSteps"
-                    value={option}
-                    checked={formData.routineSteps === option}
-                    onChange={(e) => updateFormData({ routineSteps: e.target.value })}
-                    className="mr-3 h-5 w-5 text-amber-600 border-gray-300 focus:ring-amber-400"
-                  />
-                  <span className="text-lg text-gray-700">{option}</span>
-                </label>
-              ))}
-            </div>
-            {errors.routineSteps && <p className="text-red-500 text-sm mt-2">{errors.routineSteps}</p>}
-          </div>
-        </div>
-      );
+      return <RoutineStepsStep {...stepProps} />;
     }
 
     if (currentConcernStep === 'serum-comfort') {
-      return (
-        <div className="space-y-12 flex flex-col justify-center h-full py-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-              <Droplets className="w-8 h-8 text-amber-600" />
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-              How many serums are you comfortable using?
-            </h2>
-          </div>
-
-          <div className="max-w-2xl mx-auto w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {['1', '2', '3'].map((option) => (
-                <label key={option} className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-amber-300 transition-all duration-300">
-                  <input
-                    type="radio"
-                    name="serumComfort"
-                    value={option}
-                    checked={formData.serumComfort === option}
-                    onChange={(e) => updateFormData({ serumComfort: e.target.value })}
-                    className="mr-3 h-5 w-5 text-amber-600 border-gray-300 focus:ring-amber-400"
-                  />
-                  <span className="text-lg text-gray-700">{option}</span>
-                </label>
-              ))}
-            </div>
-            {errors.serumComfort && <p className="text-red-500 text-sm mt-2">{errors.serumComfort}</p>}
-          </div>
-        </div>
-      );
+      return <SerumComfortStep {...stepProps} />;
     }
 
-    // Legal Disclaimer
+    // Legal disclaimer step
     if (currentConcernStep === 'legal-disclaimer') {
-      return (
-        <div className="space-y-12 flex flex-col justify-center h-full py-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-6">
-              <Shield className="w-8 h-8 text-red-600" />
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-              Important Legal Disclaimer
-            </h2>
-            <p className="text-gray-600 mb-6">Please read and acknowledge the following before proceeding:</p>
-          </div>
-
-          <div className="max-w-4xl mx-auto w-full">
-            <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6">
-              <h3 className="text-lg font-semibold text-red-800 mb-4">Before using this system, I understand and agree:</h3>
-              <ul className="space-y-3 text-sm text-red-700">
-                <li className="flex items-start">
-                  <input
-                    type="checkbox"
-                    checked={formData.legalDisclaimerNotMedical}
-                    onChange={(e) => updateFormData({ legalDisclaimerNotMedical: e.target.checked })}
-                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
-                  />
-                  <span>This tool provides general skincare guidance and is NOT a medical diagnosis</span>
-                </li>
-                <li className="flex items-start">
-                  <input
-                    type="checkbox"
-                    checked={formData.legalDisclaimerConsultDermatologist}
-                    onChange={(e) => updateFormData({ legalDisclaimerConsultDermatologist: e.target.checked })}
-                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
-                  />
-                  <span>I should consult a dermatologist for severe acne, suspicious moles, or worsening conditions</span>
-                </li>
-                <li className="flex items-start">
-                  <input
-                    type="checkbox"
-                    checked={formData.legalDisclaimerPatchTest}
-                    onChange={(e) => updateFormData({ legalDisclaimerPatchTest: e.target.checked })}
-                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
-                  />
-                  <span>I will perform a patch test for all new products before full-face application</span>
-                </li>
-                <li className="flex items-start">
-                  <input
-                    type="checkbox"
-                    checked={formData.legalDisclaimerDiscontinueUse}
-                    onChange={(e) => updateFormData({ legalDisclaimerDiscontinueUse: e.target.checked })}
-                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
-                  />
-                  <span>I will discontinue use immediately if irritation, redness, or allergic reaction occurs</span>
-                </li>
-                <li className="flex items-start">
-                  <input
-                    type="checkbox"
-                    checked={formData.legalDisclaimerDiscloseInfo}
-                    onChange={(e) => updateFormData({ legalDisclaimerDiscloseInfo: e.target.checked })}
-                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
-                  />
-                  <span>I am responsible for disclosing all allergies, medications, and health conditions accurately</span>
-                </li>
-                <li className="flex items-start">
-                  <input
-                    type="checkbox"
-                    checked={formData.legalDisclaimerNoLiability}
-                    onChange={(e) => updateFormData({ legalDisclaimerNoLiability: e.target.checked })}
-                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
-                  />
-                  <span>The salon and software provider are not liable for adverse reactions from product misuse or failure to disclose medical information</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="flex items-center justify-center">
-              <label className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-red-300 transition-all duration-300">
-                <input
-                  type="checkbox"
-                  checked={formData.legalDisclaimerAgreed}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    const disclaimerUpdates: Partial<Pick<UpdatedConsultData, LegalDisclaimerField | 'legalDisclaimerAgreed'>> = {
-                      legalDisclaimerAgreed: checked,
-                    };
-
-                    LEGAL_DISCLAIMER_KEYS.forEach((key) => {
-                      disclaimerUpdates[key] = checked;
-                    });
-
-                    updateFormData(disclaimerUpdates as Partial<UpdatedConsultData>);
-                  }}
-                  className="mr-3 h-5 w-5 text-red-600 border-gray-300 focus:ring-red-400"
-                />
-                <span className="text-lg text-gray-700">All disclaimer points acknowledged</span>
-              </label>
-            </div>
-            {errors.legalDisclaimerAgreed && <p className="text-red-500 text-sm mt-2 text-center">{errors.legalDisclaimerAgreed}</p>}
-          </div>
-        </div>
-      );
+      return <LegalDisclaimerStep {...stepProps} />;
     }
 
     // brand-preference UI removed
 
-    // Handle base steps (1-14)
     switch (currentStep) {
       case 1:
         return (
