@@ -24,6 +24,46 @@ import {
 } from '../data/concernMatrix';
 import RecommendationDisplay from './RecommendationDisplay';
 
+// Refactored form step components
+import {
+  NameStep,
+  PhoneStep,
+  DateOfBirthStep,
+  GenderStep,
+  PregnancyStep,
+  BreastfeedingStep,
+  AllergiesStep,
+  MedicationsStep,
+  HealthConditionsStep,
+  SkinTypeStep,
+  OilLevelsStep,
+  HydrationLevelsStep,
+  SensitivityScreeningStep,
+  DiagnosedConditionsStep,
+  PrescriptionTreatmentsStep,
+  ProfessionalTreatmentsStep,
+  CurrentProductsStep,
+  IrritatingProductsStep,
+  MainConcernsStep,
+  ConcernPriorityStep,
+  RoutineStepsStep,
+  SerumComfortStep,
+  LegalDisclaimerStep,
+} from './steps';
+
+// Refactored concern components
+import {
+  AcneTypeStep,
+  AcneSeverityStep,
+  PigmentationTypeStep,
+  PigmentationSeverityStep,
+  ScarringTypeStep,
+  ScarringSeverityStep,
+  WrinklesStep,
+  PoresStep,
+  TextureStep,
+} from './concerns';
+
 interface UpdatedConsultFormProps {
   onBack: () => void;
   onComplete: () => void;
