@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle, ArrowLeft, ArrowRight, FileText, Droplets, Shield, Heart, Sparkles, Sun, Clock, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
-import { DatePicker } from '@mantine/dates';
 import { saveConsultationData } from '../services/newConsultationService';
 import {
   deriveSelfBands as deriveSelfBandsRt,
@@ -14,8 +13,6 @@ import {
 } from '../lib/decisionEngine';
 import type { MachineScanBands } from '../lib/decisionEngine';
 import { UpdatedConsultData, AcneCategory } from '../types';
-import ProductAutocomplete from './ProductAutocomplete';
-import { SKIN_TYPE_OPTIONS } from '../lib/consultAutoFill';
 import { generateRecommendations, RecommendationContext, RoutineOptionsResponse } from '../services/recommendationEngine';
 import {
   loadConcernMatrixData,
