@@ -13,10 +13,10 @@ export {
 
 export {
   PregnancyStep,
-  BreastfeedingStep,
-  AllergiesStep,
-  MedicationsStep,
-  HealthConditionsStep,
+  IsotretinoinStep,
+  SevereCysticAcneStep,
+  AllergyConflictStep,
+  BarrierStressStep,
 } from './SafetyGateSteps';
 
 // Phase 2: Skin Basics + Sensitivity
