@@ -2089,530 +2089,60 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   }
 
   const renderConcernFollowUp = (concern: string, stepType: 'type' | 'severity' | 'sensitivity-question', questionIndex?: number) => {
-    // Maps a follow-up step to the form field key and UI copy
-    const getFieldInfo = (
-      c: string,
-      s: 'type' | 'severity' | 'sensitivity-question',
-      qIdx?: number
-    ): { fieldKey: string | null; title: string; subtitle?: string } => {
-      // Sensitivity universal screening (rarely routed here, but supported)
-      if (s === 'sensitivity-question') {
-        const sensitivityFields = SENSITIVITY_QUESTION_CONFIG.map(q => q.key);
-        const titles = [
-          'Do you flush or turn red easily?',
-          'Have you been told by a professional you have “sensitive skin” or rosacea?',
-          'Does your skin sting/burn when cleansing?',
-          'Do many new products irritate your skin?',
-          'Does sun exposure make your skin red or itchy?',
-          'Do you see visible capillaries or broken veins?'
-        ];
-        const idx = typeof qIdx === 'number' ? qIdx : 0;
-        const fieldKey = sensitivityFields[idx] ?? sensitivityFields[0];
-        const title = titles[idx] ?? titles[0];
-        return { fieldKey, title, subtitle: 'Choose Yes or No' };
-      }
-
-      // Helper to normalize base key
-      const baseMap: Record<string, string> = {
-        'Acne': 'acne',
-        'Post Acne Scarring': 'postAcneScarring',
-        'Pigmentation': 'pigmentation',
-        'Fine lines & wrinkles': 'wrinkles',
-        'Large pores': 'pores',
-        'Bumpy skin': 'texture',
-        'Oiliness': 'oiliness',
-        'Dryness': 'dryness',
-      };
-      const base = baseMap[c] || c.toLowerCase().replace(/[^a-z]/g, '');
-
-      // Acne has custom UI (array-based); we only need headings
-      if (c === 'Acne') {
-        if (s === 'type') {
-          return {
-            fieldKey: null,
-            title: 'What kinds of breakouts do you get?',
-            subtitle: 'Pick all that apply'
-          };
-        }
-        return {
-          fieldKey: null,
-          title: 'How noticeable are those breakouts?',
-          subtitle: 'Choose a severity for each breakout type'
-        };
-      }
-
-      // Post Acne Scarring has a type first, then severity/color based on type
-      if (c === 'Post Acne Scarring') {
-        if (s === 'type') {
-          return {
-            fieldKey: null,
-            title: 'What type of marks do you notice on your skin after acne heals?',
-            subtitle: 'Select the option that matches your scars'
-          };
-        }
-        const scarType = formData.postAcneScarringType || '';
-        const isPigmentation = scarType.includes('pigmentation') || scarType.includes('Post-inflammatory');
-        return {
-          fieldKey: null,
-          title: isPigmentation ? 'What colour are your post acne marks?' : 'How would you describe the severity?',
-          subtitle: isPigmentation ? 'Select the color that best describes your marks' : 'Choose the severity that best fits your situation'
-        };
-      }
-
-      // Pigmentation has a true type + severity
-      if (c === 'Pigmentation') {
-        if (s === 'type') {
-          return {
-            fieldKey: `${base}Type`,
-            title: 'What kind of pigmentation is your main concern?',
-            subtitle: 'Pick the option that best matches (Red vs Brown)'
-          };
-        }
-        return {
-          fieldKey: `${base}Severity`,
-          title: 'How noticeable is the pigmentation?',
-          subtitle: 'Choose the description closest to what you see'
-        };
-      }
-
-      // Other concerns only persist into a single *Type* field, even on a “severity” page
-      const fieldKey = `${base}Type`;
-      let title = 'Tell us a bit more';
-      let subtitle: string | undefined = 'Pick the description that fits you best';
-
-      if (c === 'Fine lines & wrinkles') {
-        title = 'How noticeable are your lines or sagging?';
-      } else if (c === 'Large pores') {
-        title = 'How noticeable are your pores?';
-      } else if (c === 'Bumpy skin') {
-        title = 'How noticeable is the uneven texture?';
-      } else if (c === 'Oiliness') {
-        title = 'How noticeable is the oiliness?';
-      } else if (c === 'Dryness') {
-        title = 'How noticeable is the dryness?';
-      }
-
-      return { fieldKey, title, subtitle };
-    };
-    // concernBaseKey not used
-    const getAcneTypeBadge = (acneType: string) => {
-      if (!acneType) return null;
-      
-      if (acneType.includes('Blackheads')) return 'Blackheads';
-      if (acneType.includes('Whiteheads')) return 'Whiteheads';
-      if (acneType.includes('Red pimples')) return 'Inflamed';
-      if (acneType.includes('Large painful bumps') || acneType.includes('cystic')) return 'Cystic';
-      if (acneType.includes('jawline') || acneType.includes('hormonal')) return 'Hormonal';
-      
-      return 'Acne';
+    // Common props for all concern components
+    const stepProps = {
+      formData,
+      updateFormData,
+      errors,
     };
 
-    const getConcernIcon = (concern: string) => {
-      switch (concern) {
-        case 'Acne': return <Shield className="w-8 h-8 text-amber-600" />;
-        case 'Post Acne Scarring': return <Sparkles className="w-8 h-8 text-purple-600" />;
-        case 'Pigmentation': return <Sun className="w-8 h-8 text-amber-600" />;
-  // 'Sensitivity' removed from main concerns; handled via universal screening
-  case 'Sensitivity': return <FileText className="w-8 h-8 text-amber-600" />;
-        case 'Fine lines & wrinkles': return <Clock className="w-8 h-8 text-amber-600" />;
-        case 'Large pores': return <Droplets className="w-8 h-8 text-amber-600" />;
-        case 'Bumpy skin': return <Sparkles className="w-8 h-8 text-amber-600" />;
-        case 'Oiliness': return <Sun className="w-8 h-8 text-amber-600" />;
-        case 'Dryness': return <Droplets className="w-8 h-8 text-amber-600" />;
-        default: return <FileText className="w-8 h-8 text-amber-600" />;
-      }
-    };
-
-    const getConcernOptions = (concern: string, stepType: 'type' | 'severity' | 'sensitivity-question', questionIndex?: number) => {
-      if (stepType === 'sensitivity-question' && questionIndex !== undefined) {
-        return ['Yes', 'No'];
-      }
-      switch (concern) {
-        case 'Acne':
-          return stepType === 'type' ? ACNE_TYPE_OPTIONS : [];
-        case 'Pigmentation': {
-          if (stepType === 'type') return ['Red', 'Brown'];
-          if (stepType === 'severity') {
-            const currentType = formData.pigmentationType || '';
-            const isRed = /\bred\b|redness/i.test(currentType);
-            if (isRed) {
-              return [
-                'Light red, only in a small area → Blue',
-                'Moderate red, noticeable in several zones → Yellow',
-                'Bright or deep red, widespread across the face → Red'
-              ];
-            }
-            return [
-              'Light brown patches, visible up close but small in size → Blue',
-              'Moderate brown spots/patches, noticeable in several areas → Yellow',
-              'Dark brown patches, large or widespread across the face → Red'
-            ];
-          }
-          return [];
-        }
-        case 'Fine lines & wrinkles':
-          return stepType === 'severity'
-            ? [
-                'A few fine lines or slight looseness in some spots → Blue',
-                'Wrinkles or sagging you can see in several areas → Yellow',
-                "Deep wrinkles or sagging that's easy to notice → Red",
-              ]
-            : [];
-        case 'Large pores':
-          return stepType === 'severity'
-            ? [
-                'Noticeable near the nose or small areas on close inspection → Blue',
-                'Clearly visible on multiple zones (nose, cheeks, forehead) → Yellow',
-                'Large, obvious pores across much of the face, visible from a distance → Red',
-              ]
-            : [];
-        case 'Bumpy skin':
-          return stepType === 'severity'
-            ? [
-                'A few small areas with bumps or rough patches (like nose or chin) → Blue',
-                'Noticeable bumps or uneven texture in several areas of the face → Yellow',
-                'Rough or bumpy texture across most of the face → Red',
-              ]
-            : [];
-        case 'Post Acne Scarring': {
-          if (stepType === 'type') {
-            return [
-              'Small, shallow, round or pitted scars → Ice pick / pitted scars',
-              'Broad, shallow depressions → Rolling scars',
-              'Flat or slightly raised dark marks → post-inflammatory pigmentation',
-              'Raised, thick scars → Keloid / hypertrophic scars',
-            ];
-          }
-          // For severity step, depends on scar type
-          const scarType = formData.postAcneScarringType || '';
-          if (scarType.includes('pigmentation') || scarType.includes('Post-inflammatory')) {
-            // Color selection for pigmentation
-            return [
-              'Red → Active / recent marks',
-              'Brown → Pigmented / older marks',
-              'Both → Combination',
-            ];
-          }
-          // Severity for ice pick/rolling/keloid
-          return [
-            'Less than 10% of face affected, slight visibility, slight uneven texture → Blue',
-            '10–30% of face affected, noticeable at normal distance, moderate bumps/indentations → Yellow',
-            'More than 30% of face affected, very prominent, deep pits or thick raised scars → Red',
-          ];
-        }
-        default:
-          return [];
-      }
-    };
-
-    const acneBreakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : [];
-    const toggleAcneBreakout = (option: string) => {
-      const exists = acneBreakouts.find(item => item.type === option);
-      if (exists) {
-        updateFormData({ acneBreakouts: acneBreakouts.filter(item => item.type !== option) });
-      } else {
-        const category = (deriveAcneCategory(option) || 'Comedonal acne') as AcneCategory;
-        updateFormData({ acneBreakouts: [...acneBreakouts, { type: option, severity: '', category }] });
-      }
-    };
-
+    // Acne concern
     if (concern === 'Acne') {
       if (stepType === 'type') {
-        const { title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
-        const options = ACNE_TYPE_OPTIONS;
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
-            <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-              <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
-                <span className="mr-1">{React.cloneElement(getConcernIcon(concern) as React.ReactElement, { className: 'w-4 h-4 text-amber-600' })}</span>
-                {concern}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-                {getConcernIcon(concern)}
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">{title}</h2>
-              {subtitle && <p className="text-gray-600">{subtitle}</p>}
-            </div>
-            <div className="max-w-2xl mx-auto w-full">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {options.map(option => {
-                  const isSelected = acneBreakouts.some(item => item.type === option);
-                  const category = deriveAcneCategory(option);
-                  return (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => toggleAcneBreakout(option)}
-                      className={`px-6 py-4 text-left rounded-xl border-2 transition-all duration-300 ${
-                        isSelected
-                          ? 'border-amber-400 bg-amber-50 text-amber-700 shadow-lg'
-                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-semibold">{option}</p>
-                          <p className="text-sm text-amber-600">{category || 'Acne'}</p>
-                        </div>
-                        {isSelected && <CheckCircle className="w-5 h-5 text-amber-500" />}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-              {errors.acneBreakouts && <p className="text-red-500 text-sm mt-2">{errors.acneBreakouts}</p>}
-            </div>
-          </div>
-        );
+        return <AcneTypeStep {...stepProps} />;
       }
-
       if (stepType === 'severity') {
-        const { title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
-        if (!acneBreakouts.length) {
-          return (
-            <div className="space-y-12 flex flex-col justify-center h-full py-8">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-                  {getConcernIcon(concern)}
-                </div>
-                <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">{title}</h2>
-                <p className="text-gray-600">Select at least one breakout type to continue.</p>
-              </div>
-            </div>
-          );
-        }
-
-        const setSeverity = (index: number, value: string) => {
-          const next = acneBreakouts.map((item, idx) => {
-            if (idx !== index) return item;
-            const category = (deriveAcneCategory(item.type) || item.category) as AcneCategory;
-            return { ...item, severity: value, category };
-          });
-          updateFormData({ acneBreakouts: next });
-        };
-
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
-            <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-              <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
-                <span className="mr-1">{React.cloneElement(getConcernIcon(concern) as React.ReactElement, { className: 'w-4 h-4 text-amber-600' })}</span>
-                {concern}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-                {getConcernIcon(concern)}
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">{title}</h2>
-              {subtitle && <p className="text-gray-600">{subtitle}</p>}
-            </div>
-            <div className="max-w-3xl mx-auto w-full space-y-6">
-              {acneBreakouts.map((item, index) => {
-                const severityOptions = getAcneSeverityOptions(item.type);
-                const badge = getAcneTypeBadge(item.type);
-                return (
-                  <div key={`${item.type}-${index}`} className="bg-white/80 border border-amber-200 rounded-2xl p-6 shadow-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                      <div className="flex items-center gap-2">
-                        {badge && (
-                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium border border-blue-200">
-                            {badge}
-                          </span>
-                        )}
-                        <span className="text-lg font-semibold text-gray-900">{item.type}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-amber-600">{deriveAcneCategory(item.type)}</span>
-                        <button
-                          type="button"
-                          onClick={() => toggleAcneBreakout(item.type)}
-                          className="text-sm text-amber-500 hover:text-amber-700"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {severityOptions.map(option => {
-                        const isSelected = item.severity === option;
-                        return (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => setSeverity(index, option)}
-                            className={`px-4 py-3 rounded-xl border-2 text-sm transition-all duration-300 ${
-                              isSelected
-                                ? 'border-amber-400 bg-amber-50 text-amber-700 shadow-lg'
-                                : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                            }`}
-                          >
-                            {option}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-              {errors.acneBreakouts && <p className="text-red-500 text-sm">{errors.acneBreakouts}</p>}
-            </div>
-          </div>
-        );
+        return <AcneSeverityStep {...stepProps} />;
       }
     }
 
-    // Post Acne Scarring handling
+    // Pigmentation concern
+    if (concern === 'Pigmentation') {
+      if (stepType === 'type') {
+        return <PigmentationTypeStep {...stepProps} />;
+      }
+      if (stepType === 'severity') {
+        return <PigmentationSeverityStep {...stepProps} />;
+      }
+    }
+
+    // Post Acne Scarring concern
     if (concern === 'Post Acne Scarring') {
       if (stepType === 'type') {
-        const { title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
-        const options = getConcernOptions(concern, stepType, questionIndex);
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
-            <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-              <div className="inline-flex items-center px-3 py-1 rounded-full bg-purple-100 text-purple-800 text-sm font-medium border border-purple-200">
-                <span className="mr-1">{React.cloneElement(getConcernIcon(concern) as React.ReactElement, { className: 'w-4 h-4 text-purple-600' })}</span>
-                {concern}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-6">
-                {getConcernIcon(concern)}
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">{title}</h2>
-              {subtitle && <p className="text-gray-600">{subtitle}</p>}
-            </div>
-            <div className="max-w-2xl mx-auto w-full space-y-3">
-              {options.map((option) => {
-                const isSelected = formData.postAcneScarringType === option;
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => {
-                      const subtype = mapScarringTypeToSubtype(option);
-                      updateFormData({ postAcneScarringType: option, postAcneScarringSubtype: subtype as any, postAcneScarringSeverity: '', postAcneScarringColor: '' });
-                    }}
-                    className={`w-full px-6 py-4 rounded-xl border-2 text-left transition-all duration-300 ${
-                      isSelected
-                        ? 'border-purple-400 bg-purple-50 text-purple-900 shadow-lg'
-                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-purple-300'
-                    }`}
-                  >
-                    <span className="text-lg font-semibold">{option}</span>
-                  </button>
-                );
-              })}
-              {errors.postAcneScarringType && <p className="text-red-500 text-sm">{errors.postAcneScarringType}</p>}
-            </div>
-          </div>
-        );
-      } else if (stepType === 'severity') {
-        const { title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
-        const options = getConcernOptions(concern, stepType, questionIndex);
-        const scarType = formData.postAcneScarringType || '';
-        const isPigmentation = scarType.includes('pigmentation') || scarType.includes('Post-inflammatory');
-        
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
-            <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-              <div className="inline-flex items-center px-3 py-1 rounded-full bg-purple-100 text-purple-800 text-sm font-medium border border-purple-200">
-                <span className="mr-1">{React.cloneElement(getConcernIcon(concern) as React.ReactElement, { className: 'w-4 h-4 text-purple-600' })}</span>
-                {concern}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-6">
-                {getConcernIcon(concern)}
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">{title}</h2>
-              {subtitle && <p className="text-gray-600">{subtitle}</p>}
-              <p className="text-sm text-purple-600 mt-2">{isPigmentation ? 'Select color' : 'Select severity'}</p>
-            </div>
-            <div className="max-w-2xl mx-auto w-full space-y-3">
-              {options.map((option) => {
-                const value = mapScarringSeverityToValue(option);
-                const isSelected = isPigmentation ? formData.postAcneScarringColor === value : formData.postAcneScarringSeverity === value;
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => {
-                      if (isPigmentation) {
-                        updateFormData({ postAcneScarringColor: value });
-                      } else {
-                        updateFormData({ postAcneScarringSeverity: value });
-                      }
-                    }}
-                    className={`w-full px-6 py-4 rounded-xl border-2 text-left transition-all duration-300 ${
-                      isSelected
-                        ? 'border-purple-400 bg-purple-50 text-purple-900 shadow-lg'
-                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-purple-300'
-                    }`}
-                  >
-                    <span className="text-lg font-semibold">{option}</span>
-                  </button>
-                );
-              })}
-              {errors.postAcneScarringSeverity && <p className="text-red-500 text-sm">{errors.postAcneScarringSeverity}</p>}
-              {errors.postAcneScarringColor && <p className="text-red-500 text-sm">{errors.postAcneScarringColor}</p>}
-            </div>
-          </div>
-        );
+        return <ScarringTypeStep {...stepProps} />;
+      }
+      if (stepType === 'severity') {
+        return <ScarringSeverityStep {...stepProps} />;
       }
     }
 
-    const { fieldKey, title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
-    const fieldValue = (fieldKey ? (formData as any)[fieldKey] : '') as string;
-    const options = getConcernOptions(concern, stepType, questionIndex);
-    const handleConcernOption = (option: string) => {
-      if (!fieldKey) return;
-      updateFormData({ [fieldKey]: option } as Partial<UpdatedConsultData>);
-    };
+    // Simple concerns (only severity, no type)
+    if (concern === 'Fine lines & wrinkles') {
+      return <WrinklesStep {...stepProps} />;
+    }
 
-    return (
-      <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
-        {/* Concern Badge */}
-        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-          <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
-            <span className="mr-1">{React.cloneElement(getConcernIcon(concern) as React.ReactElement, { className: "w-4 h-4 text-amber-600" })}</span>
-            {concern}
-          </div>
-        </div>
+    if (concern === 'Large pores') {
+      return <PoresStep {...stepProps} />;
+    }
 
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-            {getConcernIcon(concern)}
-          </div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-            {title}
-          </h2>
-          {subtitle && <p className="text-gray-600">{subtitle}</p>}
-        </div>
+    if (concern === 'Bumpy skin') {
+      return <TextureStep {...stepProps} />;
+    }
 
-        <div className="max-w-2xl mx-auto w-full">
-          <div className="grid grid-cols-1 gap-4">
-              {options.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => handleConcernOption(option)}
-                className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
-                  fieldValue === option
-                    ? 'border-amber-400 bg-amber-50 text-amber-700'
-                    : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                }`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-          {fieldKey && errors[fieldKey] && <p className="text-red-500 text-sm mt-2">{errors[fieldKey]}</p>}
-        </div>
-      </div>
-    );
+    // Fallback for unsupported concerns
+    return null;
   };
+
 
   const renderStep = () => {
     const currentConcernStep = getCurrentConcernStep();
