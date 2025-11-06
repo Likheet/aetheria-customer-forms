@@ -18,6 +18,12 @@ export type { FormStepProps } from './FormStep';
 export { TextInput } from './TextInput';
 export type { TextInputProps } from './TextInput';
 
+export { TextArea } from './TextArea';
+export type { TextAreaProps } from './TextArea';
+
+export { TagInput } from './TagInput';
+export type { TagInputProps } from './TagInput';
+
 // Re-export variants for convenience
 export * from '../../styles/variants';
 export * from '../../styles/design-tokens';
