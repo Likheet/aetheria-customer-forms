@@ -48,55 +48,68 @@ export const FormStep: React.FC<FormStepProps> = ({
   badge,
   className,
 }) => {
+  // Dark theme badge colors with good contrast
   const badgeColors = {
-    default: 'bg-gray-100 text-gray-800 border-gray-200',
-    primary: 'bg-amber-100 text-amber-800 border-amber-200',
-    success: 'bg-green-100 text-green-800 border-green-200',
-    danger: 'bg-red-100 text-red-800 border-red-200',
-    warning: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    purple: 'bg-purple-100 text-purple-800 border-purple-200',
+    default: 'bg-gray-800/60 text-gray-100 border-gray-600/50 backdrop-blur-sm',
+    primary: 'bg-amber-900/40 text-amber-200 border-amber-600/50 backdrop-blur-sm shadow-amber-500/20 shadow-lg',
+    success: 'bg-green-900/40 text-green-200 border-green-600/50 backdrop-blur-sm shadow-green-500/20 shadow-lg',
+    danger: 'bg-red-900/40 text-red-200 border-red-600/50 backdrop-blur-sm shadow-red-500/20 shadow-lg',
+    warning: 'bg-yellow-900/40 text-yellow-200 border-yellow-600/50 backdrop-blur-sm shadow-yellow-500/20 shadow-lg',
+    purple: 'bg-purple-900/40 text-purple-200 border-purple-600/50 backdrop-blur-sm shadow-purple-500/20 shadow-lg',
   };
 
   return (
     <div className={formStepVariants({ centered, className })}>
-      {/* Badge at top left (if provided) */}
-      {badge && !centered && (
-        <div className="absolute top-4 left-4 z-10">
-          <div
-            className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border ${
-              badgeColors[badge.variant || 'primary']
-            }`}
-          >
-            {badge.icon && <badge.icon className="w-4 h-4" />}
-            <span>{badge.label}</span>
+      {/* Luxury glass card wrapper */}
+      <div className="luxury-section relative">
+        {/* Ambient glow effect */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-amber-600/20 via-transparent to-amber-600/20 rounded-[32px] blur-xl opacity-50" />
+
+        <div className="relative">
+          {/* Badge at top left (if provided) */}
+          {badge && !centered && (
+            <div className="absolute -top-3 left-6 z-10">
+              <div
+                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold border-2 ${
+                  badgeColors[badge.variant || 'primary']
+                }`}
+              >
+                {badge.icon && <badge.icon className="w-4 h-4" />}
+                <span>{badge.label}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Header section */}
+          <div className={centered ? 'text-center' : ''}>
+            {/* Icon */}
+            {Icon && (
+              <div
+                className={`${
+                  centered ? 'mx-auto' : ''
+                } mb-6 ${iconContainerVariants({ variant: iconVariant, size: 'lg' })}`}
+              >
+                <Icon className="w-8 h-8" />
+              </div>
+            )}
+
+            {/* Title - Using Playfair Display font with white text for maximum contrast */}
+            <h2 className="text-3xl font-bold tracking-tight text-white mb-4 font-serif">
+              {title}
+            </h2>
+
+            {/* Subtitle - Light gray for good contrast on dark background */}
+            {subtitle && (
+              <p className="text-gray-300 text-base leading-relaxed">
+                {subtitle}
+              </p>
+            )}
           </div>
+
+          {/* Content area */}
+          <div className="max-w-2xl mx-auto w-full mt-8">{children}</div>
         </div>
-      )}
-
-      {/* Header section */}
-      <div className={centered ? 'text-center' : ''}>
-        {/* Icon */}
-        {Icon && (
-          <div
-            className={`${
-              centered ? 'mx-auto' : ''
-            } mb-6 ${iconContainerVariants({ variant: iconVariant, size: 'lg' })}`}
-          >
-            <Icon className="w-8 h-8" />
-          </div>
-        )}
-
-        {/* Title */}
-        <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-          {title}
-        </h2>
-
-        {/* Subtitle */}
-        {subtitle && <p className="text-gray-600 text-base">{subtitle}</p>}
       </div>
-
-      {/* Content area */}
-      <div className="max-w-2xl mx-auto w-full">{children}</div>
     </div>
   );
 };

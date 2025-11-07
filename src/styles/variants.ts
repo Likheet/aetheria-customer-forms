@@ -178,18 +178,19 @@ export const badgeVariants = cva(
 
 /**
  * Icon container variants - for those circular icon backgrounds
+ * Dark theme with glow effects for luxury aesthetic
  */
 export const iconContainerVariants = cva(
-  'inline-flex items-center justify-center rounded-full',
+  'inline-flex items-center justify-center rounded-full backdrop-blur-sm border-2 transition-all duration-300',
   {
     variants: {
       variant: {
-        default: 'bg-gray-100 text-gray-600',
-        primary: 'bg-amber-100 text-amber-600',
-        success: 'bg-green-100 text-green-600',
-        danger: 'bg-red-100 text-red-600',
-        warning: 'bg-yellow-100 text-yellow-600',
-        purple: 'bg-purple-100 text-purple-600',
+        default: 'bg-gray-800/60 text-gray-100 border-gray-600/40 shadow-lg shadow-gray-500/10',
+        primary: 'bg-amber-900/40 text-amber-200 border-amber-500/40 shadow-lg shadow-amber-500/30',
+        success: 'bg-green-900/40 text-green-200 border-green-500/40 shadow-lg shadow-green-500/30',
+        danger: 'bg-red-900/40 text-red-200 border-red-500/40 shadow-lg shadow-red-500/30',
+        warning: 'bg-yellow-900/40 text-yellow-200 border-yellow-500/40 shadow-lg shadow-yellow-500/30',
+        purple: 'bg-purple-900/40 text-purple-200 border-purple-500/40 shadow-lg shadow-purple-500/30',
       },
       size: {
         sm: 'w-8 h-8',
