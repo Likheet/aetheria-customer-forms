@@ -17,6 +17,8 @@ import { CheckCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { BackgroundGlowContainer } from './ui/background-glow';
+import { ProgressBar } from './ui/progress-bar';
 
 interface ConsultantInputFormProps {
   onBack: () => void;
@@ -173,10 +175,7 @@ const ConsultantInputForm: React.FC<ConsultantInputFormProps> = ({ onBack, onCom
   if (isSubmitted) {
     return (
       <div className="luxury-shell">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-32 top-24 h-64 w-64 rounded-full bg-gradient-to-br from-[hsla(40,58%,62%,0.2)] to-transparent blur-[120px]" />
-          <div className="absolute right-24 top-40 h-52 w-52 rounded-full bg-gradient-to-br from-[hsla(266,32%,26%,0.22)] to-transparent blur-[130px]" />
-        </div>
+        <BackgroundGlowContainer variant="subtle" />
         <div className="luxury-page items-center justify-center">
           <Card className="max-w-xl border-border/50 bg-surface/80 text-center">
             <CardHeader className="items-center gap-4">
@@ -204,11 +203,7 @@ const ConsultantInputForm: React.FC<ConsultantInputFormProps> = ({ onBack, onCom
 
   return (
     <div className="luxury-shell">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-24 top-24 h-72 w-72 rounded-full bg-gradient-to-br from-[hsla(40,58%,62%,0.18)] to-transparent blur-[150px]" />
-        <div className="absolute right-0 top-10 h-80 w-80 rounded-full bg-gradient-to-br from-[hsla(266,32%,26%,0.2)] to-transparent blur-[170px]" />
-        <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[rgba(8,9,13,0.75)] to-transparent" />
-      </div>
+      <BackgroundGlowContainer variant="default" />
 
       <div className="luxury-page">
         <header className="relative z-10 flex flex-col gap-6">
@@ -231,16 +226,14 @@ const ConsultantInputForm: React.FC<ConsultantInputFormProps> = ({ onBack, onCom
 
           {showProgress ? (
             <div className="rounded-[24px] border border-border/50 bg-surface/70 p-6 shadow-luxury backdrop-blur">
-              <div className="flex items-center justify-between text-xs uppercase tracking-[0.28em] text-muted-foreground/70">
-                <span>Step {Math.max(1, currentStep - 2)} of {evaluationSteps}</span>
-                <span>{Math.round(progressPercent)}% curated</span>
-              </div>
-              <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-border/40">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[hsla(40,58%,62%,0.75)] via-[hsla(40,58%,62%,1)] to-[hsla(266,32%,26%,0.85)] transition-all duration-500 ease-out"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
+              <ProgressBar
+                value={progressPercent}
+                color="purple"
+                showLabel={true}
+                labelPosition="top"
+                customLabel={`Step ${Math.max(1, currentStep - 2)} of ${evaluationSteps} • ${Math.round(progressPercent)}% curated`}
+                size="md"
+              />
             </div>
           ) : null}
         </header>
