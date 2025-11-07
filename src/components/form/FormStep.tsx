@@ -60,10 +60,10 @@ export const FormStep: React.FC<FormStepProps> = ({
 
   return (
     <div className={formStepVariants({ centered, className })}>
-      {/* Luxury glass card wrapper */}
-      <div className="luxury-section relative">
+      {/* Luxury glass card wrapper with subtle fade-in animation */}
+      <div className="luxury-section relative animate-fade-in-up">
         {/* Ambient glow effect */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-amber-600/20 via-transparent to-amber-600/20 rounded-[32px] blur-xl opacity-50" />
+        <div className="absolute -inset-1 bg-gradient-to-r from-amber-600/20 via-transparent to-amber-600/20 rounded-[32px] blur-xl opacity-50 transition-opacity duration-700" />
 
         <div className="relative">
           {/* Badge at top left (if provided) */}
