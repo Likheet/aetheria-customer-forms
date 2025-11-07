@@ -10,24 +10,24 @@ import { cva, type VariantProps } from 'class-variance-authority';
  * Enhanced luxury dark theme with sophisticated interactions
  */
 export const buttonVariants = cva(
-  // Base styles applied to all buttons - premium subtle interactions with refined transitions
-  'inline-flex items-center justify-center font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm active:scale-[0.98] active:shadow-lg relative overflow-hidden',
+  // Base styles - minimal luxury with subtle interactions
+  'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]',
   {
     variants: {
-      // Visual style
+      // Visual style - clean and minimal
       variant: {
-        primary: 'bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 text-white hover:from-amber-400 hover:via-amber-500 hover:to-amber-400 focus:ring-amber-500/50 shadow-lg shadow-amber-500/40 hover:shadow-2xl hover:shadow-amber-500/50 border border-amber-400/30',
-        secondary: 'bg-gray-800/70 text-gray-100 border-2 border-gray-600/50 hover:bg-gray-700/90 hover:border-gray-500/70 focus:ring-gray-500/50 shadow-md hover:shadow-lg',
-        outline: 'border-2 border-amber-500/60 bg-transparent text-amber-200 hover:bg-amber-500/15 hover:border-amber-400/80 focus:ring-amber-500/50 hover:shadow-lg hover:shadow-amber-500/20',
-        ghost: 'text-gray-300 hover:bg-gray-800/50 hover:text-amber-200 focus:ring-gray-500/50',
-        danger: 'bg-gradient-to-r from-red-500 via-red-600 to-red-500 text-white hover:from-red-400 hover:via-red-500 hover:to-red-400 focus:ring-red-500/50 shadow-lg shadow-red-500/40 hover:shadow-2xl hover:shadow-red-500/50 border border-red-400/30',
+        primary: 'bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-primary/30 shadow-sm hover:shadow-md',
+        secondary: 'bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80 focus:ring-secondary/30 shadow-sm',
+        outline: 'border border-primary/40 bg-transparent text-foreground hover:bg-primary/10 hover:border-primary/60 focus:ring-primary/30',
+        ghost: 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground focus:ring-secondary/30',
+        danger: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive/30 shadow-sm hover:shadow-md',
       },
 
-      // Size - Enhanced for Duolingo-like polish
+      // Size - clean proportions
       size: {
         sm: 'px-4 py-2.5 text-sm rounded-xl',
         md: 'px-6 py-3.5 text-base rounded-xl',
-        lg: 'px-8 py-4 text-lg rounded-2xl',
+        lg: 'px-8 py-4 text-base rounded-xl',
       },
 
       // Full width
@@ -49,13 +49,13 @@ export const buttonVariants = cva(
  * Enhanced luxury theme with refined glows and borders
  */
 export const optionButtonVariants = cva(
-  'w-full px-6 py-5 text-left rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent backdrop-blur-sm active:scale-[0.99] relative overflow-hidden',
+  'w-full px-6 py-5 text-left rounded-2xl border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background cursor-pointer',
   {
     variants: {
       // Selection state
       selected: {
         true: '',
-        false: 'border-gray-700/60 bg-gradient-to-br from-gray-900/50 to-gray-900/40 text-gray-200 hover:border-amber-500/50 hover:bg-gray-800/70 hover:text-gray-100 hover:shadow-md',
+        false: 'border-border bg-surface/80 text-foreground hover:border-primary/40 hover:bg-surface',
       },
 
       // Semantic meaning (when selected)
@@ -68,35 +68,35 @@ export const optionButtonVariants = cva(
       },
     },
     compoundVariants: [
-      // Default selected state - Enhanced Amber/Gold glow
+      // Default selected - minimal gold accent
       {
         selected: true,
         intent: 'default',
-        class: 'border-amber-400/80 bg-gradient-to-br from-amber-900/40 to-amber-900/30 text-amber-100 shadow-xl shadow-amber-500/40 focus:ring-amber-500/50 hover:shadow-2xl hover:shadow-amber-500/50',
+        class: 'border-primary bg-primary/10 text-foreground ring-1 ring-primary/20',
       },
-      // Success selected (e.g., "No" to danger questions) - Enhanced Green glow
+      // Success selected
       {
         selected: true,
         intent: 'success',
-        class: 'border-green-400/80 bg-gradient-to-br from-green-900/40 to-green-900/30 text-green-100 shadow-xl shadow-green-500/40 focus:ring-green-500/50 hover:shadow-2xl hover:shadow-green-500/50',
+        class: 'border-green-500/60 bg-green-500/10 text-foreground ring-1 ring-green-500/20',
       },
-      // Warning selected - Enhanced Yellow glow
+      // Warning selected
       {
         selected: true,
         intent: 'warning',
-        class: 'border-yellow-400/80 bg-gradient-to-br from-yellow-900/40 to-yellow-900/30 text-yellow-100 shadow-xl shadow-yellow-500/40 focus:ring-yellow-500/50 hover:shadow-2xl hover:shadow-yellow-500/50',
+        class: 'border-yellow-500/60 bg-yellow-500/10 text-foreground ring-1 ring-yellow-500/20',
       },
-      // Danger selected (e.g., "Yes" to safety gates) - Enhanced Red glow
+      // Danger selected
       {
         selected: true,
         intent: 'danger',
-        class: 'border-red-400/80 bg-gradient-to-br from-red-900/40 to-red-900/30 text-red-100 shadow-xl shadow-red-500/40 focus:ring-red-500/50 hover:shadow-2xl hover:shadow-red-500/50',
+        class: 'border-red-500/60 bg-red-500/10 text-foreground ring-1 ring-red-500/20',
       },
-      // Primary selected (concern selection) - Enhanced Blue glow
+      // Primary selected
       {
         selected: true,
         intent: 'primary',
-        class: 'border-blue-400/80 bg-gradient-to-br from-blue-900/40 to-blue-900/30 text-blue-100 shadow-xl shadow-blue-500/40 focus:ring-blue-500/50 hover:shadow-2xl hover:shadow-blue-500/50',
+        class: 'border-blue-500/60 bg-blue-500/10 text-foreground ring-1 ring-blue-500/20',
       },
     ],
     defaultVariants: {
@@ -129,17 +129,17 @@ export const formStepVariants = cva(
  * Enhanced luxury theme with refined glass-morphism and gradients
  */
 export const cardVariants = cva(
-  'rounded-2xl border transition-all duration-300 backdrop-blur-sm relative overflow-hidden',
+  'rounded-2xl border transition-all duration-200',
   {
     variants: {
       variant: {
-        default: 'bg-gradient-to-br from-gray-900/70 to-gray-900/60 border-gray-700/50 shadow-lg shadow-gray-900/30 hover:shadow-xl hover:shadow-gray-900/40',
-        elevated: 'bg-gradient-to-br from-gray-900/85 to-gray-900/75 border-gray-600/50 shadow-xl shadow-gray-900/40 hover:shadow-2xl hover:shadow-gray-900/50',
-        outlined: 'bg-gradient-to-br from-gray-900/50 to-gray-900/40 border-gray-600/60',
-        filled: 'bg-gradient-to-br from-gray-800/70 to-gray-800/60 border-gray-700/50',
-        primary: 'bg-gradient-to-br from-amber-900/40 to-amber-900/30 border-amber-600/50 shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/35',
-        danger: 'bg-gradient-to-br from-red-900/40 to-red-900/30 border-red-600/50 shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/35',
-        success: 'bg-gradient-to-br from-green-900/40 to-green-900/30 border-green-600/50 shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/35',
+        default: 'bg-surface/90 border-border shadow-sm',
+        elevated: 'bg-surface/95 border-border shadow-md',
+        outlined: 'bg-surface/80 border-border',
+        filled: 'bg-surface border-border',
+        primary: 'bg-primary/10 border-primary/30 shadow-sm',
+        danger: 'bg-destructive/10 border-destructive/30 shadow-sm',
+        success: 'bg-green-500/10 border-green-500/30 shadow-sm',
       },
       padding: {
         none: 'p-0',
@@ -160,17 +160,17 @@ export const cardVariants = cva(
  * Enhanced luxury theme with refined glows
  */
 export const badgeVariants = cva(
-  'inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border backdrop-blur-sm transition-all duration-300',
+  'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border transition-all duration-200',
   {
     variants: {
       variant: {
-        default: 'bg-gray-800/70 text-gray-100 border-gray-600/60',
-        primary: 'bg-gradient-to-br from-amber-800/60 to-amber-800/50 text-amber-200 border-amber-500/60 shadow-md shadow-amber-500/30',
-        success: 'bg-gradient-to-br from-green-800/60 to-green-800/50 text-green-200 border-green-500/60 shadow-md shadow-green-500/30',
-        warning: 'bg-gradient-to-br from-yellow-800/60 to-yellow-800/50 text-yellow-200 border-yellow-500/60 shadow-md shadow-yellow-500/30',
-        danger: 'bg-gradient-to-br from-red-800/60 to-red-800/50 text-red-200 border-red-500/60 shadow-md shadow-red-500/30',
-        info: 'bg-gradient-to-br from-blue-800/60 to-blue-800/50 text-blue-200 border-blue-500/60 shadow-md shadow-blue-500/30',
-        purple: 'bg-gradient-to-br from-purple-800/60 to-purple-800/50 text-purple-200 border-purple-500/60 shadow-md shadow-purple-500/30',
+        default: 'bg-secondary/80 text-foreground border-border',
+        primary: 'bg-primary/15 text-primary border-primary/30',
+        success: 'bg-green-500/15 text-green-400 border-green-500/30',
+        warning: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
+        danger: 'bg-red-500/15 text-red-400 border-red-500/30',
+        info: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+        purple: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
       },
     },
     defaultVariants: {
@@ -184,16 +184,16 @@ export const badgeVariants = cva(
  * Enhanced luxury theme with refined glow effects
  */
 export const iconContainerVariants = cva(
-  'inline-flex items-center justify-center rounded-full backdrop-blur-sm border-2 transition-all duration-300 hover:scale-110 hover:rotate-6 relative overflow-hidden',
+  'inline-flex items-center justify-center rounded-full border transition-all duration-200',
   {
     variants: {
       variant: {
-        default: 'bg-gradient-to-br from-gray-800/70 to-gray-800/60 text-gray-100 border-gray-600/50 shadow-lg shadow-gray-500/15',
-        primary: 'bg-gradient-to-br from-amber-900/50 to-amber-900/40 text-amber-200 border-amber-500/50 shadow-lg shadow-amber-500/40',
-        success: 'bg-gradient-to-br from-green-900/50 to-green-900/40 text-green-200 border-green-500/50 shadow-lg shadow-green-500/40',
-        danger: 'bg-gradient-to-br from-red-900/50 to-red-900/40 text-red-200 border-red-500/50 shadow-lg shadow-red-500/40',
-        warning: 'bg-gradient-to-br from-yellow-900/50 to-yellow-900/40 text-yellow-200 border-yellow-500/50 shadow-lg shadow-yellow-500/40',
-        purple: 'bg-gradient-to-br from-purple-900/50 to-purple-900/40 text-purple-200 border-purple-500/50 shadow-lg shadow-purple-500/40',
+        default: 'bg-secondary/80 text-foreground border-border',
+        primary: 'bg-primary/15 text-primary border-primary/30',
+        success: 'bg-green-500/15 text-green-400 border-green-500/30',
+        danger: 'bg-red-500/15 text-red-400 border-red-500/30',
+        warning: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
+        purple: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
       },
       size: {
         sm: 'w-8 h-8',
@@ -213,12 +213,12 @@ export const iconContainerVariants = cva(
  * Enhanced luxury theme with refined interactions
  */
 export const inputVariants = cva(
-  'w-full px-5 py-3.5 rounded-xl border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent backdrop-blur-sm font-medium',
+  'w-full px-5 py-3.5 rounded-xl border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background',
   {
     variants: {
       variant: {
-        default: 'bg-gradient-to-br from-gray-900/70 to-gray-900/60 border-gray-600/50 text-gray-100 placeholder:text-gray-500 hover:border-amber-500/60 hover:shadow-md hover:shadow-amber-500/10 focus:border-amber-500/80 focus:ring-amber-500/50 focus:bg-gray-900/80 focus:shadow-lg focus:shadow-amber-500/20',
-        error: 'bg-gradient-to-br from-red-900/40 to-red-900/30 border-red-500/60 text-red-100 placeholder:text-red-400/50 hover:border-red-400/70 focus:border-red-400 focus:ring-red-500/50 focus:shadow-lg focus:shadow-red-500/20',
+        default: 'bg-surface/90 border-border text-foreground placeholder:text-muted-foreground hover:border-primary/40 focus:border-primary focus:ring-primary/20',
+        error: 'bg-destructive/10 border-destructive/60 text-foreground placeholder:text-destructive/50 focus:border-destructive focus:ring-destructive/20',
       },
     },
     defaultVariants: {

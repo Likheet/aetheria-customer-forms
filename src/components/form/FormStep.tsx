@@ -60,58 +60,49 @@ export const FormStep: React.FC<FormStepProps> = ({
 
   return (
     <div className={formStepVariants({ centered, className })}>
-      {/* Luxury glass card wrapper with subtle fade-in animation - Duolingo-inspired clean design */}
-      <div className="relative animate-fade-in-up rounded-[28px] border border-border/40 p-12 md:p-16 shadow-luxury backdrop-blur-xl bg-gradient-to-br from-surface/90 to-surface/85">
-        {/* Enhanced ambient glow effect with gold and purple accents */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-amber-600/12 via-purple-600/8 to-amber-600/12 rounded-[30px] blur-2xl opacity-50 transition-opacity duration-700" />
+      {/* Minimal luxury card - clean with subtle premium touches */}
+      <div className="relative animate-fade-in-up rounded-3xl border border-border/50 p-12 md:p-16 bg-surface/95 shadow-sm">
+        {/* Single subtle accent line at top */}
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
-        {/* Subtle shimmer overlay */}
-        <div className="absolute inset-0 rounded-[28px] bg-gradient-to-br from-transparent via-amber-400/3 to-transparent opacity-30 pointer-events-none" />
+        {/* Badge at top left (if provided) */}
+        {badge && !centered && (
+          <div className="absolute -top-3 left-8">
+            <div
+              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold border ${
+                badgeColors[badge.variant || 'primary']
+              }`}
+            >
+              {badge.icon && <badge.icon className="w-3.5 h-3.5" />}
+              <span>{badge.label}</span>
+            </div>
+          </div>
+        )}
 
-        <div className="relative z-10">
-          {/* Badge at top left (if provided) */}
-          {badge && !centered && (
-            <div className="absolute -top-3 left-8 z-20">
-              <div
-                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold border-2 ${
-                  badgeColors[badge.variant || 'primary']
-                }`}
-              >
-                {badge.icon && <badge.icon className="w-4 h-4" />}
-                <span>{badge.label}</span>
-              </div>
+        {/* Header section */}
+        <div className={centered ? 'text-center' : ''}>
+          {/* Icon - simplified, no fancy container */}
+          {Icon && (
+            <div className={`${centered ? 'mx-auto' : ''} mb-8`}>
+              <Icon className="w-6 h-6 text-primary" strokeWidth={1.5} />
             </div>
           )}
 
-          {/* Header section */}
-          <div className={centered ? 'text-center' : ''}>
-            {/* Icon */}
-            {Icon && (
-              <div
-                className={`${
-                  centered ? 'mx-auto' : ''
-                } mb-6 ${iconContainerVariants({ variant: iconVariant, size: 'lg' })}`}
-              >
-                <Icon className="w-7 h-7" />
-              </div>
-            )}
+          {/* Title - clean serif with subtle gold accent on hover */}
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-3 font-serif text-foreground transition-colors hover:text-primary/90">
+            {title}
+          </h2>
 
-            {/* Title - Using Playfair Display font with enhanced gold gradient */}
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-3 font-serif text-gradient-gold">
-              {title}
-            </h2>
-
-            {/* Subtitle - Refined contrast with warmer tones */}
-            {subtitle && (
-              <p className="text-muted-foreground/85 text-base md:text-lg leading-relaxed max-w-3xl mx-auto">
-                {subtitle}
-              </p>
-            )}
-          </div>
-
-          {/* Content area with better spacing - wider for Duolingo-like feel */}
-          <div className="max-w-3xl mx-auto w-full mt-8 md:mt-10">{children}</div>
+          {/* Subtitle - minimal, clean */}
+          {subtitle && (
+            <p className="text-muted-foreground text-base md:text-lg leading-relaxed max-w-3xl mx-auto font-light">
+              {subtitle}
+            </p>
+          )}
         </div>
+
+        {/* Content area - clean and spacious */}
+        <div className="max-w-3xl mx-auto w-full mt-12">{children}</div>
       </div>
     </div>
   );
