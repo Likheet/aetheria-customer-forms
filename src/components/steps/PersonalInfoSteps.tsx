@@ -9,7 +9,7 @@ import React from 'react';
 import { User, Phone, Calendar, Users } from 'lucide-react';
 import { FormStep, TextInput, RadioGroup } from '../form';
 import { UpdatedConsultData } from '../../types';
-import { DatePicker } from '@mantine/dates';
+import { DatePickerInput } from '@mantine/dates';
 
 interface StepProps {
   formData: UpdatedConsultData;
@@ -109,15 +109,28 @@ export const DateOfBirthStep: React.FC<StepProps> = ({ formData, updateFormData,
       iconVariant="primary"
       centered
     >
-      <div className="space-y-2">
-        <DatePicker
+      <div className="space-y-2 flex flex-col items-center w-full">
+        <DatePickerInput
           value={parsedDate}
           onChange={handleDateChange}
           placeholder="Select your date of birth"
           maxDate={new Date()}
-          classNames={{
-            input: 'w-full px-4 py-3 rounded-xl border border-border/60 bg-surface/60 text-foreground placeholder:text-muted-foreground/50 focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all',
+          valueFormat="DD/MM/YYYY"
+          clearable
+          popoverProps={{
+            position: 'bottom',
+            withinPortal: true,
+            zIndex: 1000,
           }}
+          classNames={{
+            input: 'w-full px-4 py-3 rounded-xl border border-border/60 bg-surface/60 text-foreground placeholder:text-muted-foreground/50 focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-center',
+          }}
+          styles={{
+            input: {
+              textAlign: 'center',
+            },
+          }}
+          className="w-full max-w-md"
         />
         {formData.calculatedAge !== null && (
           <p className="text-sm text-muted-foreground/70 text-center">Age: {formData.calculatedAge} years</p>
