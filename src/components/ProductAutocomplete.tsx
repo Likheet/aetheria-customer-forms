@@ -137,18 +137,18 @@ export default function ProductAutocomplete({
           }
         }}
         placeholder={placeholder}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="w-full px-3 py-2 border border-border/60 bg-surface/60 text-foreground placeholder:text-muted-foreground/50 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/60"
         autoComplete="off"
       />
-      
+
       {isOpen && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
+          className="absolute z-50 w-full mt-1 bg-surface border border-border/60 rounded-md shadow-xl max-h-60 overflow-y-auto"
         >
           {isLoading ? (
-            <div className="p-3 text-center text-gray-500">
-              <span className="inline-block w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2"></span>
+            <div className="p-3 text-center text-muted-foreground/70">
+              <span className="inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2"></span>
               Searching...
             </div>
           ) : results.length > 0 ? (
@@ -156,21 +156,21 @@ export default function ProductAutocomplete({
               <button
                 key={product.id}
                 onClick={() => handleSelectProduct(product)}
-                className={`w-full text-left p-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0 ${
-                  index === highlightedIndex ? 'bg-blue-50' : ''
+                className={`w-full text-left p-3 hover:bg-surface/80 focus:bg-surface/80 focus:outline-none border-b border-border/30 last:border-b-0 transition-colors ${
+                  index === highlightedIndex ? 'bg-primary/20' : ''
                 }`}
               >
-                <div className="font-medium text-gray-900">{product.b}</div>
-                <div className="text-sm text-gray-600">{product.n}</div>
+                <div className="font-medium text-foreground/90">{product.b}</div>
+                <div className="text-sm text-foreground/70">{product.n}</div>
                 {product.c && (
-                  <div className="text-xs text-gray-400 capitalize mt-1">
+                  <div className="text-xs text-muted-foreground/60 capitalize mt-1">
                     {product.c}
                   </div>
                 )}
               </button>
             ))
           ) : value.length > 0 && !isLoading ? (
-            <div className="p-3 text-gray-500 text-center">
+            <div className="p-3 text-muted-foreground/70 text-center">
               No products found. You can still add "{value}" manually.
             </div>
           ) : null}
