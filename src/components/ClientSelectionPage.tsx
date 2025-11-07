@@ -4,7 +4,11 @@ import { getRecentConsultationSessions } from '../services/newConsultationServic
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardFooter } from './ui/card';
+import { BackgroundGlowContainer } from './ui/background-glow';
+import { LoadingState } from './ui/loading-state';
+import { EmptyState } from './ui/empty-state';
+import { ErrorState } from './ui/error-state';
 
 interface ConsultationSession {
   session_id: string;
@@ -89,10 +93,7 @@ const ClientSelectionPage: React.FC<ClientSelectionPageProps> = ({ onSelectClien
 
   return (
     <div className="luxury-shell">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute right-10 top-24 h-72 w-72 rounded-full bg-gradient-to-br from-[hsla(266,32%,26%,0.18)] to-transparent blur-[120px]" />
-        <div className="absolute left-24 top-40 h-48 w-48 rounded-full bg-gradient-to-br from-[hsla(40,58%,62%,0.16)] to-transparent blur-[110px]" />
-      </div>
+      <BackgroundGlowContainer variant="subtle" />
 
       <div className="luxury-page">
         <header className="flex flex-col gap-3 text-center md:text-left">
@@ -127,41 +128,33 @@ const ClientSelectionPage: React.FC<ClientSelectionPageProps> = ({ onSelectClien
 
         <section className="relative z-10 flex-1">
           {loading ? (
-            <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 text-muted-foreground/80">
-              <div className="h-14 w-14 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
-              <span className="text-sm uppercase tracking-[0.32em]">Preparing recent memories…</span>
-            </div>
+            <LoadingState
+              size="md"
+              message="Preparing recent memories…"
+              spinnerSize="lg"
+            />
           ) : error ? (
-            <Card className="mx-auto max-w-xl border border-destructive/40 bg-destructive/10">
-              <CardHeader className="gap-3">
-                <CardTitle className="text-lg text-destructive-foreground">We could not reach Supabase</CardTitle>
-                <CardDescription className="text-sm text-destructive-foreground/80">{error}</CardDescription>
-              </CardHeader>
-              <CardFooter className="justify-end gap-3">
-                <Button variant="outline" onClick={onBack}>
-                  Return to lounge
-                </Button>
-                <Button variant="primary" onClick={refreshConsultations}>
-                  Try again
-                </Button>
-              </CardFooter>
-            </Card>
+            <ErrorState
+              variant="error"
+              title="We could not reach Supabase"
+              message={error}
+              actions={[
+                { label: 'Return to lounge', onClick: onBack, variant: 'outline' },
+                { label: 'Try again', onClick: refreshConsultations, variant: 'primary' },
+              ]}
+            />
           ) : filteredConsultations.length === 0 ? (
-            <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 text-muted-foreground/80">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface/70">
-                <User className="h-7 w-7" />
-              </div>
-              <div className="text-center text-sm">
-                <p className="font-serif text-lg text-foreground/85">
-                  {searchTerm ? 'No guests match your search' : 'No consultations captured today'}
-                </p>
-                <p className="mt-1 text-muted-foreground/70">
-                  {searchTerm
-                    ? 'Try a different spelling or phone number.'
-                    : 'Complete a consultation to invite feedback.'}
-                </p>
-              </div>
-            </div>
+            <EmptyState
+              icon={User}
+              iconSize="md"
+              title={searchTerm ? 'No guests match your search' : 'No consultations captured today'}
+              description={
+                searchTerm
+                  ? 'Try a different spelling or phone number.'
+                  : 'Complete a consultation to invite feedback.'
+              }
+              size="md"
+            />
           ) : (
             <div className="grid gap-5 md:grid-cols-2">
               {filteredConsultations.map((consultation) => {

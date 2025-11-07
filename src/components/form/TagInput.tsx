@@ -158,18 +158,18 @@ export const TagInput: React.FC<TagInputProps> = ({
 
   return (
     <div className={className}>
-      <div className="flex flex-wrap gap-2 items-center p-2 border border-gray-200 rounded-xl bg-white relative">
+      <div className="flex flex-wrap gap-2 items-center p-2 border border-border/60 rounded-xl bg-surface/60 relative">
         {/* Tags */}
         {value.map((tag, i) => (
           <div
             key={tag + i}
-            className="inline-flex items-center space-x-2 bg-gray-100 text-sm text-gray-700 px-3 py-1 rounded-full"
+            className="inline-flex items-center space-x-2 bg-primary/15 text-sm text-foreground/90 px-3 py-1 rounded-full border border-primary/30"
           >
             <span>{tag}</span>
             <button
               type="button"
               onClick={() => removeTag(i)}
-              className="text-gray-500 hover:text-gray-700 transition-colors"
+              className="text-muted-foreground/70 hover:text-foreground transition-colors"
               aria-label={`Remove ${tag}`}
             >
               ×
@@ -186,14 +186,14 @@ export const TagInput: React.FC<TagInputProps> = ({
           onBlur={handleBlur}
           onFocus={handleFocus}
           placeholder={placeholder}
-          className="flex-1 min-w-[160px] p-2 text-sm outline-none"
+          className="flex-1 min-w-[160px] p-2 text-sm outline-none bg-transparent text-foreground placeholder:text-muted-foreground/50"
           aria-autocomplete="list"
           aria-expanded={focused}
         />
 
         {/* Autocomplete dropdown */}
         {focused && filteredSuggestions.length > 0 && (
-          <div className="absolute left-2 right-2 top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-auto">
+          <div className="absolute left-2 right-2 top-full mt-2 bg-surface border border-border/60 rounded-lg shadow-xl z-50 max-h-48 overflow-auto">
             {filteredSuggestions.map((suggestion, idx) => (
               <div
                 key={suggestion}
@@ -206,7 +206,7 @@ export const TagInput: React.FC<TagInputProps> = ({
                 }}
                 onMouseEnter={() => setHighlight(idx)}
                 className={`px-4 py-2 cursor-pointer text-sm transition-colors ${
-                  highlight === idx ? 'bg-amber-100' : 'hover:bg-gray-50'
+                  highlight === idx ? 'bg-primary/20 text-foreground' : 'hover:bg-surface/80 text-foreground/80'
                 }`}
               >
                 {suggestion}
@@ -218,7 +218,7 @@ export const TagInput: React.FC<TagInputProps> = ({
 
       {/* Helper text */}
       {helperText && (
-        <p className="text-xs text-gray-500 mt-2">{helperText}</p>
+        <p className="text-xs text-muted-foreground/70 mt-2">{helperText}</p>
       )}
     </div>
   );

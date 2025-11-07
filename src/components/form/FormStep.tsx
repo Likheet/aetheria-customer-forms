@@ -62,13 +62,16 @@ export const FormStep: React.FC<FormStepProps> = ({
     <div className={formStepVariants({ centered, className })}>
       {/* Luxury glass card wrapper with subtle fade-in animation */}
       <div className="luxury-section relative animate-fade-in-up">
-        {/* Ambient glow effect */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-amber-600/20 via-transparent to-amber-600/20 rounded-[32px] blur-xl opacity-50 transition-opacity duration-700" />
+        {/* Enhanced ambient glow effect with gold and purple accents */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-amber-600/15 via-purple-600/10 to-amber-600/15 rounded-[34px] blur-2xl opacity-60 transition-opacity duration-700" />
 
-        <div className="relative">
+        {/* Subtle shimmer overlay */}
+        <div className="absolute inset-0 rounded-[32px] bg-gradient-to-br from-transparent via-amber-400/5 to-transparent opacity-40 pointer-events-none" />
+
+        <div className="relative z-10">
           {/* Badge at top left (if provided) */}
           {badge && !centered && (
-            <div className="absolute -top-3 left-6 z-10">
+            <div className="absolute -top-3 left-6 z-20">
               <div
                 className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold border-2 ${
                   badgeColors[badge.variant || 'primary']
@@ -87,27 +90,27 @@ export const FormStep: React.FC<FormStepProps> = ({
               <div
                 className={`${
                   centered ? 'mx-auto' : ''
-                } mb-6 ${iconContainerVariants({ variant: iconVariant, size: 'lg' })}`}
+                } mb-7 ${iconContainerVariants({ variant: iconVariant, size: 'lg' })}`}
               >
                 <Icon className="w-8 h-8" />
               </div>
             )}
 
-            {/* Title - Using Playfair Display font with white text for maximum contrast */}
-            <h2 className="text-3xl font-bold tracking-tight text-white mb-4 font-serif">
+            {/* Title - Using Playfair Display font with enhanced gold gradient */}
+            <h2 className="text-3xl font-bold tracking-tight mb-4 font-serif text-gradient-gold">
               {title}
             </h2>
 
-            {/* Subtitle - Light gray for good contrast on dark background */}
+            {/* Subtitle - Refined contrast with warmer tones */}
             {subtitle && (
-              <p className="text-gray-300 text-base leading-relaxed">
+              <p className="text-muted-foreground/90 text-base leading-relaxed max-w-2xl mx-auto">
                 {subtitle}
               </p>
             )}
           </div>
 
-          {/* Content area */}
-          <div className="max-w-2xl mx-auto w-full mt-8">{children}</div>
+          {/* Content area with better spacing */}
+          <div className="max-w-2xl mx-auto w-full mt-10">{children}</div>
         </div>
       </div>
     </div>

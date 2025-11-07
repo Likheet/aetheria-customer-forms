@@ -7,6 +7,9 @@ import { Badge } from './ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
+import { BackgroundGlowContainer } from './ui/background-glow';
+import { LoadingState } from './ui/loading-state';
+import { EmptyState } from './ui/empty-state';
 import { User, Search, Clock, Phone, Calendar, ArrowRight } from 'lucide-react';
 
 type QueueEntry = {
@@ -79,11 +82,7 @@ export default function ChooseProfile({ onBack }: { onBack: () => void }) {
 
   return (
     <div className='luxury-shell'>
-      <div className='pointer-events-none absolute inset-0'>
-        <div className='absolute -left-14 top-24 h-72 w-72 rounded-full bg-gradient-to-br from-[hsla(40,58%,62%,0.18)] to-transparent blur-[160px]' />
-        <div className='absolute right-0 top-16 h-80 w-80 rounded-full bg-gradient-to-br from-[hsla(266,32%,26%,0.2)] to-transparent blur-[180px]' />
-        <div className='absolute inset-x-0 bottom-0 h-60 bg-gradient-to-t from-[rgba(10,12,18,0.75)] to-transparent' />
-      </div>
+      <BackgroundGlowContainer variant="default" />
 
       <div className='luxury-page'>
         <header className='flex flex-col gap-6 text-center md:text-left'>
@@ -117,24 +116,21 @@ export default function ChooseProfile({ onBack }: { onBack: () => void }) {
 
         <section className='relative z-10 flex-1'>
           {loading ? (
-            <div className='flex min-h-[320px] flex-col items-center justify-center gap-4 text-muted-foreground/80'>
-              <div className='h-14 w-14 animate-spin rounded-full border-2 border-primary/25 border-t-primary' />
-              <span className='text-xs uppercase tracking-[0.32em]'>Sourcing current profiles…</span>
-            </div>
+            <LoadingState
+              size="md"
+              message="Sourcing current profiles…"
+              spinnerSize="lg"
+            />
           ) : filteredQueue.length === 0 ? (
-            <div className='flex min-h-[320px] flex-col items-center justify-center gap-4 text-muted-foreground/75'>
-              <div className='flex h-16 w-16 items-center justify-center rounded-full bg-surface/70'>
-                <User className='h-7 w-7' />
-              </div>
-              <div className='text-center'>
-                <p className='font-serif text-lg text-foreground/85'>
-                  {searchTerm ? 'No returning guests match your search' : 'All consultations are complete'}
-                </p>
-                <p className='mt-1 text-muted-foreground/70'>
-                  {searchTerm ? 'Adjust the spelling or try a different number.' : 'Awaiting fresh machine analyses.'}
-                </p>
-              </div>
-            </div>
+            <EmptyState
+              icon={User}
+              iconSize="md"
+              title={searchTerm ? 'No returning guests match your search' : 'All consultations are complete'}
+              description={
+                searchTerm ? 'Adjust the spelling or try a different number.' : 'Awaiting fresh machine analyses.'
+              }
+              size="md"
+            />
           ) : (
             <div className='grid gap-5 md:grid-cols-2'>
               {filteredQueue.map((item) => {

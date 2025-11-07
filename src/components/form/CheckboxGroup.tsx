@@ -102,11 +102,11 @@ export const CheckboxGroup: React.FC<CheckboxGroupProps> = ({
     <div className="w-full">
       {label && (
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-semibold text-gray-900">
+          <label className="block text-sm font-semibold text-foreground/90">
             {label}
           </label>
           {maxSelections && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground/70">
               {value.length} / {maxSelections} selected
             </span>
           )}
@@ -114,12 +114,12 @@ export const CheckboxGroup: React.FC<CheckboxGroupProps> = ({
       )}
 
       {description && (
-        <p className="text-sm text-gray-600 mb-4">{description}</p>
+        <p className="text-sm text-muted-foreground/80 mb-4">{description}</p>
       )}
 
       {showMaxReached && (
-        <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <p className="text-sm text-amber-800">
+        <div className="mb-3 p-3 bg-amber-900/20 border border-amber-500/40 rounded-lg">
+          <p className="text-sm text-amber-200/90">
             Maximum of {maxSelections} option{maxSelections !== 1 ? 's' : ''}{' '}
             selected. Deselect one to choose another.
           </p>
@@ -150,13 +150,13 @@ export const CheckboxGroup: React.FC<CheckboxGroupProps> = ({
       </div>
 
       {error && (
-        <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+        <p className="text-destructive text-sm mt-2 flex items-center gap-1">
           <span className="font-medium">⚠</span> {error}
         </p>
       )}
 
       {minSelections && value.length < minSelections && (
-        <p className="text-amber-600 text-sm mt-2">
+        <p className="text-amber-400/90 text-sm mt-2">
           Please select at least {minSelections} option
           {minSelections !== 1 ? 's' : ''}
         </p>

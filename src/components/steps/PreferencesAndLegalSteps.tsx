@@ -160,11 +160,11 @@ export const LegalDisclaimerStep: React.FC<StepProps> = ({
     >
       <div className="max-w-4xl mx-auto w-full space-y-6">
         {/* Individual disclaimer items */}
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-4">
+        <div className="bg-destructive/10 border border-destructive/40 rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-destructive mb-4">
             Before using this system, I understand and agree:
           </h3>
-          <ul className="space-y-3 text-sm text-red-700">
+          <ul className="space-y-3 text-sm text-destructive-foreground/90">
             <li className="flex items-start">
               <input
                 type="checkbox"
@@ -175,7 +175,7 @@ export const LegalDisclaimerStep: React.FC<StepProps> = ({
                     e.target.checked
                   )
                 }
-                className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
+                className="mr-3 mt-0.5 h-4 w-4 text-destructive border-border/60 focus:ring-destructive/50 bg-surface/80"
               />
               <span>
                 This tool provides general skincare guidance and is NOT a
@@ -192,7 +192,7 @@ export const LegalDisclaimerStep: React.FC<StepProps> = ({
                     e.target.checked
                   )
                 }
-                className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
+                className="mr-3 mt-0.5 h-4 w-4 text-destructive border-border/60 focus:ring-destructive/50 bg-surface/80"
               />
               <span>
                 I should consult a dermatologist for severe acne, suspicious
@@ -209,7 +209,7 @@ export const LegalDisclaimerStep: React.FC<StepProps> = ({
                     e.target.checked
                   )
                 }
-                className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
+                className="mr-3 mt-0.5 h-4 w-4 text-destructive border-border/60 focus:ring-destructive/50 bg-surface/80"
               />
               <span>
                 I will perform a patch test for all new products before
@@ -226,7 +226,7 @@ export const LegalDisclaimerStep: React.FC<StepProps> = ({
                     e.target.checked
                   )
                 }
-                className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
+                className="mr-3 mt-0.5 h-4 w-4 text-destructive border-border/60 focus:ring-destructive/50 bg-surface/80"
               />
               <span>
                 I will discontinue use immediately if irritation, redness, or
@@ -243,7 +243,7 @@ export const LegalDisclaimerStep: React.FC<StepProps> = ({
                     e.target.checked
                   )
                 }
-                className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
+                className="mr-3 mt-0.5 h-4 w-4 text-destructive border-border/60 focus:ring-destructive/50 bg-surface/80"
               />
               <span>
                 I am responsible for disclosing all allergies, medications, and
@@ -260,7 +260,7 @@ export const LegalDisclaimerStep: React.FC<StepProps> = ({
                     e.target.checked
                   )
                 }
-                className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
+                className="mr-3 mt-0.5 h-4 w-4 text-destructive border-border/60 focus:ring-destructive/50 bg-surface/80"
               />
               <span>
                 The salon and software provider are not liable for adverse
@@ -273,21 +273,21 @@ export const LegalDisclaimerStep: React.FC<StepProps> = ({
 
         {/* Master checkbox */}
         <div className="flex items-center justify-center">
-          <label className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-red-300 transition-all duration-300">
+          <label className="flex items-center p-4 bg-surface/70 rounded-xl border-2 border-border/60 cursor-pointer hover:border-destructive/60 transition-all duration-300">
             <input
               type="checkbox"
               checked={allChecked && formData.legalDisclaimerAgreed}
               onChange={(e) => handleMasterCheckbox(e.target.checked)}
-              className="mr-3 h-5 w-5 text-red-600 border-gray-300 focus:ring-red-400"
+              className="mr-3 h-5 w-5 text-destructive border-border/60 focus:ring-destructive/50 bg-surface/80"
             />
-            <span className="text-lg text-gray-700">
+            <span className="text-lg text-foreground/90">
               All disclaimer points acknowledged
             </span>
           </label>
         </div>
 
         {errors.legalDisclaimerAgreed && (
-          <p className="text-red-500 text-sm text-center">
+          <p className="text-destructive text-sm text-center">
             {errors.legalDisclaimerAgreed}
           </p>
         )}
