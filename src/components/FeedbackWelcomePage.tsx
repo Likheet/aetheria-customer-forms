@@ -3,6 +3,7 @@ import { Quote, Sparkles, Clock } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
+import { BackgroundGlowContainer } from './ui/background-glow';
 
 interface FeedbackWelcomePageProps {
   onStart: () => void;
@@ -11,11 +12,7 @@ interface FeedbackWelcomePageProps {
 const FeedbackWelcomePage: React.FC<FeedbackWelcomePageProps> = ({ onStart }) => {
   return (
     <div className="luxury-shell">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-10 top-32 h-64 w-64 rounded-full bg-gradient-to-br from-[hsla(40,58%,62%,0.18)] to-transparent blur-[120px]" />
-        <div className="absolute right-12 top-24 h-72 w-72 rounded-full bg-gradient-to-br from-[hsla(266,32%,26%,0.22)] to-transparent blur-[140px]" />
-        <div className="absolute inset-x-0 bottom-0 h-80 bg-gradient-to-t from-[rgba(8,9,13,0.75)] to-transparent" />
-      </div>
+      <BackgroundGlowContainer variant="intense" />
 
       <div className="luxury-page items-center text-center">
         <Badge className="bg-primary/15 text-primary" variant="primary">
