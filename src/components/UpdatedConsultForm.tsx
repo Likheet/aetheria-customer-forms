@@ -2515,32 +2515,38 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           <div className="w-32"></div> {/* Spacer for centering */}
         </div>
 
-        {/* Progress Bar */}
-        <div className="max-w-4xl mx-auto mb-8">
-          <div className="bg-white rounded-lg p-4 shadow-sm">
-            <div className="flex justify-between items-center text-sm text-gray-600 mb-2">
-              <span>Step {currentStep} of {totalSteps}</span>
-              <span>{Math.round((currentStep / totalSteps) * 100)}% Complete</span>
+        {/* Progress Indicator - Dark Luxury Theme */}
+        <div className="max-w-4xl mx-auto mb-8 animate-fade-in">
+          <div className="bg-gray-900/60 backdrop-blur-sm rounded-2xl p-5 border border-gray-700/40 shadow-lg shadow-gray-900/20">
+            {/* Step Counter */}
+            <div className="flex justify-between items-center text-sm text-gray-300 mb-3">
+              <span className="font-semibold">
+                Step <span className="text-amber-400">{currentStep}</span> of {totalSteps}
+              </span>
+              <span className="text-amber-300 font-medium">
+                {Math.round((currentStep / totalSteps) * 100)}% Complete
+              </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-800/60 rounded-full h-2.5 overflow-hidden border border-gray-700/40">
               <div
-                className="bg-gradient-to-r from-amber-400 to-amber-600 h-3 rounded-full transition-all duration-300"
+                className="bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 h-full rounded-full transition-all duration-500 ease-out shadow-lg shadow-amber-500/50"
                 style={{ width: `${(currentStep / totalSteps) * 100}%` }}
               />
             </div>
           </div>
         </div>
 
-        {/* Form Content */}
-        <form onSubmit={handleFormSubmit} onKeyDownCapture={handleEnterAdvance} className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl min-h-[600px] flex flex-col">
+        {/* Form Content - Dark Theme Container */}
+        <form onSubmit={handleFormSubmit} onKeyDownCapture={handleEnterAdvance} className="max-w-4xl mx-auto bg-transparent rounded-2xl min-h-[600px] flex flex-col">
           <div className="flex-1 p-8">
             {!activeFollowUp && renderStep()}
             {activeFollowUp && (
               <div className="max-w-2xl mx-auto">
-                <div className="bg-white rounded-2xl shadow-xl border border-amber-200">
-                  <div className="px-6 py-4 border-b border-amber-200 bg-amber-50 rounded-t-2xl">
-                    <div className="text-base font-semibold text-amber-900">Follow-up: {activeFollowUp.category === 'Grease' ? 'Sebum' : activeFollowUp.category}{activeFollowUp.dimension ? ` (${activeFollowUp.dimension})` : ''}</div>
-                    <div className="text-xs text-amber-800/80">Resolve machine vs customer difference</div>
+                <div className="bg-gray-900/60 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-700/40">
+                  <div className="px-6 py-4 border-b border-amber-600/40 bg-amber-900/30 rounded-t-2xl">
+                    <div className="text-base font-semibold text-amber-200">Follow-up: {activeFollowUp.category === 'Grease' ? 'Sebum' : activeFollowUp.category}{activeFollowUp.dimension ? ` (${activeFollowUp.dimension})` : ''}</div>
+                    <div className="text-xs text-amber-300/80">Resolve machine vs customer difference</div>
                   </div>
                   <div className="px-6 py-5 space-y-5">
                     {activeFollowUp.questions.map((q) => {
@@ -2561,7 +2567,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                       
                       return (
                       <div key={q.id}>
-                        <div className="text-sm font-medium text-gray-900 mb-2">{q.prompt}</div>
+                        <div className="text-sm font-medium text-gray-200 mb-2">{q.prompt}</div>
                         {!q.multi ? (
                           <div className="flex flex-wrap gap-2">
                             {q.options.map(opt => (
@@ -2569,7 +2575,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                                 type="button"
                                 key={opt}
                                 onClick={() => toggleFollowUpOption(q.id, opt, false)}
-                                className={`px-3 py-2 rounded-lg border text-sm ${followUpLocal[q.id] === opt ? 'bg-amber-100 border-amber-400 text-amber-800' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                                className={`px-3 py-2 rounded-lg border text-sm transition-all duration-300 ${followUpLocal[q.id] === opt ? 'bg-amber-900/40 border-amber-400 text-amber-200 shadow-lg shadow-amber-500/30' : 'bg-gray-800/40 border-gray-600/50 text-gray-300 hover:bg-gray-700/60 hover:border-gray-500/60'}`}
                               >
                                 {opt}
                               </button>
@@ -2585,7 +2591,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                                   type="button"
                                   key={opt}
                                   onClick={() => toggleFollowUpOption(q.id, opt, true)}
-                                  className={`px-3 py-2 rounded-lg border text-sm ${selected ? 'bg-amber-100 border-amber-400 text-amber-800' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                                  className={`px-3 py-2 rounded-lg border text-sm transition-all duration-300 ${selected ? 'bg-amber-900/40 border-amber-400 text-amber-200 shadow-lg shadow-amber-500/30' : 'bg-gray-800/40 border-gray-600/50 text-gray-300 hover:bg-gray-700/60 hover:border-gray-500/60'}`}
                                 >
                                   {opt}
                                 </button>
