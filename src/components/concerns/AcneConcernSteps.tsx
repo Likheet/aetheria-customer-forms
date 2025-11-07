@@ -121,14 +121,14 @@ export const AcneTypeStep: React.FC<StepProps> = ({ formData, updateFormData, er
               onClick={() => toggleAcneBreakout(option)}
               className={`px-6 py-4 text-left rounded-xl border-2 transition-all duration-300 ${
                 isSelected
-                  ? 'border-amber-400 bg-amber-50 text-amber-700 shadow-lg'
-                  : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
+                  ? 'border-amber-400 bg-amber-900/40 text-amber-200 shadow-lg shadow-amber-500/30'
+                  : 'border-gray-700/50 bg-gray-800/40 text-gray-200 hover:border-amber-500/50'
               }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold">{option}</p>
-                  <p className="text-sm text-amber-600">{category || 'Acne'}</p>
+                  <p className="text-sm text-amber-400">{category || 'Acne'}</p>
                 </div>
                 {isSelected && <CheckCircle className="w-5 h-5 text-amber-500" />}
               </div>

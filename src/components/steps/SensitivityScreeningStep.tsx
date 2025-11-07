@@ -69,9 +69,9 @@ export const SensitivityScreeningStep: React.FC<StepProps> = ({
       <div className="space-y-4">
         {/* Age indicator */}
         {calculatedAge != null && (
-          <div className="bg-white/60 border border-amber-100 rounded-2xl p-4 text-sm text-gray-600">
+          <div className="bg-gray-800/60 backdrop-blur-sm border border-amber-600/40 rounded-2xl p-4 text-sm text-gray-300">
             Detected age from birth date:{' '}
-            <span className="font-medium text-gray-800">{calculatedAge}</span>
+            <span className="font-medium text-amber-200">{calculatedAge}</span>
           </div>
         )}
 
@@ -83,10 +83,10 @@ export const SensitivityScreeningStep: React.FC<StepProps> = ({
           return (
             <div
               key={q.key}
-              className="bg-white/80 border border-amber-200 rounded-2xl p-4"
+              className="bg-gray-800/60 backdrop-blur-sm border border-amber-600/40 rounded-2xl p-4"
             >
               <div className="flex flex-col gap-3">
-                <label className="text-gray-800 font-medium text-left">{q.label}</label>
+                <label className="text-gray-200 font-medium text-left">{q.label}</label>
 
                 <RadioGroup
                   options={[

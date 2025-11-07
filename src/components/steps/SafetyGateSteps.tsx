@@ -146,8 +146,8 @@ export const SevereCysticAcneStep: React.FC<StepProps> = ({
       centered
     >
       <div className="space-y-4">
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-          <p className="text-sm text-amber-900">
+        <div className="p-4 bg-amber-900/30 backdrop-blur-sm border border-amber-600/40 rounded-xl">
+          <p className="text-sm text-amber-200">
             <strong>Note:</strong> Severe cystic acne requires professional medical treatment.
             We'll recommend consulting a dermatologist.
           </p>

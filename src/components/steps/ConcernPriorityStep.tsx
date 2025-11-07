@@ -75,7 +75,7 @@ export const ConcernPriorityStep: React.FC<StepProps> = ({
                     className={`w-8 h-8 inline-flex items-center justify-center rounded-full text-sm font-semibold ${
                       idx === 0
                         ? 'bg-amber-500 text-white'
-                        : 'bg-gray-200 text-gray-700'
+                        : 'bg-gray-700/60 text-gray-200'
                     }`}
                   >
                     {idx + 1}

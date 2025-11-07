@@ -118,8 +118,8 @@ export const CheckboxGroup: React.FC<CheckboxGroupProps> = ({
       )}
 
       {showMaxReached && (
-        <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <p className="text-sm text-amber-800">
+        <div className="mb-3 p-3 bg-amber-900/30 backdrop-blur-sm border border-amber-600/40 rounded-lg">
+          <p className="text-sm text-amber-200">
             Maximum of {maxSelections} option{maxSelections !== 1 ? 's' : ''}{' '}
             selected. Deselect one to choose another.
           </p>

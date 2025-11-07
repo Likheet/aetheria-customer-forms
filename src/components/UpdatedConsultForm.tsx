@@ -1305,14 +1305,14 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
     return (
       <div className="w-full">
-  <div className="flex flex-wrap gap-2 items-center p-2 border border-gray-200 rounded-md bg-white relative">
+  <div className="flex flex-wrap gap-2 items-center p-2 border border-gray-700/40 rounded-md bg-gray-900/60 backdrop-blur-sm relative">
           {(value || []).map((tag, i) => (
-            <div key={tag + i} className="inline-flex items-center space-x-2 bg-gray-100 text-sm text-gray-700 px-3 py-1 rounded-full">
+            <div key={tag + i} className="inline-flex items-center space-x-2 bg-gray-800/80 text-sm text-gray-200 px-3 py-1 rounded-full">
               <span>{tag}</span>
               <button
                 type="button"
                 onClick={() => onChange((value || []).filter((_, idx) => idx !== i))}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-400 hover:text-gray-200"
                 aria-label={`Remove ${tag}`}
               >
                 ×
@@ -1328,14 +1328,14 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             onBlur={handleBlur}
             onFocus={handleFocus}
             placeholder={placeholder}
-            className="flex-1 min-w-[160px] p-2 text-sm outline-none"
+            className="flex-1 min-w-[160px] p-2 text-sm outline-none bg-transparent text-gray-200 placeholder:text-gray-500"
             aria-autocomplete="list"
             aria-expanded={focused}
           />
 
           {/* Suggestions dropdown */}
           {focused && filteredSuggestions.length > 0 && (
-            <div className="absolute left-2 right-2 top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-auto">
+            <div className="absolute left-2 right-2 top-full mt-2 bg-gray-900/95 backdrop-blur-sm border border-gray-700/40 rounded-lg shadow-lg z-50 max-h-48 overflow-auto">
               {filteredSuggestions.map((s, idx) => (
                 <div
                   key={s}
@@ -1348,7 +1348,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                     requestAnimationFrame(() => inputRef.current?.focus());
                   }}
                   onMouseEnter={() => setHighlight(idx)}
-                  className={`px-4 py-2 cursor-pointer text-sm ${highlight === idx ? 'bg-amber-100' : 'hover:bg-gray-50'}`}
+                  className={`px-4 py-2 cursor-pointer text-sm text-gray-200 ${highlight === idx ? 'bg-amber-900/40' : 'hover:bg-gray-800/60'}`}
                 >
                   {s}
                 </div>
@@ -2073,10 +2073,10 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     
     // Loading state while generating recommendations
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-6">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-6">
-            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-6">
+        <div className="bg-gray-900/80 backdrop-blur-sm border border-gray-700/40 rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-900/40 rounded-full mb-6">
+            <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"></div>
           </div>
           <h1 className="text-2xl font-semibold text-gray-900 mb-4">Generating Your Skincare Routine...</h1>
           <p className="text-gray-600">Please wait while we create personalized recommendations for you.</p>
@@ -2271,10 +2271,10 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     
     // Loading state while generating recommendations
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-6">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-6">
-            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-6">
+        <div className="bg-gray-900/80 backdrop-blur-sm border border-gray-700/40 rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-900/40 rounded-full mb-6">
+            <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"></div>
           </div>
           <h1 className="text-2xl font-semibold text-gray-900 mb-4">Generating Your Skincare Routine...</h1>
           <p className="text-gray-600">Please wait while we create personalized recommendations for you.</p>
@@ -2311,14 +2311,14 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             )}
             
             {/* Sidebar Panel */}
-            <div 
-              className={`fixed top-24 right-0 w-80 z-50 h-[calc(100vh-6rem)] bg-white/95 shadow-2xl transition-transform duration-300 ease-in-out ${
+            <div
+              className={`fixed top-24 right-0 w-80 z-50 h-[calc(100vh-6rem)] bg-gray-900/95 backdrop-blur-sm border-l border-gray-700/40 shadow-2xl transition-transform duration-300 ease-in-out ${
                 isSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
               }`}
             >
               <div className="h-full overflow-y-auto p-4 space-y-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#CBD5E1 #F1F5F9' }}>
             <Collapsible open={isMachineBandOpen} onOpenChange={setIsMachineBandOpen}>
-              <div className="bg-white/95 border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+              <div className="bg-gray-800/60 backdrop-blur-sm border border-gray-700/40 rounded-xl shadow-xl overflow-hidden">
                 <CollapsibleTrigger className="w-full px-4 py-2 bg-gray-800 text-white text-sm font-semibold flex items-center justify-between hover:bg-gray-700 transition-colors">
                   <span>Machine Bands (Dev)</span>
                   <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isMachineBandOpen ? 'rotate-180' : ''}`} />
@@ -2358,7 +2358,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               </div>
             </Collapsible>
             <Collapsible open={isEffectiveBandOpen} onOpenChange={setIsEffectiveBandOpen}>
-              <div className="bg-white/95 border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+              <div className="bg-gray-800/60 backdrop-blur-sm border border-gray-700/40 rounded-xl shadow-xl overflow-hidden">
                 <CollapsibleTrigger className="w-full px-4 py-2 bg-gray-800 text-white text-sm font-semibold flex items-center justify-between hover:bg-gray-700 transition-colors">
                   <span>Effective Bands (Dev)</span>
                   <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isEffectiveBandOpen ? 'rotate-180' : ''}`} />
@@ -2462,9 +2462,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               </div>
             </Collapsible>
             {/* Editable Follow-ups list for quick access */}
-            <div className="bg-white/95 border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+            <div className="bg-gray-800/60 backdrop-blur-sm border border-gray-700/40 rounded-xl shadow-xl overflow-hidden">
               <div className="px-4 py-2 bg-gray-800 text-white text-sm font-semibold">Follow-ups (Editable)</div>
-              <div className="p-4 text-sm text-gray-800 space-y-2">
+              <div className="p-4 text-sm text-gray-200 space-y-2">
                 {(() => {
                   const qsets = getFollowUpsRt((machine as any) || {}, (runtimeSelf as any) || {}).filter(q => isCategoryReady(q.category as any, q.dimension as any))
                   const items = qsets.filter(q => q.questions && q.questions.length)
@@ -2474,7 +2474,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                       <div className="truncate pr-2">{q.category === 'Grease' ? 'Sebum' : q.category}{q.dimension ? ` (${q.dimension})` : ''}</div>
                       <button
                         type="button"
-                        className="px-2 py-1 text-xs border border-amber-300 text-amber-700 rounded hover:bg-amber-50"
+                        className="px-2 py-1 text-xs border border-amber-600/50 text-amber-300 rounded hover:bg-amber-900/40"
                         onClick={() => {
                           setActiveFollowUp({ ruleId: q.ruleId, category: q.category as any, dimension: q.dimension as any, questions: q.questions || [] })
                           setFollowUpLocal(followUpAnswers[q.ruleId] || {})

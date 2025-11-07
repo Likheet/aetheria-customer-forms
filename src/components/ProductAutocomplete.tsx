@@ -144,11 +144,11 @@ export default function ProductAutocomplete({
       {isOpen && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
+          className="absolute z-50 w-full mt-1 bg-gray-900/95 backdrop-blur-sm border border-gray-700/40 rounded-md shadow-lg max-h-60 overflow-y-auto"
         >
           {isLoading ? (
-            <div className="p-3 text-center text-gray-500">
-              <span className="inline-block w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2"></span>
+            <div className="p-3 text-center text-gray-300">
+              <span className="inline-block w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mr-2"></span>
               Searching...
             </div>
           ) : results.length > 0 ? (
@@ -156,21 +156,21 @@ export default function ProductAutocomplete({
               <button
                 key={product.id}
                 onClick={() => handleSelectProduct(product)}
-                className={`w-full text-left p-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0 ${
-                  index === highlightedIndex ? 'bg-blue-50' : ''
+                className={`w-full text-left p-3 text-gray-200 hover:bg-gray-800/60 focus:bg-gray-800/60 focus:outline-none border-b border-gray-700/40 last:border-b-0 ${
+                  index === highlightedIndex ? 'bg-amber-900/40' : ''
                 }`}
               >
-                <div className="font-medium text-gray-900">{product.b}</div>
-                <div className="text-sm text-gray-600">{product.n}</div>
+                <div className="font-medium text-gray-100">{product.b}</div>
+                <div className="text-sm text-gray-400">{product.n}</div>
                 {product.c && (
-                  <div className="text-xs text-gray-400 capitalize mt-1">
+                  <div className="text-xs text-gray-500 capitalize mt-1">
                     {product.c}
                   </div>
                 )}
               </button>
             ))
           ) : value.length > 0 && !isLoading ? (
-            <div className="p-3 text-gray-500 text-center">
+            <div className="p-3 text-gray-300 text-center">
               No products found. You can still add "{value}" manually.
             </div>
           ) : null}
