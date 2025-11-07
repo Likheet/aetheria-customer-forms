@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle, ArrowLeft, ArrowRight, FileText, Droplets, Shield, Heart, Sparkles, Sun, Clock, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
-import { DatePicker } from '@mantine/dates';
 import { saveConsultationData } from '../services/newConsultationService';
 import {
   deriveSelfBands as deriveSelfBandsRt,
@@ -14,8 +13,6 @@ import {
 } from '../lib/decisionEngine';
 import type { MachineScanBands } from '../lib/decisionEngine';
 import { UpdatedConsultData, AcneCategory } from '../types';
-import ProductAutocomplete from './ProductAutocomplete';
-import { SKIN_TYPE_OPTIONS } from '../lib/consultAutoFill';
 import { generateRecommendations, RecommendationContext, RoutineOptionsResponse } from '../services/recommendationEngine';
 import {
   loadConcernMatrixData,
@@ -23,6 +20,46 @@ import {
   getConcernMatrixLoadError,
 } from '../data/concernMatrix';
 import RecommendationDisplay from './RecommendationDisplay';
+
+// Refactored form step components
+import {
+  NameStep,
+  PhoneStep,
+  DateOfBirthStep,
+  GenderStep,
+  PregnancyStep,
+  IsotretinoinStep,
+  SevereCysticAcneStep,
+  AllergyConflictStep,
+  BarrierStressStep,
+  SkinTypeStep,
+  OilLevelsStep,
+  HydrationLevelsStep,
+  SensitivityScreeningStep,
+  DiagnosedConditionsStep,
+  PrescriptionTreatmentsStep,
+  ProfessionalTreatmentsStep,
+  CurrentProductsStep,
+  IrritatingProductsStep,
+  MainConcernsStep,
+  ConcernPriorityStep,
+  RoutineStepsStep,
+  SerumComfortStep,
+  LegalDisclaimerStep,
+} from './steps';
+
+// Refactored concern components
+import {
+  AcneTypeStep,
+  AcneSeverityStep,
+  PigmentationTypeStep,
+  PigmentationSeverityStep,
+  ScarringTypeStep,
+  ScarringSeverityStep,
+  WrinklesStep,
+  PoresStep,
+  TextureStep,
+} from './concerns';
 
 interface UpdatedConsultFormProps {
   onBack: () => void;
@@ -2049,530 +2086,60 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   }
 
   const renderConcernFollowUp = (concern: string, stepType: 'type' | 'severity' | 'sensitivity-question', questionIndex?: number) => {
-    // Maps a follow-up step to the form field key and UI copy
-    const getFieldInfo = (
-      c: string,
-      s: 'type' | 'severity' | 'sensitivity-question',
-      qIdx?: number
-    ): { fieldKey: string | null; title: string; subtitle?: string } => {
-      // Sensitivity universal screening (rarely routed here, but supported)
-      if (s === 'sensitivity-question') {
-        const sensitivityFields = SENSITIVITY_QUESTION_CONFIG.map(q => q.key);
-        const titles = [
-          'Do you flush or turn red easily?',
-          'Have you been told by a professional you have “sensitive skin” or rosacea?',
-          'Does your skin sting/burn when cleansing?',
-          'Do many new products irritate your skin?',
-          'Does sun exposure make your skin red or itchy?',
-          'Do you see visible capillaries or broken veins?'
-        ];
-        const idx = typeof qIdx === 'number' ? qIdx : 0;
-        const fieldKey = sensitivityFields[idx] ?? sensitivityFields[0];
-        const title = titles[idx] ?? titles[0];
-        return { fieldKey, title, subtitle: 'Choose Yes or No' };
-      }
-
-      // Helper to normalize base key
-      const baseMap: Record<string, string> = {
-        'Acne': 'acne',
-        'Post Acne Scarring': 'postAcneScarring',
-        'Pigmentation': 'pigmentation',
-        'Fine lines & wrinkles': 'wrinkles',
-        'Large pores': 'pores',
-        'Bumpy skin': 'texture',
-        'Oiliness': 'oiliness',
-        'Dryness': 'dryness',
-      };
-      const base = baseMap[c] || c.toLowerCase().replace(/[^a-z]/g, '');
-
-      // Acne has custom UI (array-based); we only need headings
-      if (c === 'Acne') {
-        if (s === 'type') {
-          return {
-            fieldKey: null,
-            title: 'What kinds of breakouts do you get?',
-            subtitle: 'Pick all that apply'
-          };
-        }
-        return {
-          fieldKey: null,
-          title: 'How noticeable are those breakouts?',
-          subtitle: 'Choose a severity for each breakout type'
-        };
-      }
-
-      // Post Acne Scarring has a type first, then severity/color based on type
-      if (c === 'Post Acne Scarring') {
-        if (s === 'type') {
-          return {
-            fieldKey: null,
-            title: 'What type of marks do you notice on your skin after acne heals?',
-            subtitle: 'Select the option that matches your scars'
-          };
-        }
-        const scarType = formData.postAcneScarringType || '';
-        const isPigmentation = scarType.includes('pigmentation') || scarType.includes('Post-inflammatory');
-        return {
-          fieldKey: null,
-          title: isPigmentation ? 'What colour are your post acne marks?' : 'How would you describe the severity?',
-          subtitle: isPigmentation ? 'Select the color that best describes your marks' : 'Choose the severity that best fits your situation'
-        };
-      }
-
-      // Pigmentation has a true type + severity
-      if (c === 'Pigmentation') {
-        if (s === 'type') {
-          return {
-            fieldKey: `${base}Type`,
-            title: 'What kind of pigmentation is your main concern?',
-            subtitle: 'Pick the option that best matches (Red vs Brown)'
-          };
-        }
-        return {
-          fieldKey: `${base}Severity`,
-          title: 'How noticeable is the pigmentation?',
-          subtitle: 'Choose the description closest to what you see'
-        };
-      }
-
-      // Other concerns only persist into a single *Type* field, even on a “severity” page
-      const fieldKey = `${base}Type`;
-      let title = 'Tell us a bit more';
-      let subtitle: string | undefined = 'Pick the description that fits you best';
-
-      if (c === 'Fine lines & wrinkles') {
-        title = 'How noticeable are your lines or sagging?';
-      } else if (c === 'Large pores') {
-        title = 'How noticeable are your pores?';
-      } else if (c === 'Bumpy skin') {
-        title = 'How noticeable is the uneven texture?';
-      } else if (c === 'Oiliness') {
-        title = 'How noticeable is the oiliness?';
-      } else if (c === 'Dryness') {
-        title = 'How noticeable is the dryness?';
-      }
-
-      return { fieldKey, title, subtitle };
-    };
-    // concernBaseKey not used
-    const getAcneTypeBadge = (acneType: string) => {
-      if (!acneType) return null;
-      
-      if (acneType.includes('Blackheads')) return 'Blackheads';
-      if (acneType.includes('Whiteheads')) return 'Whiteheads';
-      if (acneType.includes('Red pimples')) return 'Inflamed';
-      if (acneType.includes('Large painful bumps') || acneType.includes('cystic')) return 'Cystic';
-      if (acneType.includes('jawline') || acneType.includes('hormonal')) return 'Hormonal';
-      
-      return 'Acne';
+    // Common props for all concern components
+    const stepProps = {
+      formData,
+      updateFormData,
+      errors,
     };
 
-    const getConcernIcon = (concern: string) => {
-      switch (concern) {
-        case 'Acne': return <Shield className="w-8 h-8 text-amber-600" />;
-        case 'Post Acne Scarring': return <Sparkles className="w-8 h-8 text-purple-600" />;
-        case 'Pigmentation': return <Sun className="w-8 h-8 text-amber-600" />;
-  // 'Sensitivity' removed from main concerns; handled via universal screening
-  case 'Sensitivity': return <FileText className="w-8 h-8 text-amber-600" />;
-        case 'Fine lines & wrinkles': return <Clock className="w-8 h-8 text-amber-600" />;
-        case 'Large pores': return <Droplets className="w-8 h-8 text-amber-600" />;
-        case 'Bumpy skin': return <Sparkles className="w-8 h-8 text-amber-600" />;
-        case 'Oiliness': return <Sun className="w-8 h-8 text-amber-600" />;
-        case 'Dryness': return <Droplets className="w-8 h-8 text-amber-600" />;
-        default: return <FileText className="w-8 h-8 text-amber-600" />;
-      }
-    };
-
-    const getConcernOptions = (concern: string, stepType: 'type' | 'severity' | 'sensitivity-question', questionIndex?: number) => {
-      if (stepType === 'sensitivity-question' && questionIndex !== undefined) {
-        return ['Yes', 'No'];
-      }
-      switch (concern) {
-        case 'Acne':
-          return stepType === 'type' ? ACNE_TYPE_OPTIONS : [];
-        case 'Pigmentation': {
-          if (stepType === 'type') return ['Red', 'Brown'];
-          if (stepType === 'severity') {
-            const currentType = formData.pigmentationType || '';
-            const isRed = /\bred\b|redness/i.test(currentType);
-            if (isRed) {
-              return [
-                'Light red, only in a small area → Blue',
-                'Moderate red, noticeable in several zones → Yellow',
-                'Bright or deep red, widespread across the face → Red'
-              ];
-            }
-            return [
-              'Light brown patches, visible up close but small in size → Blue',
-              'Moderate brown spots/patches, noticeable in several areas → Yellow',
-              'Dark brown patches, large or widespread across the face → Red'
-            ];
-          }
-          return [];
-        }
-        case 'Fine lines & wrinkles':
-          return stepType === 'severity'
-            ? [
-                'A few fine lines or slight looseness in some spots → Blue',
-                'Wrinkles or sagging you can see in several areas → Yellow',
-                "Deep wrinkles or sagging that's easy to notice → Red",
-              ]
-            : [];
-        case 'Large pores':
-          return stepType === 'severity'
-            ? [
-                'Noticeable near the nose or small areas on close inspection → Blue',
-                'Clearly visible on multiple zones (nose, cheeks, forehead) → Yellow',
-                'Large, obvious pores across much of the face, visible from a distance → Red',
-              ]
-            : [];
-        case 'Bumpy skin':
-          return stepType === 'severity'
-            ? [
-                'A few small areas with bumps or rough patches (like nose or chin) → Blue',
-                'Noticeable bumps or uneven texture in several areas of the face → Yellow',
-                'Rough or bumpy texture across most of the face → Red',
-              ]
-            : [];
-        case 'Post Acne Scarring': {
-          if (stepType === 'type') {
-            return [
-              'Small, shallow, round or pitted scars → Ice pick / pitted scars',
-              'Broad, shallow depressions → Rolling scars',
-              'Flat or slightly raised dark marks → post-inflammatory pigmentation',
-              'Raised, thick scars → Keloid / hypertrophic scars',
-            ];
-          }
-          // For severity step, depends on scar type
-          const scarType = formData.postAcneScarringType || '';
-          if (scarType.includes('pigmentation') || scarType.includes('Post-inflammatory')) {
-            // Color selection for pigmentation
-            return [
-              'Red → Active / recent marks',
-              'Brown → Pigmented / older marks',
-              'Both → Combination',
-            ];
-          }
-          // Severity for ice pick/rolling/keloid
-          return [
-            'Less than 10% of face affected, slight visibility, slight uneven texture → Blue',
-            '10–30% of face affected, noticeable at normal distance, moderate bumps/indentations → Yellow',
-            'More than 30% of face affected, very prominent, deep pits or thick raised scars → Red',
-          ];
-        }
-        default:
-          return [];
-      }
-    };
-
-    const acneBreakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : [];
-    const toggleAcneBreakout = (option: string) => {
-      const exists = acneBreakouts.find(item => item.type === option);
-      if (exists) {
-        updateFormData({ acneBreakouts: acneBreakouts.filter(item => item.type !== option) });
-      } else {
-        const category = (deriveAcneCategory(option) || 'Comedonal acne') as AcneCategory;
-        updateFormData({ acneBreakouts: [...acneBreakouts, { type: option, severity: '', category }] });
-      }
-    };
-
+    // Acne concern
     if (concern === 'Acne') {
       if (stepType === 'type') {
-        const { title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
-        const options = ACNE_TYPE_OPTIONS;
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
-            <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-              <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
-                <span className="mr-1">{React.cloneElement(getConcernIcon(concern) as React.ReactElement, { className: 'w-4 h-4 text-amber-600' })}</span>
-                {concern}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-                {getConcernIcon(concern)}
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">{title}</h2>
-              {subtitle && <p className="text-gray-600">{subtitle}</p>}
-            </div>
-            <div className="max-w-2xl mx-auto w-full">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {options.map(option => {
-                  const isSelected = acneBreakouts.some(item => item.type === option);
-                  const category = deriveAcneCategory(option);
-                  return (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => toggleAcneBreakout(option)}
-                      className={`px-6 py-4 text-left rounded-xl border-2 transition-all duration-300 ${
-                        isSelected
-                          ? 'border-amber-400 bg-amber-50 text-amber-700 shadow-lg'
-                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-semibold">{option}</p>
-                          <p className="text-sm text-amber-600">{category || 'Acne'}</p>
-                        </div>
-                        {isSelected && <CheckCircle className="w-5 h-5 text-amber-500" />}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-              {errors.acneBreakouts && <p className="text-red-500 text-sm mt-2">{errors.acneBreakouts}</p>}
-            </div>
-          </div>
-        );
+        return <AcneTypeStep {...stepProps} />;
       }
-
       if (stepType === 'severity') {
-        const { title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
-        if (!acneBreakouts.length) {
-          return (
-            <div className="space-y-12 flex flex-col justify-center h-full py-8">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-                  {getConcernIcon(concern)}
-                </div>
-                <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">{title}</h2>
-                <p className="text-gray-600">Select at least one breakout type to continue.</p>
-              </div>
-            </div>
-          );
-        }
-
-        const setSeverity = (index: number, value: string) => {
-          const next = acneBreakouts.map((item, idx) => {
-            if (idx !== index) return item;
-            const category = (deriveAcneCategory(item.type) || item.category) as AcneCategory;
-            return { ...item, severity: value, category };
-          });
-          updateFormData({ acneBreakouts: next });
-        };
-
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
-            <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-              <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
-                <span className="mr-1">{React.cloneElement(getConcernIcon(concern) as React.ReactElement, { className: 'w-4 h-4 text-amber-600' })}</span>
-                {concern}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-                {getConcernIcon(concern)}
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">{title}</h2>
-              {subtitle && <p className="text-gray-600">{subtitle}</p>}
-            </div>
-            <div className="max-w-3xl mx-auto w-full space-y-6">
-              {acneBreakouts.map((item, index) => {
-                const severityOptions = getAcneSeverityOptions(item.type);
-                const badge = getAcneTypeBadge(item.type);
-                return (
-                  <div key={`${item.type}-${index}`} className="bg-white/80 border border-amber-200 rounded-2xl p-6 shadow-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                      <div className="flex items-center gap-2">
-                        {badge && (
-                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-medium border border-blue-200">
-                            {badge}
-                          </span>
-                        )}
-                        <span className="text-lg font-semibold text-gray-900">{item.type}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-amber-600">{deriveAcneCategory(item.type)}</span>
-                        <button
-                          type="button"
-                          onClick={() => toggleAcneBreakout(item.type)}
-                          className="text-sm text-amber-500 hover:text-amber-700"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {severityOptions.map(option => {
-                        const isSelected = item.severity === option;
-                        return (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => setSeverity(index, option)}
-                            className={`px-4 py-3 rounded-xl border-2 text-sm transition-all duration-300 ${
-                              isSelected
-                                ? 'border-amber-400 bg-amber-50 text-amber-700 shadow-lg'
-                                : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                            }`}
-                          >
-                            {option}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-              {errors.acneBreakouts && <p className="text-red-500 text-sm">{errors.acneBreakouts}</p>}
-            </div>
-          </div>
-        );
+        return <AcneSeverityStep {...stepProps} />;
       }
     }
 
-    // Post Acne Scarring handling
+    // Pigmentation concern
+    if (concern === 'Pigmentation') {
+      if (stepType === 'type') {
+        return <PigmentationTypeStep {...stepProps} />;
+      }
+      if (stepType === 'severity') {
+        return <PigmentationSeverityStep {...stepProps} />;
+      }
+    }
+
+    // Post Acne Scarring concern
     if (concern === 'Post Acne Scarring') {
       if (stepType === 'type') {
-        const { title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
-        const options = getConcernOptions(concern, stepType, questionIndex);
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
-            <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-              <div className="inline-flex items-center px-3 py-1 rounded-full bg-purple-100 text-purple-800 text-sm font-medium border border-purple-200">
-                <span className="mr-1">{React.cloneElement(getConcernIcon(concern) as React.ReactElement, { className: 'w-4 h-4 text-purple-600' })}</span>
-                {concern}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-6">
-                {getConcernIcon(concern)}
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">{title}</h2>
-              {subtitle && <p className="text-gray-600">{subtitle}</p>}
-            </div>
-            <div className="max-w-2xl mx-auto w-full space-y-3">
-              {options.map((option) => {
-                const isSelected = formData.postAcneScarringType === option;
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => {
-                      const subtype = mapScarringTypeToSubtype(option);
-                      updateFormData({ postAcneScarringType: option, postAcneScarringSubtype: subtype as any, postAcneScarringSeverity: '', postAcneScarringColor: '' });
-                    }}
-                    className={`w-full px-6 py-4 rounded-xl border-2 text-left transition-all duration-300 ${
-                      isSelected
-                        ? 'border-purple-400 bg-purple-50 text-purple-900 shadow-lg'
-                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-purple-300'
-                    }`}
-                  >
-                    <span className="text-lg font-semibold">{option}</span>
-                  </button>
-                );
-              })}
-              {errors.postAcneScarringType && <p className="text-red-500 text-sm">{errors.postAcneScarringType}</p>}
-            </div>
-          </div>
-        );
-      } else if (stepType === 'severity') {
-        const { title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
-        const options = getConcernOptions(concern, stepType, questionIndex);
-        const scarType = formData.postAcneScarringType || '';
-        const isPigmentation = scarType.includes('pigmentation') || scarType.includes('Post-inflammatory');
-        
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
-            <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-              <div className="inline-flex items-center px-3 py-1 rounded-full bg-purple-100 text-purple-800 text-sm font-medium border border-purple-200">
-                <span className="mr-1">{React.cloneElement(getConcernIcon(concern) as React.ReactElement, { className: 'w-4 h-4 text-purple-600' })}</span>
-                {concern}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-6">
-                {getConcernIcon(concern)}
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">{title}</h2>
-              {subtitle && <p className="text-gray-600">{subtitle}</p>}
-              <p className="text-sm text-purple-600 mt-2">{isPigmentation ? 'Select color' : 'Select severity'}</p>
-            </div>
-            <div className="max-w-2xl mx-auto w-full space-y-3">
-              {options.map((option) => {
-                const value = mapScarringSeverityToValue(option);
-                const isSelected = isPigmentation ? formData.postAcneScarringColor === value : formData.postAcneScarringSeverity === value;
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => {
-                      if (isPigmentation) {
-                        updateFormData({ postAcneScarringColor: value });
-                      } else {
-                        updateFormData({ postAcneScarringSeverity: value });
-                      }
-                    }}
-                    className={`w-full px-6 py-4 rounded-xl border-2 text-left transition-all duration-300 ${
-                      isSelected
-                        ? 'border-purple-400 bg-purple-50 text-purple-900 shadow-lg'
-                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-purple-300'
-                    }`}
-                  >
-                    <span className="text-lg font-semibold">{option}</span>
-                  </button>
-                );
-              })}
-              {errors.postAcneScarringSeverity && <p className="text-red-500 text-sm">{errors.postAcneScarringSeverity}</p>}
-              {errors.postAcneScarringColor && <p className="text-red-500 text-sm">{errors.postAcneScarringColor}</p>}
-            </div>
-          </div>
-        );
+        return <ScarringTypeStep {...stepProps} />;
+      }
+      if (stepType === 'severity') {
+        return <ScarringSeverityStep {...stepProps} />;
       }
     }
 
-    const { fieldKey, title, subtitle } = getFieldInfo(concern, stepType, questionIndex);
-    const fieldValue = (fieldKey ? (formData as any)[fieldKey] : '') as string;
-    const options = getConcernOptions(concern, stepType, questionIndex);
-    const handleConcernOption = (option: string) => {
-      if (!fieldKey) return;
-      updateFormData({ [fieldKey]: option } as Partial<UpdatedConsultData>);
-    };
+    // Simple concerns (only severity, no type)
+    if (concern === 'Fine lines & wrinkles') {
+      return <WrinklesStep {...stepProps} />;
+    }
 
-    return (
-      <div className="space-y-12 flex flex-col justify-center h-full py-8 relative">
-        {/* Concern Badge */}
-        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-          <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium border border-amber-200">
-            <span className="mr-1">{React.cloneElement(getConcernIcon(concern) as React.ReactElement, { className: "w-4 h-4 text-amber-600" })}</span>
-            {concern}
-          </div>
-        </div>
+    if (concern === 'Large pores') {
+      return <PoresStep {...stepProps} />;
+    }
 
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-            {getConcernIcon(concern)}
-          </div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-            {title}
-          </h2>
-          {subtitle && <p className="text-gray-600">{subtitle}</p>}
-        </div>
+    if (concern === 'Bumpy skin') {
+      return <TextureStep {...stepProps} />;
+    }
 
-        <div className="max-w-2xl mx-auto w-full">
-          <div className="grid grid-cols-1 gap-4">
-              {options.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => handleConcernOption(option)}
-                className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
-                  fieldValue === option
-                    ? 'border-amber-400 bg-amber-50 text-amber-700'
-                    : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                }`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-          {fieldKey && errors[fieldKey] && <p className="text-red-500 text-sm mt-2">{errors[fieldKey]}</p>}
-        </div>
-      </div>
-    );
+    // Fallback for unsupported concerns
+    return null;
   };
+
 
   const renderStep = () => {
     const currentConcernStep = getCurrentConcernStep();
@@ -2587,1035 +2154,100 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     }
 
     // Handle individual lifestyle questions
+    // Common props for all step components
+    const stepProps = {
+      formData,
+      updateFormData,
+      errors,
+    };
+
+    // Concern priority step
     if (currentConcernStep === 'concern-priority') {
-      const selected = Array.isArray(formData.mainConcerns) ? formData.mainConcerns : [];
-      let order = Array.isArray(formData.concernPriority) ? formData.concernPriority.filter(c => selected.includes(c)) : [];
-      // Ensure all selected present exactly once
-      selected.forEach(c => { if (!order.includes(c)) order.push(c); });
-      // Enforce Acne at top if selected
-      if (selected.includes('Acne')) {
-        order = ['Acne', ...order.filter(c => c !== 'Acne')];
-      }
-
-      const move = (c: string, dir: -1 | 1) => {
-        if (c === 'Acne' && selected.includes('Acne')) return; // Acne pinned
-        const idx = order.indexOf(c);
-        if (idx < 0) return;
-        const newIdx = idx + dir;
-        if (newIdx < (selected.includes('Acne') ? 1 : 0) || newIdx >= order.length) return;
-        const copy = [...order];
-        const [item] = copy.splice(idx, 1);
-        copy.splice(newIdx, 0, item);
-        updateFormData({ concernPriority: copy });
-      };
-
-      return (
-        <div className="space-y-12 flex flex-col justify-center h-full py-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-              <Sparkles className="w-8 h-8 text-amber-600" />
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-              What would you like to prioritize?
-            </h2>
-            <p className="text-gray-600">Drag to reorder or use the arrows. Acne stays #1 if selected.</p>
-          </div>
-          <div className="max-w-xl mx-auto w-full">
-            <ul className="space-y-2">
-              {order.map((c, idx) => (
-                <li key={c} className={`flex items-center justify-between p-3 rounded-xl border ${c==='Acne' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
-                  <div className="flex items-center gap-3">
-                    <span className={`w-8 h-8 inline-flex items-center justify-center rounded-full text-sm font-semibold ${idx===0 ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-700'}`}>{idx+1}</span>
-                    <span className={`text-lg ${c==='Acne' ? 'text-red-700' : 'text-gray-800'}`}>{c}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => move(c, -1)} disabled={idx === (selected.includes('Acne') ? 1 : 0) || c==='Acne'} className="px-2 py-1 text-sm border rounded disabled:opacity-40">↑</button>
-                    <button type="button" onClick={() => move(c, 1)} disabled={idx === order.length - 1} className="px-2 py-1 text-sm border rounded disabled:opacity-40">↓</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            {errors.concernPriority && <p className="text-red-500 text-sm mt-2">{errors.concernPriority}</p>}
-          </div>
-        </div>
-      );
+      return <ConcernPriorityStep {...stepProps} />;
     }
     // Section E - Lifestyle questions REMOVED (diet, water-intake, sleep-hours, stress-levels, environment)
 
-    // Handle individual preference questions
+    // Preference steps
     if (currentConcernStep === 'routine-steps') {
-      return (
-        <div className="space-y-12 flex flex-col justify-center h-full py-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-              <Sparkles className="w-8 h-8 text-amber-600" />
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-              How many steps do you want in your skincare routine?
-            </h2>
-          </div>
-
-          <div className="max-w-2xl mx-auto w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {['3-step', '4-step', '5+ step'].map((option) => (
-                <label key={option} className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-amber-300 transition-all duration-300">
-                  <input
-                    type="radio"
-                    name="routineSteps"
-                    value={option}
-                    checked={formData.routineSteps === option}
-                    onChange={(e) => updateFormData({ routineSteps: e.target.value })}
-                    className="mr-3 h-5 w-5 text-amber-600 border-gray-300 focus:ring-amber-400"
-                  />
-                  <span className="text-lg text-gray-700">{option}</span>
-                </label>
-              ))}
-            </div>
-            {errors.routineSteps && <p className="text-red-500 text-sm mt-2">{errors.routineSteps}</p>}
-          </div>
-        </div>
-      );
+      return <RoutineStepsStep {...stepProps} />;
     }
 
     if (currentConcernStep === 'serum-comfort') {
-      return (
-        <div className="space-y-12 flex flex-col justify-center h-full py-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-              <Droplets className="w-8 h-8 text-amber-600" />
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-              How many serums are you comfortable using?
-            </h2>
-          </div>
-
-          <div className="max-w-2xl mx-auto w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {['1', '2', '3'].map((option) => (
-                <label key={option} className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-amber-300 transition-all duration-300">
-                  <input
-                    type="radio"
-                    name="serumComfort"
-                    value={option}
-                    checked={formData.serumComfort === option}
-                    onChange={(e) => updateFormData({ serumComfort: e.target.value })}
-                    className="mr-3 h-5 w-5 text-amber-600 border-gray-300 focus:ring-amber-400"
-                  />
-                  <span className="text-lg text-gray-700">{option}</span>
-                </label>
-              ))}
-            </div>
-            {errors.serumComfort && <p className="text-red-500 text-sm mt-2">{errors.serumComfort}</p>}
-          </div>
-        </div>
-      );
+      return <SerumComfortStep {...stepProps} />;
     }
 
-    // Legal Disclaimer
+    // Legal disclaimer step
     if (currentConcernStep === 'legal-disclaimer') {
-      return (
-        <div className="space-y-12 flex flex-col justify-center h-full py-8">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-6">
-              <Shield className="w-8 h-8 text-red-600" />
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-              Important Legal Disclaimer
-            </h2>
-            <p className="text-gray-600 mb-6">Please read and acknowledge the following before proceeding:</p>
-          </div>
-
-          <div className="max-w-4xl mx-auto w-full">
-            <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6">
-              <h3 className="text-lg font-semibold text-red-800 mb-4">Before using this system, I understand and agree:</h3>
-              <ul className="space-y-3 text-sm text-red-700">
-                <li className="flex items-start">
-                  <input
-                    type="checkbox"
-                    checked={formData.legalDisclaimerNotMedical}
-                    onChange={(e) => updateFormData({ legalDisclaimerNotMedical: e.target.checked })}
-                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
-                  />
-                  <span>This tool provides general skincare guidance and is NOT a medical diagnosis</span>
-                </li>
-                <li className="flex items-start">
-                  <input
-                    type="checkbox"
-                    checked={formData.legalDisclaimerConsultDermatologist}
-                    onChange={(e) => updateFormData({ legalDisclaimerConsultDermatologist: e.target.checked })}
-                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
-                  />
-                  <span>I should consult a dermatologist for severe acne, suspicious moles, or worsening conditions</span>
-                </li>
-                <li className="flex items-start">
-                  <input
-                    type="checkbox"
-                    checked={formData.legalDisclaimerPatchTest}
-                    onChange={(e) => updateFormData({ legalDisclaimerPatchTest: e.target.checked })}
-                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
-                  />
-                  <span>I will perform a patch test for all new products before full-face application</span>
-                </li>
-                <li className="flex items-start">
-                  <input
-                    type="checkbox"
-                    checked={formData.legalDisclaimerDiscontinueUse}
-                    onChange={(e) => updateFormData({ legalDisclaimerDiscontinueUse: e.target.checked })}
-                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
-                  />
-                  <span>I will discontinue use immediately if irritation, redness, or allergic reaction occurs</span>
-                </li>
-                <li className="flex items-start">
-                  <input
-                    type="checkbox"
-                    checked={formData.legalDisclaimerDiscloseInfo}
-                    onChange={(e) => updateFormData({ legalDisclaimerDiscloseInfo: e.target.checked })}
-                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
-                  />
-                  <span>I am responsible for disclosing all allergies, medications, and health conditions accurately</span>
-                </li>
-                <li className="flex items-start">
-                  <input
-                    type="checkbox"
-                    checked={formData.legalDisclaimerNoLiability}
-                    onChange={(e) => updateFormData({ legalDisclaimerNoLiability: e.target.checked })}
-                    className="mr-3 mt-0.5 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-400"
-                  />
-                  <span>The salon and software provider are not liable for adverse reactions from product misuse or failure to disclose medical information</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="flex items-center justify-center">
-              <label className="flex items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-red-300 transition-all duration-300">
-                <input
-                  type="checkbox"
-                  checked={formData.legalDisclaimerAgreed}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    const disclaimerUpdates: Partial<Pick<UpdatedConsultData, LegalDisclaimerField | 'legalDisclaimerAgreed'>> = {
-                      legalDisclaimerAgreed: checked,
-                    };
-
-                    LEGAL_DISCLAIMER_KEYS.forEach((key) => {
-                      disclaimerUpdates[key] = checked;
-                    });
-
-                    updateFormData(disclaimerUpdates as Partial<UpdatedConsultData>);
-                  }}
-                  className="mr-3 h-5 w-5 text-red-600 border-gray-300 focus:ring-red-400"
-                />
-                <span className="text-lg text-gray-700">All disclaimer points acknowledged</span>
-              </label>
-            </div>
-            {errors.legalDisclaimerAgreed && <p className="text-red-500 text-sm mt-2 text-center">{errors.legalDisclaimerAgreed}</p>}
-          </div>
-        </div>
-      );
+      return <LegalDisclaimerStep {...stepProps} />;
     }
 
     // brand-preference UI removed
 
-    // Handle base steps (1-14)
+    // Handle base steps (1-19) using extracted components
     switch (currentStep) {
+      // Personal Info (Steps 1-4)
       case 1:
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-                <FileText className="w-8 h-8 text-amber-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                Name
-              </h2>
-              <p className="text-gray-600">What is your full name?</p>
-            </div>
-
-            <div className="max-w-2xl mx-auto w-full">
-              <input
-                ref={currentStep === 1 ? firstInputRef : undefined}
-                type="text"
-                value={formData.name}
-                onChange={(e) => updateFormData({ name: e.target.value })}
-                className="w-full px-6 py-4 text-lg rounded-xl border-2 border-gray-200 bg-gray-50 focus:border-amber-400 focus:bg-white focus:outline-none transition-all duration-300"
-                placeholder="Enter your full name"
-              />
-              {errors.name && <p className="text-red-500 text-sm mt-2">{errors.name}</p>}
-            </div>
-          </div>
-        );
+        return <NameStep {...stepProps} />;
 
       case 2:
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-                <FileText className="w-8 h-8 text-amber-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                Phone Number
-              </h2>
-              <p className="text-gray-600">What is your phone number?</p>
-            </div>
-
-            <div className="max-w-2xl mx-auto w-full">
-              <input
-                ref={currentStep === 2 ? firstInputRef : undefined}
-                type="tel"
-                value={formData.phoneNumber}
-                onChange={(e) => updateFormData({ phoneNumber: e.target.value })}
-                className="w-full px-6 py-4 text-lg rounded-xl border-2 border-gray-200 bg-gray-50 focus:border-amber-400 focus:bg-white focus:outline-none transition-all duration-300"
-                placeholder="Enter your phone number"
-              />
-              {errors.phoneNumber && <p className="text-red-500 text-sm mt-2">{errors.phoneNumber}</p>}
-            </div>
-          </div>
-        );
+        return <PhoneStep {...stepProps} />;
 
       case 3:
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-                <FileText className="w-8 h-8 text-amber-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                Date of Birth
-              </h2>
-              <p className="text-gray-600">What is your date of birth?</p>
-            </div>
-
-            <div className="max-w-2xl mx-auto w-full">
-              <div className="flex justify-center">
-                <div className="calendar-wrapper mx-auto w-fit" style={{
-                  '--calendar-scale': 1,
-                  '--cui-calendar-nav-date-color': '#d97706',
-                  '--cui-calendar-nav-date-hover-color': '#92400e',
-                  '--cui-calendar-nav-icon-color': '#6b7280',
-                  '--cui-calendar-nav-icon-hover-color': '#92400e',
-                  '--cui-calendar-nav-icon-width': 'calc(1rem * var(--calendar-scale))',
-                  '--cui-calendar-nav-icon-height': 'calc(1rem * var(--calendar-scale))',
-                  '--cui-calendar-cell-selected-bg': '#f59e0b',
-                  '--cui-calendar-cell-selected-color': '#ffffff',
-                  '--cui-calendar-cell-hover-bg': '#fef3c7',
-                  '--cui-calendar-cell-hover-color': '#92400e',
-                  '--cui-calendar-cell-today-color': '#f59e0b',
-                  '--cui-calendar-nav-border-color': '#e5e7eb',
-                  '--cui-calendar-cell-focus-box-shadow': '0 0 0 2px rgba(245, 158, 11, 0.3)',
-                  '--cui-calendar-table-cell-size': 'calc(2.6rem * var(--calendar-scale))',
-                  '--cui-calendar-nav-padding': 'calc(0.35rem * var(--calendar-scale))'
-                } as React.CSSProperties}>
-                  {/* Helper to format date consistently (local, no TZ shift) */}
-                  
-                  <DatePicker
-                    defaultDate={new Date(2005, 0, 1)}
-                    value={formData.dateOfBirth ? (() => {
-                      try {
-                        const dateStr = formData.dateOfBirth.includes('T') ? formData.dateOfBirth : formData.dateOfBirth + 'T00:00:00';
-                        const date = new Date(dateStr);
-                        return isNaN(date.getTime()) ? null : date;
-                      } catch {
-                        return null;
-                      }
-                    })() : null}
-                    onChange={(val) => {
-                      let d: any = val as any;
-                      if (Array.isArray(d)) {
-                        d = d.find(Boolean);
-                      }
-                      if (d && typeof d.toDate === 'function') {
-                        d = d.toDate();
-                      } else if (d && d.date) {
-                        d = d.date;
-                      } else if (typeof d === 'string') {
-                        const parsed = new Date(d);
-                        d = isNaN(parsed.getTime()) ? null : parsed;
-                      }
-                      if (!(d instanceof Date)) {
-                        return; // ignore unexpected shape
-                      }
-                      const yyyy = d.getFullYear();
-                      const mm = String(d.getMonth() + 1).padStart(2, '0');
-                      const dd = String(d.getDate()).padStart(2, '0');
-                      updateFormData({ dateOfBirth: `${yyyy}-${mm}-${dd}` });
-                    }}
-                    getDayProps={(input: any) => {
-                      const d = input instanceof Date
-                        ? input
-                        : input && input.date instanceof Date
-                          ? input.date
-                          : null;
-                      return {
-                        onClick: () => {
-                          if (!d) return;
-                          const yyyy = d.getFullYear();
-                          const mm = String(d.getMonth() + 1).padStart(2, '0');
-                          const dd = String(d.getDate()).padStart(2, '0');
-                          updateFormData({ dateOfBirth: `${yyyy}-${mm}-${dd}` });
-                        },
-                      };
-                    }}
-                    defaultLevel="decade"
-                    weekendDays={[]}
-                    maxDate={new Date()}
-                    allowDeselect={false}
-                    size="md"
-                    aria-label="Date of birth"
-                  />
-                </div>
-              </div>
-              {formData.dateOfBirth && (
-                <div className="text-center mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                  <p className="text-sm text-amber-800">
-                    <span className="font-medium">Selected Date:</span> {new Date(formData.dateOfBirth).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
-                </div>
-              )}
-              {errors.dateOfBirth && <p className="text-red-500 text-sm mt-2 text-center">{errors.dateOfBirth}</p>}
-            </div>
-          </div>
-        );
+        return <DateOfBirthStep {...stepProps} />;
 
       case 4:
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-                <FileText className="w-8 h-8 text-amber-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                Gender
-              </h2>
-              <p className="text-gray-600">What is your gender?</p>
-            </div>
+        return <GenderStep {...stepProps} />;
 
-            <div className="max-w-2xl mx-auto w-full">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {['Male', 'Female', 'Other'].map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => updateFormData({ gender: option })}
-                    className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
-                      formData.gender === option
-                        ? 'border-amber-400 bg-amber-50 text-amber-700'
-                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-              {errors.gender && <p className="text-red-500 text-sm mt-2">{errors.gender}</p>}
-            </div>
-          </div>
-        );
+      // Safety Gates (Steps 5-9)
+      case 5:
+        return <PregnancyStep {...stepProps} />;
 
-      // Section 0 - Gates (Steps 5-9)
-      case 5: // Pregnancy
-        // Skip rendering this step for males - it's handled by step skipping in handleNext/handleBack
-        if (formData.gender === 'Male') {
-          return null;
-        }
-        
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-6">
-                <Shield className="w-8 h-8 text-red-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                Safety Gate: Pregnancy
-              </h2>
-              <p className="text-gray-600">Are you currently pregnant or breastfeeding?</p>
-            </div>
+      case 6:
+        return <IsotretinoinStep {...stepProps} />;
 
-            <div className="max-w-2xl mx-auto w-full">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {['Yes', 'No'].map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => handleGateChange('pregnancy', option, gateQuestions[0].action)}
-                    className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
-                      formData.pregnancy === option
-                        ? option === 'Yes' 
-                          ? 'border-red-400 bg-red-50 text-red-700'
-                          : 'border-green-400 bg-green-50 text-green-700'
-                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-              {errors.pregnancy && <p className="text-red-500 text-sm mt-2">{errors.pregnancy}</p>}
-            </div>
-          </div>
-        );
+      case 7:
+        return <SevereCysticAcneStep {...stepProps} />;
 
-      case 6: // Recent Isotretinoin
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-6">
-                <Shield className="w-8 h-8 text-red-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                Safety Gate: Recent Medication
-              </h2>
-              <p className="text-gray-600">Have you used isotretinoin (Accutane) in the last 6 months?</p>
-            </div>
+      case 8:
+        return <AllergyConflictStep {...stepProps} />;
 
-            <div className="max-w-2xl mx-auto w-full">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {['Yes', 'No'].map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => handleGateChange('recentIsotretinoin', option, gateQuestions[1].action)}
-                    className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
-                      formData.recentIsotretinoin === option
-                        ? option === 'Yes' 
-                          ? 'border-red-400 bg-red-50 text-red-700'
-                          : 'border-green-400 bg-green-50 text-green-700'
-                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-              {errors.recentIsotretinoin && <p className="text-red-500 text-sm mt-2">{errors.recentIsotretinoin}</p>}
-            </div>
-          </div>
-        );
+      case 9:
+        return <BarrierStressStep {...stepProps} />;
 
-      case 7: // Severe Cystic Acne
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-6">
-                <Shield className="w-8 h-8 text-red-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                Safety Gate: Severe Acne
-              </h2>
-              <p className="text-gray-600">Do you have severe or cystic acne that is painful or scarring?</p>
-            </div>
+      // Skin Basics (Steps 10-12)
+      case 10:
+        return <SkinTypeStep {...stepProps} />;
 
-            <div className="max-w-2xl mx-auto w-full">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {['Yes', 'No'].map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => handleGateChange('severeCysticAcne', option, gateQuestions[2].action)}
-                    className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
-                      formData.severeCysticAcne === option
-                        ? option === 'Yes' 
-                          ? 'border-red-400 bg-red-50 text-red-700'
-                          : 'border-green-400 bg-green-50 text-green-700'
-                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-              {errors.severeCysticAcne && <p className="text-red-500 text-sm mt-2">{errors.severeCysticAcne}</p>}
-            </div>
-          </div>
-        );
+      case 11:
+        return <OilLevelsStep {...stepProps} />;
 
-      case 8: // Allergy Conflict
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-6">
-                <Shield className="w-8 h-8 text-red-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                Safety Gate: Allergies
-              </h2>
-              <p className="text-gray-600">Do you have any known allergies to skincare ingredients?</p>
-            </div>
+      case 12:
+        return <HydrationLevelsStep {...stepProps} />;
 
-            <div className="max-w-2xl mx-auto w-full">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {['Yes', 'No'].map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => handleGateChange('allergyConflict', option, gateQuestions[3].action)}
-                    className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
-                      formData.allergyConflict === option
-                        ? option === 'Yes' 
-                          ? 'border-red-400 bg-red-50 text-red-700'
-                          : 'border-green-400 bg-green-50 text-green-700'
-                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-              {errors.allergyConflict && <p className="text-red-500 text-sm mt-2">{errors.allergyConflict}</p>}
-            </div>
-          </div>
-        );
+      // Sensitivity Screening (Step 13)
+      case 13:
+        return <SensitivityScreeningStep {...stepProps} />;
 
-      case 9: // Barrier Stress High
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-6">
-                <Shield className="w-8 h-8 text-red-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                Safety Gate: Barrier Function
-              </h2>
-              <p className="text-gray-600">Is your skin currently very irritated, inflamed, or compromised?</p>
-            </div>
+      // History (Steps 14-16)
+      case 14:
+        return <DiagnosedConditionsStep {...stepProps} />;
 
-            <div className="max-w-2xl mx-auto w-full">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {['Yes', 'No'].map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => handleGateChange('barrierStressHigh', option, gateQuestions[4].action)}
-                    className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
-                      formData.barrierStressHigh === option
-                        ? option === 'Yes' 
-                          ? 'border-red-400 bg-red-50 text-red-700'
-                          : 'border-green-400 bg-green-50 text-green-700'
-                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-              {errors.barrierStressHigh && <p className="text-red-500 text-sm mt-2">{errors.barrierStressHigh}</p>}
-            </div>
-          </div>
-        );
+      case 15:
+        return <PrescriptionTreatmentsStep {...stepProps} />;
 
-      // Section A - Skin Basics (now starts at step 10)
-      case 10: // Skin Type
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-                <Droplets className="w-8 h-8 text-amber-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                What do you think your skin type is?
-              </h2>
-            </div>
+      case 16:
+        return <ProfessionalTreatmentsStep {...stepProps} />;
 
-            <div className="max-w-2xl mx-auto w-full">
-              <div className="grid grid-cols-1 gap-4">
-                {SKIN_TYPE_OPTIONS.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => updateFormData({ skinType: option })}
-                    className={`px-6 py-4 text-lg rounded-xl border-2 transition-all duration-300 ${
-                      formData.skinType === option
-                        ? 'border-amber-400 bg-amber-50 text-amber-700'
-                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-              {errors.skinType && <p className="text-red-500 text-sm mt-2">{errors.skinType}</p>}
-            </div>
-          </div>
-        );
+      // Current Products (Steps 17-18)
+      case 17:
+        return <CurrentProductsStep {...stepProps} />;
 
-      case 11: // Oil Levels
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-                <Sun className="w-8 h-8 text-amber-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                How would you describe your skin's oil levels?
-              </h2>
-            </div>
+      case 18:
+        return <IrritatingProductsStep {...stepProps} />;
 
-            <div className="max-w-2xl mx-auto w-full">
-              <div className="grid grid-cols-1 gap-4">
-                {[
-                  'Comfortable, no shine or greasiness → Green',
-                  'Slight shine only in T-zone, not bothersome → Blue', 
-                  'Noticeable shine in multiple areas → Yellow',
-                  'Very greasy/heavy shine across face, frequent blotting/wash needed → Red'
-                ].map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => updateFormData({ oilLevels: option })}
-                    className={`px-6 py-4 text-left rounded-xl border-2 transition-all duration-300 ${
-                      formData.oilLevels === option
-                        ? 'border-amber-400 bg-amber-50 text-amber-700'
-                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-              {errors.oilLevels && <p className="text-red-500 text-sm mt-2">{errors.oilLevels}</p>}
-            </div>
-          </div>
-        );
-
-      case 12: // Hydration Levels
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-                <Droplets className="w-8 h-8 text-amber-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                How would you describe your skin's hydration levels?
-              </h2>
-            </div>
-
-            <div className="max-w-2xl mx-auto w-full">
-              <div className="grid grid-cols-1 gap-4">
-                {[
-                  'Comfortable, no tightness → Green',
-                  'Slight tightness or occasional dryness → Blue',
-                  'Often feels tight, rough, or flaky → Yellow', 
-                  'Always feels very tight, itchy, or cracks/peels → Red'
-                ].map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => updateFormData({ hydrationLevels: option })}
-                    className={`px-6 py-4 text-left rounded-xl border-2 transition-all duration-300 ${
-                      formData.hydrationLevels === option
-                        ? 'border-amber-400 bg-amber-50 text-amber-700'
-                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-              {errors.hydrationLevels && <p className="text-red-500 text-sm mt-2">{errors.hydrationLevels}</p>}
-            </div>
-          </div>
-        );
-
-      case 13: // Sensitivity screening (7 questions for everyone)
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-6">
-                <Heart className="w-8 h-8 text-amber-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-2">
-                Sensitivity screening
-              </h2>
-              <p className="text-gray-600">Please answer the following about your skin.</p>
-            </div>
-
-            <div className="max-w-3xl mx-auto w-full space-y-4">
-              {calculatedAge != null && (
-                <div className="bg-white/60 border border-amber-100 rounded-2xl p-4 text-sm text-gray-600">
-                  Detected age from birth date: <span className="font-medium text-gray-800">{calculatedAge}</span>
-                </div>
-              )}
-              {SENSITIVITY_QUESTION_CONFIG.map((q) => (
-                <div key={q.key} className="bg-white/80 border border-amber-200 rounded-2xl p-4">
-                  <div className="flex flex-col gap-3">
-                    <label className="text-gray-800 font-medium">{q.label}</label>
-                    <div className="flex gap-3">
-                      {['Yes', 'No'].map((opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => updateFormData({ [q.key]: opt } as any)}
-                          className={`px-4 py-2 rounded-lg border-2 text-sm transition-all ${
-                            ((formData as any)[q.key] || '') === opt
-                              ? 'border-amber-400 bg-amber-50 text-amber-700'
-                              : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300'
-                          }`}
-                        >
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
-                    {(errors as any)[q.key] && (
-                      <p className="text-red-500 text-xs">{(errors as any)[q.key]}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      // Section B - Current Skin History
-      case 14: // Diagnosed Skin Conditions
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-6">
-                <FileText className="w-8 h-8 text-blue-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                Do you have any diagnosed skin conditions?
-              </h2>
-              <p className="text-gray-500 text-sm">(eczema, psoriasis, rosacea, acne grade, PCOS-related acne, etc.)</p>
-            </div>
-
-            <div className="max-w-2xl mx-auto w-full">
-              <textarea
-                value={formData.diagnosedConditions}
-                onChange={(e) => updateFormData({ diagnosedConditions: e.target.value })}
-                placeholder="Please describe any diagnosed skin conditions or type 'None' if not applicable..."
-                rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              {errors.diagnosedConditions && <p className="text-red-500 text-sm mt-2">{errors.diagnosedConditions}</p>}
-            </div>
-          </div>
-        );
-
-      case 15: // Prescription Treatments
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-6">
-                <Heart className="w-8 h-8 text-blue-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                Have you used prescription treatments?
-              </h2>
-              <p className="text-gray-500 text-sm">(Steroids, retinoids, antibiotics, hydroquinone, etc.)</p>
-            </div>
-
-            <div className="max-w-2xl mx-auto w-full">
-              <textarea
-                value={formData.prescriptionTreatments}
-                onChange={(e) => updateFormData({ prescriptionTreatments: e.target.value })}
-                placeholder="Please describe any prescription treatments you've used or type 'None' if not applicable..."
-                rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              {errors.prescriptionTreatments && <p className="text-red-500 text-sm mt-2">{errors.prescriptionTreatments}</p>}
-            </div>
-          </div>
-        );
-
-      case 16: // Professional Treatments
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-6">
-                <Sparkles className="w-8 h-8 text-blue-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                Have you had professional treatments in the last 6 months?
-              </h2>
-              <p className="text-gray-500 text-sm">(Chemical peel, laser, microneedling, facials, etc.)</p>
-            </div>
-
-            <div className="max-w-2xl mx-auto w-full">
-              <textarea
-                value={formData.professionalTreatments}
-                onChange={(e) => updateFormData({ professionalTreatments: e.target.value })}
-                placeholder="Please describe any professional treatments or type 'None' if not applicable..."
-                rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              {errors.professionalTreatments && <p className="text-red-500 text-sm mt-2">{errors.professionalTreatments}</p>}
-            </div>
-          </div>
-        );
-
-      // Section C - Current Skincare Routine
-      case 17: // Current Products
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-6">
-                <FileText className="w-8 h-8 text-purple-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                What products are you using daily?
-              </h2>
-              <p className="text-gray-500 text-sm">(cleanser, moisturizer, sunscreen, serum(s), toner, exfoliants, masks, oils)</p>
-            </div>
-
-            <div className="max-w-4xl mx-auto w-full">
-              {/* Current Product List */}
-              <div className="space-y-4 mb-6">
-                {formData.currentProductsList && formData.currentProductsList.length > 0 ? (
-                  formData.currentProductsList.map((product, index) => (
-                    <div key={index} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex-1">
-                        <ProductAutocomplete
-                          value={product.name}
-                          onChange={(value) => {
-                            const updatedProducts = [...(formData.currentProductsList || [])];
-                            updatedProducts[index] = { ...product, name: value };
-                            updateFormData({ currentProductsList: updatedProducts });
-                          }}
-                          placeholder="e.g., CeraVe Foaming Cleanser, The Ordinary Niacinamide..."
-                          className="w-full"
-                        />
-                      </div>
-                      <div className="w-48">
-                        <select
-                          value={product.duration}
-                          onChange={(e) => {
-                            const updatedProducts = [...(formData.currentProductsList || [])];
-                            updatedProducts[index] = { ...product, duration: e.target.value };
-                            updateFormData({ currentProductsList: updatedProducts });
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                        >
-                          <option value="">How long?</option>
-                          <option value="Less than 1 month">Less than 1 month</option>
-                          <option value="1-3 months">1-3 months</option>
-                          <option value="3-6 months">3-6 months</option>
-                          <option value="6-12 months">6-12 months</option>
-                          <option value="1-2 years">1-2 years</option>
-                          <option value="2+ years">2+ years</option>
-                        </select>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const updatedProducts = formData.currentProductsList?.filter((_, i) => i !== index) || [];
-                          updateFormData({ currentProductsList: updatedProducts });
-                        }}
-                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
-                        type="button"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No products added yet. Click "Add Product" to start.</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Add Product Button */}
-              <div className="text-center mb-6">
-                <button
-                  onClick={() => {
-                    const currentList = formData.currentProductsList || [];
-                    const newProduct = { name: '', duration: '' };
-                    updateFormData({ currentProductsList: [...currentList, newProduct] });
-                  }}
-                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-                  type="button"
-                >
-                  + Add Product
-                </button>
-              </div>
-
-              {errors.currentProductsList && <p className="text-red-500 text-sm mt-2 text-center">{errors.currentProductsList}</p>}
-            </div>
-          </div>
-        );
-
-      case 18: // Irritating Products
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-6">
-                <Shield className="w-8 h-8 text-purple-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                Any product that caused irritation/breakouts/redness?
-              </h2>
-              <p className="text-gray-500 text-sm">(Specify)</p>
-            </div>
-
-            <div className="max-w-2xl mx-auto w-full">
-              <TagInput
-                value={(formData as any).productReactionsList || (formData.irritatingProducts ? formData.irritatingProducts.split(',').map(s=>s.trim()).filter(Boolean) : [])}
-                onChange={(list) => updateFormData({ irritatingProducts: list.join(', '), productReactionsList: list } as any)}
-                placeholder="Type a product, then use a comma or newline"
-              />
-              {errors.irritatingProducts && <p className="text-red-500 text-sm mt-2">{errors.irritatingProducts}</p>}
-            </div>
-          </div>
-        );
-
-      // Section D - Main Concerns
-      case 19: // Main Concerns
-        return (
-          <div className="space-y-12 flex flex-col justify-center h-full py-8">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-6">
-                <FileText className="w-8 h-8 text-red-600" />
-              </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-4">
-                Main Concerns (customer picks 1–3, then gets detailed questions)
-              </h2>
-              <p className="text-sm text-red-600 mt-2">Selected: {formData.mainConcerns.length}/3</p>
-            </div>
-
-            <div className="max-w-2xl mx-auto w-full">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {((calculatedAge !== null && calculatedAge > 25)
-                  ? ['Acne', 'Post Acne Scarring', 'Pigmentation', 'Fine lines & wrinkles', 'Large pores', 'Bumpy skin']
-                  : ['Acne', 'Post Acne Scarring', 'Pigmentation', 'Large pores', 'Bumpy skin']
-                ).map((concern) => {
-                  const isSelected = formData.mainConcerns.includes(concern);
-                  const isDisabled = !isSelected && formData.mainConcerns.length >= 3;
-                  
-                  return (
-                    <label key={concern} className={`flex items-center p-4 bg-gray-50 rounded-xl border-2 transition-all duration-300 ${
-                      isSelected
-                        ? 'border-red-400 bg-red-50'
-                        : isDisabled 
-                        ? 'border-gray-200 cursor-not-allowed opacity-50' 
-                        : 'border-gray-200 cursor-pointer hover:border-red-300'
-                    }`}>
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        disabled={isDisabled}
-                        onChange={() => handleConcernToggle(concern)}
-                        className="mr-3 h-5 w-5 text-red-600 border-gray-300 rounded focus:ring-red-400 disabled:opacity-50"
-                      />
-                      <span className={`text-lg ${isDisabled ? 'text-gray-400' : isSelected ? 'text-red-700' : 'text-gray-700'}`}>{concern}</span>
-                    </label>
-                  );
-                })}
-              </div>
-              {calculatedAge !== null && calculatedAge <= 25 && (
-                <p className="text-sm text-gray-500 mt-4 text-center">
-                  Fine lines &amp; wrinkles becomes available after age 25.
-                </p>
-              )}
-              {errors.mainConcerns && <p className="text-red-500 text-sm mt-2">{errors.mainConcerns}</p>}
-            </div>
-          </div>
-        );
+      // Main Concerns (Step 19)
+      case 19:
+        return <MainConcernsStep {...stepProps} handleConcernToggle={handleConcernToggle} />;
 
       default:
         return null;
