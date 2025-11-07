@@ -60,18 +60,18 @@ export const FormStep: React.FC<FormStepProps> = ({
 
   return (
     <div className={formStepVariants({ centered, className })}>
-      {/* Luxury glass card wrapper with subtle fade-in animation */}
-      <div className="luxury-section relative animate-fade-in-up">
+      {/* Luxury glass card wrapper with subtle fade-in animation - Duolingo-inspired clean design */}
+      <div className="relative animate-fade-in-up rounded-[28px] border border-border/40 p-12 md:p-16 shadow-luxury backdrop-blur-xl bg-gradient-to-br from-surface/90 to-surface/85">
         {/* Enhanced ambient glow effect with gold and purple accents */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-amber-600/15 via-purple-600/10 to-amber-600/15 rounded-[34px] blur-2xl opacity-60 transition-opacity duration-700" />
+        <div className="absolute -inset-1 bg-gradient-to-r from-amber-600/12 via-purple-600/8 to-amber-600/12 rounded-[30px] blur-2xl opacity-50 transition-opacity duration-700" />
 
         {/* Subtle shimmer overlay */}
-        <div className="absolute inset-0 rounded-[32px] bg-gradient-to-br from-transparent via-amber-400/5 to-transparent opacity-40 pointer-events-none" />
+        <div className="absolute inset-0 rounded-[28px] bg-gradient-to-br from-transparent via-amber-400/3 to-transparent opacity-30 pointer-events-none" />
 
         <div className="relative z-10">
           {/* Badge at top left (if provided) */}
           {badge && !centered && (
-            <div className="absolute -top-3 left-6 z-20">
+            <div className="absolute -top-3 left-8 z-20">
               <div
                 className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold border-2 ${
                   badgeColors[badge.variant || 'primary']
@@ -90,27 +90,27 @@ export const FormStep: React.FC<FormStepProps> = ({
               <div
                 className={`${
                   centered ? 'mx-auto' : ''
-                } mb-7 ${iconContainerVariants({ variant: iconVariant, size: 'lg' })}`}
+                } mb-6 ${iconContainerVariants({ variant: iconVariant, size: 'lg' })}`}
               >
-                <Icon className="w-8 h-8" />
+                <Icon className="w-7 h-7" />
               </div>
             )}
 
             {/* Title - Using Playfair Display font with enhanced gold gradient */}
-            <h2 className="text-3xl font-bold tracking-tight mb-4 font-serif text-gradient-gold">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-3 font-serif text-gradient-gold">
               {title}
             </h2>
 
             {/* Subtitle - Refined contrast with warmer tones */}
             {subtitle && (
-              <p className="text-muted-foreground/90 text-base leading-relaxed max-w-2xl mx-auto">
+              <p className="text-muted-foreground/85 text-base md:text-lg leading-relaxed max-w-3xl mx-auto">
                 {subtitle}
               </p>
             )}
           </div>
 
-          {/* Content area with better spacing */}
-          <div className="max-w-2xl mx-auto w-full mt-10">{children}</div>
+          {/* Content area with better spacing - wider for Duolingo-like feel */}
+          <div className="max-w-3xl mx-auto w-full mt-8 md:mt-10">{children}</div>
         </div>
       </div>
     </div>

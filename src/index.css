@@ -128,6 +128,11 @@ body::after {
     @apply relative mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-12 px-6 pb-16 pt-12 md:px-12 lg:px-20;
   }
 
+  .luxury-page-form {
+    /* Optimized layout for form pages - Duolingo-inspired clean design */
+    @apply relative mx-auto flex w-full max-w-[1000px] flex-1 flex-col gap-8 px-6 pb-16 pt-12 md:px-8;
+  }
+
   .luxury-section {
     @apply rounded-[32px] border border-border/30 p-10 shadow-luxury backdrop-blur-xl;
     background: linear-gradient(135deg,

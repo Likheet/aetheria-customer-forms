@@ -279,7 +279,7 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-6">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+        <div className="bg-white rounded-2xl shadow-xl p-12 max-w-lg w-full text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
@@ -679,7 +679,7 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
       <div className="min-h-screen flex flex-col">
         {/* Header */}
         <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
-          <div className="max-w-4xl mx-auto px-6 py-6">
+          <div className="max-w-[900px] mx-auto px-6 py-6 md:px-8">
             <div className="text-center">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 Client Feedback
@@ -710,17 +710,17 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ consultation, onBack, onCom
         </header>
         
         {/* Main Content */}
-        <main className="flex-1 px-6 py-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
+        <main className="flex-1 px-6 py-8 md:px-8">
+          <div className="max-w-[900px] mx-auto">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-10 md:p-12">
               {renderStep()}
             </div>
           </div>
         </main>
         
         {/* Navigation */}
-        <footer className="bg-white border-t border-gray-200 px-6 py-4">
-          <div className="max-w-4xl mx-auto flex justify-between items-center">
+        <footer className="bg-white border-t border-gray-200 px-6 py-5 md:px-8">
+          <div className="max-w-[900px] mx-auto flex justify-between items-center gap-4">
             <div className="flex items-center space-x-3">
               <button
                 onClick={currentStep === 1 ? onBack : handlePrevious}

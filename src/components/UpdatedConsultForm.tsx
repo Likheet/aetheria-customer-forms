@@ -2285,7 +2285,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-[1000px] mx-auto px-6 py-8 md:px-8">
         {/* Dev: Sidebar Toggle Button - Only visible on mobile/tablet */}
         {machine && (
           <button
@@ -2516,8 +2516,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         </div>
 
         {/* Progress Indicator - Sleek Modern Theme */}
-        <div className="max-w-4xl mx-auto mb-8 animate-fade-in">
-          <div className="bg-surface/80 backdrop-blur-xl rounded-2xl p-5 border border-border/60 shadow-xl">
+        <div className="w-full mx-auto mb-6 animate-fade-in">
+          <div className="bg-surface/85 backdrop-blur-xl rounded-[20px] p-6 border border-border/50 shadow-xl">
             {/* Step Counter */}
             <div className="flex justify-between items-center text-sm text-muted-foreground mb-3">
               <span className="font-semibold">
@@ -2538,12 +2538,12 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         </div>
 
         {/* Form Content - Dark Theme Container */}
-        <form onSubmit={handleFormSubmit} onKeyDownCapture={handleEnterAdvance} className="max-w-4xl mx-auto bg-transparent rounded-2xl min-h-[600px] flex flex-col">
-          <div className="flex-1 p-8">
+        <form onSubmit={handleFormSubmit} onKeyDownCapture={handleEnterAdvance} className="w-full mx-auto bg-transparent rounded-2xl min-h-[600px] flex flex-col">
+          <div className="flex-1">
             {!activeFollowUp && renderStep()}
             {activeFollowUp && (
-              <div className="max-w-2xl mx-auto">
-                <div className="bg-surface/80 backdrop-blur-xl rounded-2xl shadow-xl border border-border/60">
+              <div className="w-full mx-auto">
+                <div className="bg-surface/85 backdrop-blur-xl rounded-[20px] shadow-xl border border-border/50 p-8">
                   <div className="px-6 py-4 border-b border-primary/20 bg-primary/10 rounded-t-2xl">
                     <div className="text-base font-semibold text-foreground">Follow-up: {activeFollowUp.category === 'Grease' ? 'Sebum' : activeFollowUp.category}{activeFollowUp.dimension ? ` (${activeFollowUp.dimension})` : ''}</div>
                     <div className="text-xs text-muted-foreground">Resolve machine vs customer difference</div>
@@ -2607,16 +2607,16 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               </div>
             )}          </div>
 
-          {/* Navigation */}
-          <div className="flex justify-between items-center p-8 pt-0">
+          {/* Navigation - Duolingo-inspired clean button layout */}
+          <div className="flex justify-between items-center px-0 py-8 gap-4">
             <button
               type="button"
               onClick={handleBack}
               disabled={currentStep === 1}
-              className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 group ${
+              className={`flex items-center gap-2 px-8 py-4 rounded-2xl font-semibold text-base transition-all duration-300 group ${
                 currentStep === 1
-                  ? 'bg-muted/50 text-muted-foreground/40 cursor-not-allowed'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  ? 'bg-muted/40 text-muted-foreground/30 cursor-not-allowed'
+                  : 'bg-secondary/80 text-secondary-foreground hover:bg-secondary hover:shadow-md'
               }`}
             >
               <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
@@ -2627,7 +2627,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-xl font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
+                className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary via-primary/95 to-primary/90 text-primary-foreground rounded-2xl font-semibold text-base hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group min-w-[140px] justify-center"
               >
                 {isSubmitting ? (
                   <>
@@ -2645,7 +2645,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               <button
                 type="button"
                 onClick={handleSubmitFollowUp}
-                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-xl font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all duration-300 group"
+                className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary via-primary/95 to-primary/90 text-primary-foreground rounded-2xl font-semibold text-base hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 group"
               >
                 <span>Continue</span>
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />

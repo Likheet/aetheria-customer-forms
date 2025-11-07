@@ -23,11 +23,11 @@ export const buttonVariants = cva(
         danger: 'bg-gradient-to-r from-red-500 via-red-600 to-red-500 text-white hover:from-red-400 hover:via-red-500 hover:to-red-400 focus:ring-red-500/50 shadow-lg shadow-red-500/40 hover:shadow-2xl hover:shadow-red-500/50 border border-red-400/30',
       },
 
-      // Size
+      // Size - Enhanced for Duolingo-like polish
       size: {
-        sm: 'px-3 py-2 text-sm rounded-lg',
-        md: 'px-5 py-3 text-base rounded-xl',
-        lg: 'px-7 py-4 text-lg rounded-2xl',
+        sm: 'px-4 py-2.5 text-sm rounded-xl',
+        md: 'px-6 py-3.5 text-base rounded-xl',
+        lg: 'px-8 py-4 text-lg rounded-2xl',
       },
 
       // Full width
@@ -49,7 +49,7 @@ export const buttonVariants = cva(
  * Enhanced luxury theme with refined glows and borders
  */
 export const optionButtonVariants = cva(
-  'w-full px-6 py-4 text-left rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent backdrop-blur-sm active:scale-[0.99] relative overflow-hidden',
+  'w-full px-6 py-5 text-left rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent backdrop-blur-sm active:scale-[0.99] relative overflow-hidden',
   {
     variants: {
       // Selection state
@@ -213,7 +213,7 @@ export const iconContainerVariants = cva(
  * Enhanced luxury theme with refined interactions
  */
 export const inputVariants = cva(
-  'w-full px-5 py-3 rounded-xl border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent backdrop-blur-sm font-medium',
+  'w-full px-5 py-3.5 rounded-xl border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent backdrop-blur-sm font-medium',
   {
     variants: {
       variant: {
