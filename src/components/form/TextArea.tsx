@@ -29,13 +29,15 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
 
     return (
       <div className={fullWidth ? 'w-full' : ''}>
+        {/* Label - Light text for dark theme */}
         {label && (
-          <label className="block text-sm font-semibold text-gray-900 mb-2">
+          <label className="block text-sm font-semibold text-gray-200 mb-2">
             {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
+            {required && <span className="text-red-400 ml-1">*</span>}
           </label>
         )}
 
+        {/* Textarea with dark theme styling */}
         <textarea
           ref={ref}
           className={inputVariants({
@@ -49,14 +51,16 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
           {...props}
         />
 
+        {/* Error message - Light red text on dark */}
         {error && (
-          <p id={`${props.id}-error`} className="text-red-500 text-sm mt-2 flex items-center gap-1">
+          <p id={`${props.id}-error`} className="text-red-300 text-sm mt-2 flex items-center gap-1">
             <span className="font-medium">⚠</span> {error}
           </p>
         )}
 
+        {/* Helper text - Light gray on dark */}
         {helperText && !error && (
-          <p id={`${props.id}-helper`} className="text-gray-500 text-sm mt-2">
+          <p id={`${props.id}-helper`} className="text-gray-400 text-sm mt-2">
             {helperText}
           </p>
         )}
