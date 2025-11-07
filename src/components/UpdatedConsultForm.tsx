@@ -2259,7 +2259,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   if (isSubmitted) {
     if (recommendation) {
       return (
-        <RecommendationDisplay 
+        <RecommendationDisplay
           recommendation={recommendation}
           onComplete={onComplete}
           onSubmit={handleFinalizeSubmit}
@@ -2268,29 +2268,29 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         />
       );
     }
-    
+
     // Loading state while generating recommendations
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-6">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-6">
-            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex items-center justify-center p-6">
+        <div className="bg-surface/80 backdrop-blur-xl border border-border/50 rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/20 rounded-full mb-6 animate-pulse">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
           </div>
-          <h1 className="text-2xl font-semibold text-gray-900 mb-4">Generating Your Skincare Routine...</h1>
-          <p className="text-gray-600">Please wait while we create personalized recommendations for you.</p>
+          <h1 className="text-2xl font-semibold text-foreground mb-4">Generating Your Skincare Routine...</h1>
+          <p className="text-muted-foreground">Please wait while we create personalized recommendations for you.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
       <div className="container mx-auto px-4 py-8">
         {/* Dev: Sidebar Toggle Button - Only visible on mobile/tablet */}
         {machine && (
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={`fixed top-32 z-50 bg-gray-800 hover:bg-gray-700 text-white p-3 rounded-lg shadow-xl transition-all lg:hidden ${
+            className={`fixed top-32 z-50 bg-surface/90 backdrop-blur border border-border/60 hover:bg-surface text-foreground p-3 rounded-lg shadow-xl transition-all lg:hidden ${
               isSidebarOpen ? 'right-[21rem]' : 'right-4'
             }`}
             aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
@@ -2298,42 +2298,42 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             {isSidebarOpen ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
           </button>
         )}
-        
+
         {/* Dev: Machine Bands Sidebar - Slides in from right */}
         {machine && (
           <>
             {/* Overlay for mobile */}
             {isSidebarOpen && (
               <div
-                className="fixed inset-0 bg-black/20 z-40 lg:hidden"
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
                 onClick={() => setIsSidebarOpen(false)}
               />
             )}
-            
+
             {/* Sidebar Panel */}
-            <div 
-              className={`fixed top-24 right-0 w-80 z-50 h-[calc(100vh-6rem)] bg-white/95 shadow-2xl transition-transform duration-300 ease-in-out ${
+            <div
+              className={`fixed top-24 right-0 w-80 z-50 h-[calc(100vh-6rem)] bg-surface/95 backdrop-blur-xl border-l border-border/60 shadow-2xl transition-transform duration-300 ease-in-out ${
                 isSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
               }`}
             >
-              <div className="h-full overflow-y-auto p-4 space-y-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#CBD5E1 #F1F5F9' }}>
+              <div className="h-full overflow-y-auto p-4 space-y-4" style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--primary)) hsl(var(--muted))' }}>
             <Collapsible open={isMachineBandOpen} onOpenChange={setIsMachineBandOpen}>
-              <div className="bg-white/95 border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-                <CollapsibleTrigger className="w-full px-4 py-2 bg-gray-800 text-white text-sm font-semibold flex items-center justify-between hover:bg-gray-700 transition-colors">
+              <div className="bg-surface/80 backdrop-blur border border-border/60 rounded-xl shadow-xl overflow-hidden">
+                <CollapsibleTrigger className="w-full px-4 py-2 bg-primary/10 text-foreground text-sm font-semibold flex items-center justify-between hover:bg-primary/20 transition-colors">
                   <span>Machine Bands (Dev)</span>
                   <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isMachineBandOpen ? 'rotate-180' : ''}`} />
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <div className="p-4 text-sm text-gray-800 space-y-1">
-                <div><span className="font-medium">Moisture:</span> {machine.moisture || '-'} {machineRaw?.moisture !== undefined && <span className="text-gray-500">(val: {String(machineRaw.moisture)})</span>}</div>
-                <div><span className="font-medium">Sebum:</span> {machine.sebum || '-'} {machineRaw?.sebum !== undefined && <span className="text-gray-500">(val: {String(machineRaw.sebum)})</span>}</div>
-                <div><span className="font-medium">Texture:</span> {machine.texture || '-'} {machineRaw?.texture !== undefined && <span className="text-gray-500">(val: {String(machineRaw.texture)})</span>}</div>
-                <div><span className="font-medium">Texture (Aging):</span> {machine.textureAging || '-'} {machineRaw?.texture_aging !== undefined && <span className="text-gray-500">(val: {String(machineRaw.texture_aging)})</span>}</div>
-                <div><span className="font-medium">Texture (Bumpy):</span> {machine.textureBumpy || '-'} {machineRaw?.texture_bumpy !== undefined && <span className="text-gray-500">(val: {String(machineRaw.texture_bumpy)})</span>}</div>
-                <div><span className="font-medium">Pores:</span> {machine.pores || '-'} {machineRaw?.pores !== undefined && <span className="text-gray-500">(val: {String(machineRaw.pores)})</span>}</div>
-                <div><span className="font-medium">Acne:</span> {machine.acne || '-'} {machineRaw?.acne !== undefined && <span className="text-gray-500">(val: {String(machineRaw.acne)})</span>}</div>
+                  <div className="p-4 text-sm text-foreground/90 space-y-1">
+                <div><span className="font-medium text-primary">Moisture:</span> {machine.moisture || '-'} {machineRaw?.moisture !== undefined && <span className="text-muted-foreground">(val: {String(machineRaw.moisture)})</span>}</div>
+                <div><span className="font-medium text-primary">Sebum:</span> {machine.sebum || '-'} {machineRaw?.sebum !== undefined && <span className="text-muted-foreground">(val: {String(machineRaw.sebum)})</span>}</div>
+                <div><span className="font-medium text-primary">Texture:</span> {machine.texture || '-'} {machineRaw?.texture !== undefined && <span className="text-muted-foreground">(val: {String(machineRaw.texture)})</span>}</div>
+                <div><span className="font-medium text-primary">Texture (Aging):</span> {machine.textureAging || '-'} {machineRaw?.texture_aging !== undefined && <span className="text-muted-foreground">(val: {String(machineRaw.texture_aging)})</span>}</div>
+                <div><span className="font-medium text-primary">Texture (Bumpy):</span> {machine.textureBumpy || '-'} {machineRaw?.texture_bumpy !== undefined && <span className="text-muted-foreground">(val: {String(machineRaw.texture_bumpy)})</span>}</div>
+                <div><span className="font-medium text-primary">Pores:</span> {machine.pores || '-'} {machineRaw?.pores !== undefined && <span className="text-muted-foreground">(val: {String(machineRaw.pores)})</span>}</div>
+                <div><span className="font-medium text-primary">Acne:</span> {machine.acne || '-'} {machineRaw?.acne !== undefined && <span className="text-muted-foreground">(val: {String(machineRaw.acne)})</span>}</div>
                 {machine.acneDetails?.breakouts?.length ? (
-                  <div className="text-xs text-gray-600 pl-2 space-y-1">
+                  <div className="text-xs text-muted-foreground/80 pl-2 space-y-1">
                     {machine.acneDetails.breakouts.map((entry, idx) => (
                       <div key={`${entry.type || 'type'}-${idx}`}>
                         • {entry.type || 'Type'}{entry.severity ? ` — ${entry.severity}` : ''}{entry.category ? ` (${entry.category})` : ''}
@@ -2349,27 +2349,27 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                     ? (order[b] >= order[r] ? b : r)
                     : (b || r || '-')
                   return (
-                    <div><span className="font-medium">Pigmentation:</span> {combined}</div>
+                    <div><span className="font-medium text-primary">Pigmentation:</span> {combined}</div>
                   )
                 })()}
-                <div><span className="font-medium">Sensitivity:</span> {machine.sensitivity || '-'} {machineRaw?.sensitivity !== undefined && <span className="text-gray-500">(val: {String(machineRaw.sensitivity)})</span>}</div>
+                <div><span className="font-medium text-primary">Sensitivity:</span> {machine.sensitivity || '-'} {machineRaw?.sensitivity !== undefined && <span className="text-muted-foreground">(val: {String(machineRaw.sensitivity)})</span>}</div>
                   </div>
                 </CollapsibleContent>
               </div>
             </Collapsible>
             <Collapsible open={isEffectiveBandOpen} onOpenChange={setIsEffectiveBandOpen}>
-              <div className="bg-white/95 border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-                <CollapsibleTrigger className="w-full px-4 py-2 bg-gray-800 text-white text-sm font-semibold flex items-center justify-between hover:bg-gray-700 transition-colors">
+              <div className="bg-surface/80 backdrop-blur border border-border/60 rounded-xl shadow-xl overflow-hidden">
+                <CollapsibleTrigger className="w-full px-4 py-2 bg-primary/10 text-foreground text-sm font-semibold flex items-center justify-between hover:bg-primary/20 transition-colors">
                   <span>Effective Bands (Dev)</span>
                   <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isEffectiveBandOpen ? 'rotate-180' : ''}`} />
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <div className="p-4 text-sm text-gray-800 space-y-1">
-                <div><span className="font-medium">Moisture:</span> {effectiveBands?.moisture || '-'}</div>
-                <div><span className="font-medium">Sebum:</span> {effectiveBands?.sebum || '-'}</div>
-                <div><span className="font-medium">Texture:</span> {effectiveBands?.texture || '-'}</div>
-                <div><span className="font-medium">Pores:</span> {effectiveBands?.pores || '-'}</div>
-                <div><span className="font-medium">Acne:</span> {effectiveBands?.acne || '-'}</div>
+                  <div className="p-4 text-sm text-foreground/90 space-y-1">
+                <div><span className="font-medium text-primary">Moisture:</span> {effectiveBands?.moisture || '-'}</div>
+                <div><span className="font-medium text-primary">Sebum:</span> {effectiveBands?.sebum || '-'}</div>
+                <div><span className="font-medium text-primary">Texture:</span> {effectiveBands?.texture || '-'}</div>
+                <div><span className="font-medium text-primary">Pores:</span> {effectiveBands?.pores || '-'}</div>
+                <div><span className="font-medium text-primary">Acne:</span> {effectiveBands?.acne || '-'}</div>
                 <div>
                   <span className="font-medium">Acne categories:</span>{' '}
                   {(() => {
@@ -2496,16 +2496,16 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         <div className="flex justify-between items-center mb-8">
           <button
             onClick={onBack}
-            className="flex items-center space-x-2 px-4 py-2 text-amber-700 hover:text-amber-800 transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 text-foreground/70 hover:text-foreground transition-colors group"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             <span>Back to Profile Selection</span>
           </button>
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-800">Updated Client Consult</h1>
+            <h1 className="text-2xl font-bold text-foreground bg-clip-text">Updated Client Consult</h1>
             <button
               onClick={fillWithDummyData}
-              className="mt-2 px-3 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
+              className="mt-2 px-3 py-1 text-xs bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-colors"
               type="button"
               title="Fill only empty fields with sample data, keeping your existing entries"
             >
@@ -2515,22 +2515,22 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           <div className="w-32"></div> {/* Spacer for centering */}
         </div>
 
-        {/* Progress Indicator - Dark Luxury Theme */}
+        {/* Progress Indicator - Sleek Modern Theme */}
         <div className="max-w-4xl mx-auto mb-8 animate-fade-in">
-          <div className="bg-gray-900/60 backdrop-blur-sm rounded-2xl p-5 border border-gray-700/40 shadow-lg shadow-gray-900/20">
+          <div className="bg-surface/80 backdrop-blur-xl rounded-2xl p-5 border border-border/60 shadow-xl">
             {/* Step Counter */}
-            <div className="flex justify-between items-center text-sm text-gray-300 mb-3">
+            <div className="flex justify-between items-center text-sm text-muted-foreground mb-3">
               <span className="font-semibold">
-                Step <span className="text-amber-400">{currentStep}</span> of {totalSteps}
+                Step <span className="text-primary">{currentStep}</span> of {totalSteps}
               </span>
-              <span className="text-amber-300 font-medium">
+              <span className="text-primary font-medium">
                 {Math.round((currentStep / totalSteps) * 100)}% Complete
               </span>
             </div>
             {/* Progress Bar */}
-            <div className="w-full bg-gray-800/60 rounded-full h-2.5 overflow-hidden border border-gray-700/40">
+            <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 h-full rounded-full transition-all duration-500 ease-out shadow-lg shadow-amber-500/50"
+                className="bg-gradient-to-r from-primary via-primary/90 to-primary h-full rounded-full transition-all duration-500 ease-out shadow-lg shadow-primary/30"
                 style={{ width: `${(currentStep / totalSteps) * 100}%` }}
               />
             </div>
@@ -2543,10 +2543,10 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
             {!activeFollowUp && renderStep()}
             {activeFollowUp && (
               <div className="max-w-2xl mx-auto">
-                <div className="bg-gray-900/60 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-700/40">
-                  <div className="px-6 py-4 border-b border-amber-600/40 bg-amber-900/30 rounded-t-2xl">
-                    <div className="text-base font-semibold text-amber-200">Follow-up: {activeFollowUp.category === 'Grease' ? 'Sebum' : activeFollowUp.category}{activeFollowUp.dimension ? ` (${activeFollowUp.dimension})` : ''}</div>
-                    <div className="text-xs text-amber-300/80">Resolve machine vs customer difference</div>
+                <div className="bg-surface/80 backdrop-blur-xl rounded-2xl shadow-xl border border-border/60">
+                  <div className="px-6 py-4 border-b border-primary/20 bg-primary/10 rounded-t-2xl">
+                    <div className="text-base font-semibold text-foreground">Follow-up: {activeFollowUp.category === 'Grease' ? 'Sebum' : activeFollowUp.category}{activeFollowUp.dimension ? ` (${activeFollowUp.dimension})` : ''}</div>
+                    <div className="text-xs text-muted-foreground">Resolve machine vs customer difference</div>
                   </div>
                   <div className="px-6 py-5 space-y-5">
                     {activeFollowUp.questions.map((q) => {
@@ -2567,7 +2567,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                       
                       return (
                       <div key={q.id}>
-                        <div className="text-sm font-medium text-gray-200 mb-2">{q.prompt}</div>
+                        <div className="text-sm font-medium text-foreground mb-2">{q.prompt}</div>
                         {!q.multi ? (
                           <div className="flex flex-wrap gap-2">
                             {q.options.map(opt => (
@@ -2575,7 +2575,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                                 type="button"
                                 key={opt}
                                 onClick={() => toggleFollowUpOption(q.id, opt, false)}
-                                className={`px-3 py-2 rounded-lg border text-sm transition-all duration-300 ${followUpLocal[q.id] === opt ? 'bg-amber-900/40 border-amber-400 text-amber-200 shadow-lg shadow-amber-500/30' : 'bg-gray-800/40 border-gray-600/50 text-gray-300 hover:bg-gray-700/60 hover:border-gray-500/60'}`}
+                                className={`px-3 py-2 rounded-lg border text-sm transition-all duration-300 ${followUpLocal[q.id] === opt ? 'bg-primary/20 border-primary text-foreground shadow-lg shadow-primary/30' : 'bg-muted/50 border-border text-foreground/80 hover:bg-muted hover:border-border/80'}`}
                               >
                                 {opt}
                               </button>
@@ -2613,13 +2613,13 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               type="button"
               onClick={handleBack}
               disabled={currentStep === 1}
-              className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+              className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 group ${
                 currentStep === 1
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? 'bg-muted/50 text-muted-foreground/40 cursor-not-allowed'
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
               }`}
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
               <span>Back</span>
             </button>
 
@@ -2627,17 +2627,17 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-semibold hover:from-amber-600 hover:to-amber-700 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-xl font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
               >
                 {isSubmitting ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
                     <span>Submitting...</span>
                   </>
                 ) : (
                   <>
                     <span>{currentStep === totalSteps ? 'Submit' : (followUp ? 'Resolve Follow-up' : 'Next')}</span>
-                    <ArrowRight className="w-5 h-5" />
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
               </button>
@@ -2645,10 +2645,10 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               <button
                 type="button"
                 onClick={handleSubmitFollowUp}
-                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-semibold hover:from-amber-600 hover:to-amber-700 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-xl font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all duration-300 group"
               >
                 <span>Continue</span>
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
             )}
           </div>
