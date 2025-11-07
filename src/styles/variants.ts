@@ -7,19 +7,20 @@ import { cva, type VariantProps } from 'class-variance-authority';
 
 /**
  * Button variants - replaces all the hard-coded button styles
+ * Dark theme with high contrast text
  */
 export const buttonVariants = cva(
   // Base styles applied to all buttons
-  'inline-flex items-center justify-center font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed',
+  'inline-flex items-center justify-center font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm',
   {
     variants: {
       // Visual style
       variant: {
-        primary: 'bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500',
-        secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500',
-        outline: 'border-2 bg-white hover:bg-gray-50',
-        ghost: 'hover:bg-gray-100',
-        danger: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500',
+        primary: 'bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-400 hover:to-amber-500 focus:ring-amber-500/50 shadow-lg shadow-amber-500/30 hover:shadow-xl hover:shadow-amber-500/40',
+        secondary: 'bg-gray-800/60 text-gray-100 border-2 border-gray-600/40 hover:bg-gray-700/80 hover:border-gray-500/60 focus:ring-gray-500/50',
+        outline: 'border-2 border-amber-500/50 bg-transparent text-amber-200 hover:bg-amber-500/10 hover:border-amber-400 focus:ring-amber-500/50',
+        ghost: 'text-gray-300 hover:bg-gray-800/40 hover:text-amber-200 focus:ring-gray-500/50',
+        danger: 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-400 hover:to-red-500 focus:ring-red-500/50 shadow-lg shadow-red-500/30 hover:shadow-xl hover:shadow-red-500/40',
       },
 
       // Size
@@ -45,16 +46,16 @@ export const buttonVariants = cva(
 
 /**
  * Option button variants - for single/multi-select options in forms
- * This is the most common pattern in your forms
+ * Dark theme with colored glows when selected
  */
 export const optionButtonVariants = cva(
-  'w-full px-6 py-4 text-left rounded-xl border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2',
+  'w-full px-6 py-4 text-left rounded-xl border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent backdrop-blur-sm',
   {
     variants: {
       // Selection state
       selected: {
         true: '',
-        false: 'border-gray-200 bg-gray-50 text-gray-700 hover:border-amber-300 hover:bg-gray-100',
+        false: 'border-gray-700/50 bg-gray-900/40 text-gray-200 hover:border-amber-500/40 hover:bg-gray-800/60 hover:text-gray-100',
       },
 
       // Semantic meaning (when selected)
@@ -67,35 +68,35 @@ export const optionButtonVariants = cva(
       },
     },
     compoundVariants: [
-      // Default selected state
+      // Default selected state - Amber/Gold glow
       {
         selected: true,
         intent: 'default',
-        class: 'border-amber-400 bg-amber-50 text-amber-900 shadow-lg focus:ring-amber-500',
+        class: 'border-amber-400 bg-amber-900/30 text-amber-100 shadow-lg shadow-amber-500/30 focus:ring-amber-500/50 hover:shadow-xl hover:shadow-amber-500/40',
       },
-      // Success selected (e.g., "No" to danger questions)
+      // Success selected (e.g., "No" to danger questions) - Green glow
       {
         selected: true,
         intent: 'success',
-        class: 'border-green-400 bg-green-50 text-green-900 shadow-lg focus:ring-green-500',
+        class: 'border-green-400 bg-green-900/30 text-green-100 shadow-lg shadow-green-500/30 focus:ring-green-500/50 hover:shadow-xl hover:shadow-green-500/40',
       },
-      // Warning selected
+      // Warning selected - Yellow glow
       {
         selected: true,
         intent: 'warning',
-        class: 'border-yellow-400 bg-yellow-50 text-yellow-900 shadow-lg focus:ring-yellow-500',
+        class: 'border-yellow-400 bg-yellow-900/30 text-yellow-100 shadow-lg shadow-yellow-500/30 focus:ring-yellow-500/50 hover:shadow-xl hover:shadow-yellow-500/40',
       },
-      // Danger selected (e.g., "Yes" to safety gates)
+      // Danger selected (e.g., "Yes" to safety gates) - Red glow
       {
         selected: true,
         intent: 'danger',
-        class: 'border-red-400 bg-red-50 text-red-900 shadow-lg focus:ring-red-500',
+        class: 'border-red-400 bg-red-900/30 text-red-100 shadow-lg shadow-red-500/30 focus:ring-red-500/50 hover:shadow-xl hover:shadow-red-500/40',
       },
-      // Primary selected (concern selection)
+      // Primary selected (concern selection) - Blue glow
       {
         selected: true,
         intent: 'primary',
-        class: 'border-blue-400 bg-blue-50 text-blue-900 shadow-lg focus:ring-blue-500',
+        class: 'border-blue-400 bg-blue-900/30 text-blue-100 shadow-lg shadow-blue-500/30 focus:ring-blue-500/50 hover:shadow-xl hover:shadow-blue-500/40',
       },
     ],
     defaultVariants: {
