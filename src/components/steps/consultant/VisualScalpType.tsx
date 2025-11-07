@@ -1,6 +1,7 @@
 import React from 'react';
 import { StepProps } from '../../../types';
 import FormStep from '../../FormStep';
+import { RadioGroup } from '../../form/RadioGroup';
 
 const VisualScalpType: React.FC<StepProps> = ({ formData, updateFormData, onNext, onBack }) => {
   const scalpTypes = [
@@ -24,29 +25,19 @@ const VisualScalpType: React.FC<StepProps> = ({ formData, updateFormData, onNext
 
   return (
     <FormStep
-      title={<span className="text-3xl font-extrabold tracking-tight text-gray-900 drop-shadow font-sans">Visual Scalp Type Check</span>}
+      title="Visual Scalp Type Check"
       onNext={onNext}
       onBack={onBack}
       isValid={isValid()}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {scalpTypes.map(option => (
-          <label key={option.id} className={`flex items-center p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
-            formData.evaluation?.scalp_type === option.id
-              ? 'bg-blue-100 border-blue-500 shadow-lg'
-              : 'bg-white hover:bg-gray-50 border-gray-200'
-          }`}>
-            <input
-              type="radio"
-              name="scalp_type"
-              checked={formData.evaluation?.scalp_type === option.id}
-              onChange={() => handleOptionChange(option.id)}
-              className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="ml-3 font-medium text-gray-800">{option.label}</span>
-          </label>
-        ))}
-      </div>
+      <RadioGroup
+        options={scalpTypes.map(opt => ({ value: opt.id, label: opt.label }))}
+        value={formData.evaluation?.scalp_type || ''}
+        onChange={handleOptionChange}
+        name="scalp_type"
+        columns={2}
+        gap="md"
+      />
     </FormStep>
   );
 };

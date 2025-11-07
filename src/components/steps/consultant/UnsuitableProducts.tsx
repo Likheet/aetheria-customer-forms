@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StepProps } from '../../../types';
 import FormStep from '../../FormStep';
 import { X } from 'lucide-react';
+import { Button } from '../../ui/button';
 
 const UnsuitableProducts: React.FC<StepProps> = ({ formData, updateFormData, onNext, onBack }) => {
   const [product, setProduct] = useState('');
@@ -26,7 +27,7 @@ const UnsuitableProducts: React.FC<StepProps> = ({ formData, updateFormData, onN
 
   return (
     <FormStep
-      title={<span className="text-3xl font-extrabold tracking-tight text-gray-900 drop-shadow font-sans">Unsuitable Products</span>}
+      title="Unsuitable Products"
       onNext={onNext}
       onBack={onBack}
       isValid={true}
@@ -37,18 +38,23 @@ const UnsuitableProducts: React.FC<StepProps> = ({ formData, updateFormData, onN
             type="text"
             value={product}
             onChange={(e) => setProduct(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddProduct()}
             placeholder="Enter product name"
-            className="flex-grow p-2 border rounded"
+            className="flex-grow px-4 py-3 rounded-xl border border-border/60 bg-surface/60 text-foreground placeholder:text-muted-foreground/50 focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
           />
-          <button onClick={handleAddProduct} className="px-4 py-2 bg-blue-500 text-white rounded">
+          <Button onClick={handleAddProduct} variant="primary" size="md">
             Add
-          </button>
+          </Button>
         </div>
         <div className="space-y-2">
           {formData.evaluation?.unsuitable_products?.map((p: string, i: number) => (
-            <div key={i} className="flex items-center justify-between p-2 bg-gray-100 rounded">
-              <span>{p}</span>
-              <button onClick={() => handleRemoveProduct(i)} className="text-red-500">
+            <div key={i} className="flex items-center justify-between px-4 py-3 rounded-xl border border-border/50 bg-surface/70">
+              <span className="text-foreground/90">{p}</span>
+              <button
+                onClick={() => handleRemoveProduct(i)}
+                className="text-destructive hover:text-destructive/80 transition-colors"
+                aria-label="Remove product"
+              >
                 <X size={18} />
               </button>
             </div>

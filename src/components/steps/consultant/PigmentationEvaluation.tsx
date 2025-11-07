@@ -1,6 +1,7 @@
 import React from 'react';
 import { StepProps } from '../../../types';
 import FormStep from '../../FormStep';
+import { RadioGroup } from '../../form/RadioGroup';
 
 const PigmentationEvaluation: React.FC<StepProps> = ({ formData, updateFormData, onNext, onBack, errors }) => {
   const pigmentationOptions = [
@@ -42,7 +43,7 @@ const PigmentationEvaluation: React.FC<StepProps> = ({ formData, updateFormData,
 
   return (
     <FormStep
-      title={<span className="text-3xl font-extrabold tracking-tight text-gray-900 drop-shadow font-sans">Pigmentation Evaluation</span>}
+      title="Pigmentation Evaluation"
       onNext={onNext}
       onBack={onBack}
       isValid={isValid()}
@@ -50,54 +51,32 @@ const PigmentationEvaluation: React.FC<StepProps> = ({ formData, updateFormData,
       <div className="space-y-8">
         {/* Pigmentation Observations */}
         <div className="space-y-4">
-          <h3 className="text-xl font-bold text-gray-900 font-sans">Current Observations</h3>
-          <div className="grid grid-cols-1 gap-3">
-            {pigmentationOptions.map((option) => (
-              <label key={option.id} className={`flex items-center gap-3 p-4 rounded-xl border transition-colors cursor-pointer font-sans
-                ${formData.evaluation?.pigmentation_evaluation?.checked?.[0] === option.id
-                  ? 'border-blue-500 bg-blue-50 text-gray-900'
-                  : 'border-gray-200 bg-white text-gray-800 hover:border-blue-300 hover:bg-blue-50'}
-              `}>
-                <input
-                  type="radio"
-                  name="pigmentation_observation"
-                  checked={formData.evaluation?.pigmentation_evaluation?.checked?.[0] === option.id}
-                  onChange={() => handleOptionChange(option.id)}
-                  className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-lg font-medium">{option.label}</span>
-              </label>
-            ))}
-          </div>
+          <h3 className="text-xl font-semibold text-foreground/90">Current Observations</h3>
+          <RadioGroup
+            options={pigmentationOptions.map(opt => ({ value: opt.id, label: opt.label }))}
+            value={formData.evaluation?.pigmentation_evaluation?.checked?.[0] || ''}
+            onChange={handleOptionChange}
+            name="pigmentation_observation"
+            gap="md"
+          />
         </div>
 
         {/* Classification */}
         <div className="space-y-4">
-          <h3 className="text-xl font-bold text-gray-900 font-sans">Overall Classification</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {classifications.map((classification) => (
-              <label key={classification.id} className={`p-4 rounded-xl border-2 cursor-pointer font-sans text-lg font-semibold transition-colors
-                ${formData.evaluation?.pigmentation_evaluation?.classification === classification.id
-                  ? 'border-blue-500 bg-blue-50 text-gray-900'
-                  : 'border-gray-200 bg-white text-gray-800 hover:border-blue-300 hover:bg-blue-50'}
-              `}>
-                <input
-                  type="radio"
-                  name="pigmentation_classification"
-                  value={classification.id}
-                  checked={formData.evaluation?.pigmentation_evaluation?.classification === classification.id}
-                  onChange={() => handleClassificationChange(classification.id)}
-                  className="sr-only"
-                />
-                {classification.label}
-              </label>
-            ))}
-          </div>
+          <h3 className="text-xl font-semibold text-foreground/90">Overall Classification</h3>
+          <RadioGroup
+            options={classifications.map(cls => ({ value: cls.id, label: cls.label }))}
+            value={formData.evaluation?.pigmentation_evaluation?.classification || ''}
+            onChange={handleClassificationChange}
+            name="pigmentation_classification"
+            columns={2}
+            gap="md"
+          />
         </div>
 
         {/* Error Message */}
         {errors.pigmentation_evaluation && (
-          <p className="text-rose-500 text-sm mt-2 font-sans">{errors.pigmentation_evaluation}</p>
+          <p className="text-destructive text-sm mt-2">{errors.pigmentation_evaluation}</p>
         )}
       </div>
     </FormStep>
