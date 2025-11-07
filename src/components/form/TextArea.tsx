@@ -1,10 +1,11 @@
 /**
- * TextArea - Consistent textarea component
- * For multi-line text inputs
+ * TextArea - Modern textarea component built on ShadCN
  */
 
 import React from 'react';
-import { inputVariants } from '../../styles/variants';
+import { Textarea } from '../ui/textarea';
+import { Label } from '../ui/label';
+import { cn } from '@/lib/utils';
 
 export interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   /** Textarea label */
@@ -24,43 +25,50 @@ export interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextArea
 }
 
 export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  ({ label, error, helperText, required, fullWidth = true, className, ...props }, ref) => {
+  ({ label, error, helperText, required, fullWidth = true, className, id, ...props }, ref) => {
     const hasError = !!error;
+    const textareaId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`;
 
     return (
-      <div className={fullWidth ? 'w-full' : ''}>
-        {/* Label - Light text for dark theme */}
+      <div className={cn(fullWidth && 'w-full')}>
+        {/* Label */}
         {label && (
-          <label className="block text-sm font-semibold text-gray-200 mb-2">
+          <Label
+            htmlFor={textareaId}
+            className="text-sm font-semibold text-gray-200 mb-2 block"
+          >
             {label}
             {required && <span className="text-red-400 ml-1">*</span>}
-          </label>
+          </Label>
         )}
 
-        {/* Textarea with dark theme styling */}
-        <textarea
+        {/* Textarea */}
+        <Textarea
           ref={ref}
-          className={inputVariants({
-            variant: hasError ? 'error' : 'default',
-            className,
-          })}
+          id={textareaId}
+          className={cn(
+            "bg-gray-800/60 border-gray-700/50 text-gray-100 placeholder:text-gray-500 min-h-[100px]",
+            "focus:border-amber-500/50 focus:ring-amber-500/20",
+            hasError && "border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20",
+            className
+          )}
           aria-invalid={hasError}
           aria-describedby={
-            error ? `${props.id}-error` : helperText ? `${props.id}-helper` : undefined
+            error ? `${textareaId}-error` : helperText ? `${textareaId}-helper` : undefined
           }
           {...props}
         />
 
-        {/* Error message - Light red text on dark */}
+        {/* Error message */}
         {error && (
-          <p id={`${props.id}-error`} className="text-red-300 text-sm mt-2 flex items-center gap-1">
+          <p id={`${textareaId}-error`} className="text-red-300 text-sm mt-2 flex items-center gap-1.5">
             <span className="font-medium">⚠</span> {error}
           </p>
         )}
 
-        {/* Helper text - Light gray on dark */}
+        {/* Helper text */}
         {helperText && !error && (
-          <p id={`${props.id}-helper`} className="text-gray-400 text-sm mt-2">
+          <p id={`${textareaId}-helper`} className="text-gray-400 text-sm mt-2">
             {helperText}
           </p>
         )}

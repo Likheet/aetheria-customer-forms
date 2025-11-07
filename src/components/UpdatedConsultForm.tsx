@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle, ArrowLeft, ArrowRight, FileText, Droplets, Shield, Heart, Sparkles, Sun, Clock, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Progress } from './ui/progress';
+import { Badge } from './ui/badge';
 import { saveConsultationData } from '../services/newConsultationService';
 import {
   deriveSelfBands as deriveSelfBandsRt,
@@ -2284,13 +2288,18 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-[#08090d] relative overflow-hidden">
+      {/* Background gradient effects */}
+      <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-purple-500/5 to-blue-500/5" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(229,185,110,0.08),_transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_rgba(139,92,246,0.08),_transparent_50%)]" />
+
+      <div className="container mx-auto px-4 py-6 relative z-10">
         {/* Dev: Sidebar Toggle Button - Only visible on mobile/tablet */}
         {machine && (
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={`fixed top-32 z-50 bg-gray-800 hover:bg-gray-700 text-white p-3 rounded-lg shadow-xl transition-all lg:hidden ${
+            className={`fixed top-32 z-50 bg-gray-800/90 backdrop-blur-sm hover:bg-gray-700/90 text-white p-3 rounded-lg shadow-xl transition-all lg:hidden ${
               isSidebarOpen ? 'right-[21rem]' : 'right-4'
             }`}
             aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
@@ -2493,62 +2502,71 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         )}
         
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <button
+        <div className="flex justify-between items-center mb-8 backdrop-blur-sm bg-gray-900/40 rounded-xl p-4 border border-gray-800/50">
+          <Button
             onClick={onBack}
-            className="flex items-center space-x-2 px-4 py-2 text-amber-700 hover:text-amber-800 transition-colors"
+            variant="ghost"
+            className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
           >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Back to Profile Selection</span>
-          </button>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Profile Selection
+          </Button>
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-800">Updated Client Consult</h1>
-            <button
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 bg-clip-text text-transparent font-serif">
+              Client Consultation
+            </h1>
+            <Button
               onClick={fillWithDummyData}
-              className="mt-2 px-3 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
+              variant="outline"
+              size="sm"
+              className="mt-2 text-xs border-blue-500/30 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
               type="button"
               title="Fill only empty fields with sample data, keeping your existing entries"
             >
               Fill Remaining (Test)
-            </button>
+            </Button>
           </div>
           <div className="w-32"></div> {/* Spacer for centering */}
         </div>
 
-        {/* Progress Indicator - Dark Luxury Theme */}
-        <div className="max-w-4xl mx-auto mb-8 animate-fade-in">
-          <div className="bg-gray-900/60 backdrop-blur-sm rounded-2xl p-5 border border-gray-700/40 shadow-lg shadow-gray-900/20">
-            {/* Step Counter */}
-            <div className="flex justify-between items-center text-sm text-gray-300 mb-3">
-              <span className="font-semibold">
-                Step <span className="text-amber-400">{currentStep}</span> of {totalSteps}
-              </span>
-              <span className="text-amber-300 font-medium">
-                {Math.round((currentStep / totalSteps) * 100)}% Complete
-              </span>
-            </div>
-            {/* Progress Bar */}
-            <div className="w-full bg-gray-800/60 rounded-full h-2.5 overflow-hidden border border-gray-700/40">
-              <div
-                className="bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 h-full rounded-full transition-all duration-500 ease-out shadow-lg shadow-amber-500/50"
-                style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+        {/* Progress Indicator - Modern ShadCN Card */}
+        <div className="max-w-4xl mx-auto mb-8">
+          <Card className="bg-gray-900/70 backdrop-blur-md border-gray-800/60 shadow-2xl shadow-amber-500/10">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 px-3 py-1">
+                    Step {currentStep} of {totalSteps}
+                  </Badge>
+                </div>
+                <div className="text-sm font-medium text-amber-300/90">
+                  {Math.round((currentStep / totalSteps) * 100)}% Complete
+                </div>
+              </div>
+              <Progress
+                value={(currentStep / totalSteps) * 100}
+                className="h-3 bg-gray-800/60 border border-gray-700/40"
               />
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Form Content - Dark Theme Container */}
-        <form onSubmit={handleFormSubmit} onKeyDownCapture={handleEnterAdvance} className="max-w-4xl mx-auto bg-transparent rounded-2xl min-h-[600px] flex flex-col">
-          <div className="flex-1 p-8">
-            {!activeFollowUp && renderStep()}
-            {activeFollowUp && (
-              <div className="max-w-2xl mx-auto">
-                <div className="bg-gray-900/60 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-700/40">
-                  <div className="px-6 py-4 border-b border-amber-600/40 bg-amber-900/30 rounded-t-2xl">
-                    <div className="text-base font-semibold text-amber-200">Follow-up: {activeFollowUp.category === 'Grease' ? 'Sebum' : activeFollowUp.category}{activeFollowUp.dimension ? ` (${activeFollowUp.dimension})` : ''}</div>
-                    <div className="text-xs text-amber-300/80">Resolve machine vs customer difference</div>
-                  </div>
-                  <div className="px-6 py-5 space-y-5">
+        {/* Form Content - Modern Card Container */}
+        <form onSubmit={handleFormSubmit} onKeyDownCapture={handleEnterAdvance} className="max-w-4xl mx-auto rounded-2xl min-h-[600px] flex flex-col">
+          <Card className="flex-1 bg-gray-900/70 backdrop-blur-md border-gray-800/60 shadow-2xl">
+            <CardContent className="p-8">
+              {!activeFollowUp && renderStep()}
+              {activeFollowUp && (
+                <div className="max-w-2xl mx-auto">
+                  <Card className="bg-gray-800/80 backdrop-blur-md border-amber-600/30 shadow-xl shadow-amber-500/10">
+                    <CardHeader className="border-b border-amber-600/30 bg-amber-900/20 pb-4">
+                      <CardTitle className="text-amber-300 text-lg">
+                        Follow-up: {activeFollowUp.category === 'Grease' ? 'Sebum' : activeFollowUp.category}
+                        {activeFollowUp.dimension ? ` (${activeFollowUp.dimension})` : ''}
+                      </CardTitle>
+                      <p className="text-xs text-amber-300/70 mt-1">Resolve machine vs customer difference</p>
+                    </CardHeader>
+                    <CardContent className="pt-6 space-y-5">
                     {activeFollowUp.questions.map((q) => {
                       // Conditional rendering: Skip Q2a if Q2 is not "Yes"
                       if (q.id === 'Q2a' && followUpLocal['Q2'] !== 'Yes') {
@@ -2567,18 +2585,22 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                       
                       return (
                       <div key={q.id}>
-                        <div className="text-sm font-medium text-gray-200 mb-2">{q.prompt}</div>
+                        <div className="text-sm font-medium text-gray-200 mb-3">{q.prompt}</div>
                         {!q.multi ? (
                           <div className="flex flex-wrap gap-2">
                             {q.options.map(opt => (
-                              <button
+                              <Button
                                 type="button"
                                 key={opt}
                                 onClick={() => toggleFollowUpOption(q.id, opt, false)}
-                                className={`px-3 py-2 rounded-lg border text-sm transition-all duration-300 ${followUpLocal[q.id] === opt ? 'bg-amber-900/40 border-amber-400 text-amber-200 shadow-lg shadow-amber-500/30' : 'bg-gray-800/40 border-gray-600/50 text-gray-300 hover:bg-gray-700/60 hover:border-gray-500/60'}`}
+                                variant={followUpLocal[q.id] === opt ? "default" : "outline"}
+                                className={followUpLocal[q.id] === opt
+                                  ? 'bg-amber-500/20 border-amber-400/50 text-amber-200 hover:bg-amber-500/30 shadow-lg shadow-amber-500/20'
+                                  : 'bg-gray-800/40 border-gray-600/50 text-gray-300 hover:bg-gray-700/60 hover:border-gray-500/60'
+                                }
                               >
                                 {opt}
-                              </button>
+                              </Button>
                             ))}
                           </div>
                         ) : (
@@ -2587,14 +2609,18 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                               const arr = Array.isArray(followUpLocal[q.id]) ? (followUpLocal[q.id] as string[]) : []
                               const selected = arr.includes(opt)
                               return (
-                                <button
+                                <Button
                                   type="button"
                                   key={opt}
                                   onClick={() => toggleFollowUpOption(q.id, opt, true)}
-                                  className={`px-3 py-2 rounded-lg border text-sm transition-all duration-300 ${selected ? 'bg-amber-900/40 border-amber-400 text-amber-200 shadow-lg shadow-amber-500/30' : 'bg-gray-800/40 border-gray-600/50 text-gray-300 hover:bg-gray-700/60 hover:border-gray-500/60'}`}
+                                  variant={selected ? "default" : "outline"}
+                                  className={selected
+                                    ? 'bg-amber-500/20 border-amber-400/50 text-amber-200 hover:bg-amber-500/30 shadow-lg shadow-amber-500/20'
+                                    : 'bg-gray-800/40 border-gray-600/50 text-gray-300 hover:bg-gray-700/60 hover:border-gray-500/60'
+                                  }
                                 >
                                   {opt}
-                                </button>
+                                </Button>
                               )
                             })}
                           </div>
@@ -2602,56 +2628,59 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                       </div>
                       );
                     })}
-                  </div>
+                    </CardContent>
+                  </Card>
                 </div>
-              </div>
-            )}          </div>
+              )}
+            </CardContent>
+            {/* Navigation */}
+            <div className="px-8 pb-6 pt-0">
+              <div className="w-full border-t border-gray-800/50 pt-6 flex justify-between items-center">
+                <Button
+                  type="button"
+                  onClick={handleBack}
+                  disabled={currentStep === 1}
+                  variant="outline"
+                  size="lg"
+                  className="bg-gray-800/40 border-gray-700/50 text-gray-300 hover:bg-gray-700/60 hover:text-white disabled:opacity-30"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  Back
+                </Button>
 
-          {/* Navigation */}
-          <div className="flex justify-between items-center p-8 pt-0">
-            <button
-              type="button"
-              onClick={handleBack}
-              disabled={currentStep === 1}
-              className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
-                currentStep === 1
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-
-            {!activeFollowUp ? (
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-semibold hover:from-amber-600 hover:to-amber-700 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Submitting...</span>
-                  </>
+                {!activeFollowUp ? (
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    size="lg"
+                    className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 transition-all"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        {currentStep === totalSteps ? 'Submit' : (followUp ? 'Resolve Follow-up' : 'Next')}
+                        <ArrowRight className="w-5 h-5 ml-2" />
+                      </>
+                    )}
+                  </Button>
                 ) : (
-                  <>
-                    <span>{currentStep === totalSteps ? 'Submit' : (followUp ? 'Resolve Follow-up' : 'Next')}</span>
-                    <ArrowRight className="w-5 h-5" />
-                  </>
+                  <Button
+                    type="button"
+                    onClick={handleSubmitFollowUp}
+                    size="lg"
+                    className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 transition-all"
+                  >
+                    Continue
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
                 )}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSubmitFollowUp}
-                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-semibold hover:from-amber-600 hover:to-amber-700 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span>Continue</span>
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            )}
-          </div>
+              </div>
+            </div>
+          </Card>
         </form>
       </div>
     </div>

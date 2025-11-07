@@ -1,9 +1,9 @@
 /**
- * RadioGroup - Single-select option group using OptionButton
- * Simplifies the common pattern of radio-style selections
+ * RadioGroup - Single-select option group using modern OptionButton
  */
 
 import React from 'react';
+import { Label } from '../ui/label';
 import { OptionButton, type OptionButtonProps } from './OptionButton';
 
 export interface RadioOption {
@@ -76,14 +76,14 @@ export const RadioGroup: React.FC<RadioGroupProps> = ({
 
   return (
     <div className="w-full">
-      {/* Label - Light text for dark theme */}
+      {/* Label */}
       {label && (
-        <label className="block text-sm font-semibold text-gray-200 mb-2">
+        <Label className="text-sm font-semibold text-gray-200 mb-2 block">
           {label}
-        </label>
+        </Label>
       )}
 
-      {/* Description - Light gray for dark theme */}
+      {/* Description */}
       {description && (
         <p className="text-sm text-gray-400 mb-4">{description}</p>
       )}

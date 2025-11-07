@@ -1,10 +1,11 @@
 /**
- * TextInput - Consistent text input component
- * Replaces hard-coded input styling
+ * TextInput - Modern text input component built on ShadCN
  */
 
 import React from 'react';
-import { inputVariants } from '../../styles/variants';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { cn } from '@/lib/utils';
 
 export interface TextInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   /** Input label */
@@ -24,43 +25,50 @@ export interface TextInputProps extends Omit<React.InputHTMLAttributes<HTMLInput
 }
 
 export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
-  ({ label, error, helperText, required, fullWidth = true, className, ...props }, ref) => {
+  ({ label, error, helperText, required, fullWidth = true, className, id, ...props }, ref) => {
     const hasError = !!error;
+    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
 
     return (
-      <div className={fullWidth ? 'w-full' : ''}>
-        {/* Label - Light text for dark theme */}
+      <div className={cn(fullWidth && 'w-full')}>
+        {/* Label */}
         {label && (
-          <label className="block text-sm font-semibold text-gray-200 mb-2">
+          <Label
+            htmlFor={inputId}
+            className="text-sm font-semibold text-gray-200 mb-2 block"
+          >
             {label}
             {required && <span className="text-red-400 ml-1">*</span>}
-          </label>
+          </Label>
         )}
 
-        {/* Input field with dark theme styling */}
-        <input
+        {/* Input field */}
+        <Input
           ref={ref}
-          className={inputVariants({
-            variant: hasError ? 'error' : 'default',
-            className,
-          })}
+          id={inputId}
+          className={cn(
+            "bg-gray-800/60 border-gray-700/50 text-gray-100 placeholder:text-gray-500",
+            "focus:border-amber-500/50 focus:ring-amber-500/20",
+            hasError && "border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20",
+            className
+          )}
           aria-invalid={hasError}
           aria-describedby={
-            error ? `${props.id}-error` : helperText ? `${props.id}-helper` : undefined
+            error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined
           }
           {...props}
         />
 
-        {/* Error message - Light red text on dark */}
+        {/* Error message */}
         {error && (
-          <p id={`${props.id}-error`} className="text-red-300 text-sm mt-2 flex items-center gap-1">
+          <p id={`${inputId}-error`} className="text-red-300 text-sm mt-2 flex items-center gap-1.5">
             <span className="font-medium">⚠</span> {error}
           </p>
         )}
 
-        {/* Helper text - Light gray on dark */}
+        {/* Helper text */}
         {helperText && !error && (
-          <p id={`${props.id}-helper`} className="text-gray-400 text-sm mt-2">
+          <p id={`${inputId}-helper`} className="text-gray-400 text-sm mt-2">
             {helperText}
           </p>
         )}

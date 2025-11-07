@@ -1,10 +1,13 @@
 /**
  * OptionButton - Reusable button for single/multi-select options
- * Replaces all the hard-coded option button patterns
+ * Built on ShadCN Button with modern styling
  */
 
 import React from 'react';
 import { CheckCircle } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { cn } from '@/lib/utils';
 import { optionButtonVariants, type OptionButtonVariants } from '../../styles/variants';
 
 export interface OptionButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> {
@@ -49,50 +52,54 @@ export const OptionButton: React.FC<OptionButtonProps> = ({
   disabled,
   ...props
 }) => {
-  // Dark theme badge colors with good contrast
-  const badgeColors = {
-    default: 'bg-gray-800/60 text-gray-200 border-gray-600/50',
-    primary: 'bg-amber-800/40 text-amber-200 border-amber-600/50',
-    info: 'bg-blue-800/40 text-blue-200 border-blue-600/50',
-    success: 'bg-green-800/40 text-green-200 border-green-600/50',
-    warning: 'bg-yellow-800/40 text-yellow-200 border-yellow-600/50',
-    danger: 'bg-red-800/40 text-red-200 border-red-600/50',
-  };
-
   return (
-    <button
+    <Button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={optionButtonVariants({ selected, intent, className })}
+      variant={selected ? "default" : "outline"}
+      className={cn(
+        optionButtonVariants({ selected, intent }),
+        "h-auto min-h-[56px] p-4 justify-start text-left relative overflow-hidden",
+        selected && "ring-2 ring-offset-2 ring-offset-gray-900",
+        className
+      )}
       {...props}
     >
       <div className="flex items-start justify-between gap-3 w-full">
-        <div className="flex-1 text-left">
-          {/* Label - inherits color from variant (light text) */}
+        <div className="flex-1">
+          {/* Label */}
           <p className="font-semibold text-base leading-snug">{label}</p>
 
-          {/* Description - slightly dimmed version of label color */}
+          {/* Description */}
           {description && (
-            <p className="text-sm mt-1 opacity-70">{description}</p>
+            <p className="text-sm mt-1.5 opacity-75 font-normal">{description}</p>
           )}
 
-          {/* Badge - dark theme with light text */}
+          {/* Badge */}
           {badge && (
-            <span
-              className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm ${badgeColors[badgeVariant]}`}
+            <Badge
+              variant={badgeVariant === 'default' ? 'secondary' : 'outline'}
+              className={cn(
+                "mt-2",
+                badgeVariant === 'primary' && "bg-amber-500/10 text-amber-300 border-amber-500/30",
+                badgeVariant === 'success' && "bg-green-500/10 text-green-300 border-green-500/30",
+                badgeVariant === 'warning' && "bg-yellow-500/10 text-yellow-300 border-yellow-500/30",
+                badgeVariant === 'danger' && "bg-red-500/10 text-red-300 border-red-500/30",
+                badgeVariant === 'info' && "bg-blue-500/10 text-blue-300 border-blue-500/30"
+              )}
             >
               {badge}
-            </span>
+            </Badge>
           )}
         </div>
 
-        {/* Checkmark - inherits color from variant */}
+        {/* Checkmark */}
         {selected && showCheckmark && (
           <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
         )}
       </div>
-    </button>
+    </Button>
   );
 };
 
