@@ -126,19 +126,20 @@ export const formStepVariants = cva(
 
 /**
  * Card variants
+ * Dark theme with glass-morphism effects
  */
 export const cardVariants = cva(
-  'rounded-2xl border transition-all',
+  'rounded-2xl border transition-all backdrop-blur-sm',
   {
     variants: {
       variant: {
-        default: 'bg-white border-gray-200 shadow-sm',
-        elevated: 'bg-white border-gray-200 shadow-lg',
-        outlined: 'bg-white border-gray-300',
-        filled: 'bg-gray-50 border-gray-200',
-        primary: 'bg-amber-50 border-amber-200',
-        danger: 'bg-red-50 border-red-200',
-        success: 'bg-green-50 border-green-200',
+        default: 'bg-gray-900/60 border-gray-700/40 shadow-lg shadow-gray-900/20',
+        elevated: 'bg-gray-900/80 border-gray-600/40 shadow-xl shadow-gray-900/30',
+        outlined: 'bg-gray-900/40 border-gray-600/50',
+        filled: 'bg-gray-800/60 border-gray-700/40',
+        primary: 'bg-amber-900/30 border-amber-600/40 shadow-lg shadow-amber-500/20',
+        danger: 'bg-red-900/30 border-red-600/40 shadow-lg shadow-red-500/20',
+        success: 'bg-green-900/30 border-green-600/40 shadow-lg shadow-green-500/20',
       },
       padding: {
         none: 'p-0',
@@ -156,19 +157,20 @@ export const cardVariants = cva(
 
 /**
  * Badge variants - for concern tags, severity indicators, etc.
+ * Dark theme with light text for maximum readability
  */
 export const badgeVariants = cva(
-  'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border',
+  'inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border backdrop-blur-sm',
   {
     variants: {
       variant: {
-        default: 'bg-gray-100 text-gray-800 border-gray-200',
-        primary: 'bg-amber-100 text-amber-800 border-amber-200',
-        success: 'bg-green-100 text-green-800 border-green-200',
-        warning: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-        danger: 'bg-red-100 text-red-800 border-red-200',
-        info: 'bg-blue-100 text-blue-800 border-blue-200',
-        purple: 'bg-purple-100 text-purple-800 border-purple-200',
+        default: 'bg-gray-800/60 text-gray-100 border-gray-600/50',
+        primary: 'bg-amber-800/50 text-amber-200 border-amber-500/50 shadow-sm shadow-amber-500/30',
+        success: 'bg-green-800/50 text-green-200 border-green-500/50 shadow-sm shadow-green-500/30',
+        warning: 'bg-yellow-800/50 text-yellow-200 border-yellow-500/50 shadow-sm shadow-yellow-500/30',
+        danger: 'bg-red-800/50 text-red-200 border-red-500/50 shadow-sm shadow-red-500/30',
+        info: 'bg-blue-800/50 text-blue-200 border-blue-500/50 shadow-sm shadow-blue-500/30',
+        purple: 'bg-purple-800/50 text-purple-200 border-purple-500/50 shadow-sm shadow-purple-500/30',
       },
     },
     defaultVariants: {
