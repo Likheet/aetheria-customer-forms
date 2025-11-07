@@ -61,7 +61,7 @@ export const FormStep: React.FC<FormStepProps> = ({
   return (
     <div className={formStepVariants({ centered, className })}>
       {/* Luxury glass card wrapper with subtle fade-in animation */}
-      <div className="luxury-section relative animate-fade-in-up">
+      <div className="luxury-section relative animate-fade-in-up px-12 py-12">
         {/* Enhanced ambient glow effect with gold and purple accents */}
         <div className="absolute -inset-1 bg-gradient-to-r from-amber-600/15 via-purple-600/10 to-amber-600/15 rounded-[34px] blur-2xl opacity-60 transition-opacity duration-700" />
 
@@ -90,27 +90,27 @@ export const FormStep: React.FC<FormStepProps> = ({
               <div
                 className={`${
                   centered ? 'mx-auto' : ''
-                } mb-7 ${iconContainerVariants({ variant: iconVariant, size: 'lg' })}`}
+                } mb-8 ${iconContainerVariants({ variant: iconVariant, size: 'lg' })}`}
               >
-                <Icon className="w-8 h-8" />
+                <Icon className="w-10 h-10" />
               </div>
             )}
 
             {/* Title - Using Playfair Display font with enhanced gold gradient */}
-            <h2 className="text-3xl font-bold tracking-tight mb-4 font-serif text-gradient-gold">
+            <h2 className="text-4xl font-bold tracking-tight mb-5 font-serif text-gradient-gold">
               {title}
             </h2>
 
             {/* Subtitle - Refined contrast with warmer tones */}
             {subtitle && (
-              <p className="text-muted-foreground/90 text-base leading-relaxed max-w-2xl mx-auto">
+              <p className="text-muted-foreground/90 text-lg leading-relaxed max-w-3xl mx-auto">
                 {subtitle}
               </p>
             )}
           </div>
 
           {/* Content area with better spacing */}
-          <div className="max-w-2xl mx-auto w-full mt-10">{children}</div>
+          <div className="max-w-3xl mx-auto w-full mt-12">{children}</div>
         </div>
       </div>
     </div>

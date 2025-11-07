@@ -123,14 +123,15 @@ export const DateOfBirthStep: React.FC<StepProps> = ({ formData, updateFormData,
             zIndex: 1000,
           }}
           classNames={{
-            input: 'w-full px-4 py-3 rounded-xl border border-border/60 bg-surface/60 text-foreground placeholder:text-muted-foreground/50 focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-center',
+            input: 'w-full px-6 py-4 rounded-xl border-2 border-gray-600/50 bg-gradient-to-br from-gray-900/70 to-gray-900/60 text-gray-100 text-lg placeholder:text-gray-500 focus:border-amber-500/80 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all text-center hover:border-amber-500/60',
           }}
           styles={{
             input: {
               textAlign: 'center',
+              fontWeight: 500,
             },
           }}
-          className="w-full max-w-md"
+          className="w-full max-w-2xl"
         />
         {formData.calculatedAge !== null && (
           <p className="text-sm text-muted-foreground/70 text-center">Age: {formData.calculatedAge} years</p>
