@@ -116,14 +116,14 @@ export const DateOfBirthStep: React.FC<StepProps> = ({ formData, updateFormData,
           placeholder="Select your date of birth"
           maxDate={new Date()}
           classNames={{
-            input: 'w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 transition-all text-base',
+            input: 'w-full px-4 py-3 rounded-xl border border-border/60 bg-surface/60 text-foreground placeholder:text-muted-foreground/50 focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all',
           }}
         />
         {formData.calculatedAge !== null && (
-          <p className="text-sm text-gray-600 text-center">Age: {formData.calculatedAge} years</p>
+          <p className="text-sm text-muted-foreground/70 text-center">Age: {formData.calculatedAge} years</p>
         )}
         {errors.dateOfBirth && (
-          <p className="text-red-500 text-sm mt-2 flex items-center justify-center gap-1">
+          <p className="text-destructive text-sm mt-2 flex items-center justify-center gap-1">
             <span className="font-medium">⚠</span> {errors.dateOfBirth}
           </p>
         )}
