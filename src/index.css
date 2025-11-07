@@ -568,3 +568,46 @@ kbd {
   box-shadow: 0 20px 40px rgba(0,0,0,0.15);
 }
 
+/* Dark theme overrides for Mantine DatePicker */
+.dark .mantine-DatePicker-day,
+.dark .mantine-DatePicker-calendarHeader,
+.dark .mantine-DatePicker-month,
+.dark .mantine-DatePicker-monthsList,
+.dark .mantine-DatePicker-yearsList,
+.dark .mantine-DatePicker-pickerControl {
+  color: #e5e7eb !important;
+}
+
+.dark .mantine-DatePicker-day:hover {
+  background-color: rgba(251, 191, 36, 0.1) !important;
+}
+
+.dark .mantine-DatePicker-day[data-selected="true"] {
+  background-color: #f59e0b !important;
+  color: white !important;
+}
+
+.dark .mantine-DatePicker-day[data-weekend="true"] {
+  color: #fcd34d !important;
+}
+
+.dark .mantine-MonthPickerInput-input,
+.dark .mantine-DateInput-input,
+.dark .mantine-DatePickerInput-input {
+  background-color: rgba(17, 24, 39, 0.6) !important;
+  border-color: rgba(107, 114, 128, 0.4) !important;
+  color: #f3f4f6 !important;
+}
+
+.dark .mantine-MonthPickerInput-input:hover,
+.dark .mantine-DateInput-input:hover,
+.dark .mantine-DatePickerInput-input:hover {
+  border-color: rgba(251, 191, 36, 0.5) !important;
+}
+
+.dark .mantine-MonthPickerInput-input:focus,
+.dark .mantine-DateInput-input:focus,
+.dark .mantine-DatePickerInput-input:focus {
+  border-color: #f59e0b !important;
+}
+
