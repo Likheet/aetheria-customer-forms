@@ -207,14 +207,15 @@ export const iconContainerVariants = cva(
 
 /**
  * Input variants - for text inputs, selects, etc.
+ * Dark theme with high contrast text
  */
 export const inputVariants = cva(
-  'w-full px-4 py-3 rounded-xl border-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-1',
+  'w-full px-4 py-3 rounded-xl border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent backdrop-blur-sm',
   {
     variants: {
       variant: {
-        default: 'border-gray-200 bg-white focus:border-amber-400 focus:ring-amber-500',
-        error: 'border-red-300 bg-red-50 focus:border-red-400 focus:ring-red-500',
+        default: 'bg-gray-900/60 border-gray-600/40 text-gray-100 placeholder:text-gray-500 hover:border-amber-500/50 focus:border-amber-500 focus:ring-amber-500/50 focus:bg-gray-900/80',
+        error: 'bg-red-900/30 border-red-500/50 text-red-100 placeholder:text-red-400/50 focus:border-red-400 focus:ring-red-500/50',
       },
     },
     defaultVariants: {

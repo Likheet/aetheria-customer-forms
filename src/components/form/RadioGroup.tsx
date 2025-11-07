@@ -76,14 +76,16 @@ export const RadioGroup: React.FC<RadioGroupProps> = ({
 
   return (
     <div className="w-full">
+      {/* Label - Light text for dark theme */}
       {label && (
-        <label className="block text-sm font-semibold text-gray-900 mb-2">
+        <label className="block text-sm font-semibold text-gray-200 mb-2">
           {label}
         </label>
       )}
 
+      {/* Description - Light gray for dark theme */}
       {description && (
-        <p className="text-sm text-gray-600 mb-4">{description}</p>
+        <p className="text-sm text-gray-400 mb-4">{description}</p>
       )}
 
       <div className={`${layoutClass} ${gapClasses[gap]}`}>
@@ -103,8 +105,9 @@ export const RadioGroup: React.FC<RadioGroupProps> = ({
         ))}
       </div>
 
+      {/* Error - Light red for dark theme */}
       {error && (
-        <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+        <p className="text-red-300 text-sm mt-2 flex items-center gap-1">
           <span className="font-medium">⚠</span> {error}
         </p>
       )}
