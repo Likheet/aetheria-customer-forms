@@ -1,6 +1,6 @@
 import React from 'react';
 import { StepProps } from '../../../types';
-import FormStep from '../../FormStep';
+import FormStep from '../../form/FormStep';
 import { RadioGroup } from '../../form/RadioGroup';
 
 const DensityObservation: React.FC<StepProps> = ({ formData, updateFormData, onNext, onBack }) => {
@@ -39,4 +39,4 @@ const DensityObservation: React.FC<StepProps> = ({ formData, updateFormData, onN
   );
 };
 
-export default DensityObservation; 
+export default React.memo(DensityObservation); 

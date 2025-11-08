@@ -21,7 +21,7 @@ interface StepProps {
  * Step 14: Diagnosed Skin Conditions
  * Pattern: Optional textarea for medical history
  */
-export const DiagnosedConditionsStep: React.FC<StepProps> = ({
+export const DiagnosedConditionsStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -44,13 +44,13 @@ export const DiagnosedConditionsStep: React.FC<StepProps> = ({
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Step 15: Prescription Treatments
  * Pattern: Optional textarea for prescription history
  */
-export const PrescriptionTreatmentsStep: React.FC<StepProps> = ({
+export const PrescriptionTreatmentsStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -73,13 +73,13 @@ export const PrescriptionTreatmentsStep: React.FC<StepProps> = ({
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Step 16: Professional Treatments
  * Pattern: Optional textarea for recent professional treatments
  */
-export const ProfessionalTreatmentsStep: React.FC<StepProps> = ({
+export const ProfessionalTreatmentsStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -102,7 +102,7 @@ export const ProfessionalTreatmentsStep: React.FC<StepProps> = ({
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Code reduction summary:

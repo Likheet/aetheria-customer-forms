@@ -22,7 +22,7 @@ interface StepProps {
  * Step 10: Skin Type Selection
  * Pattern: Single-select from predefined skin type options
  */
-export const SkinTypeStep: React.FC<StepProps> = ({ formData, updateFormData, errors }) => {
+export const SkinTypeStep = React.memo<StepProps>(({ formData, updateFormData, errors }) => {
   return (
     <FormStep
       title="What do you think your skin type is?"
@@ -43,13 +43,13 @@ export const SkinTypeStep: React.FC<StepProps> = ({ formData, updateFormData, er
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Step 11: Oil Levels Assessment
  * Pattern: Single-select with severity bands (Green/Blue/Yellow/Red)
  */
-export const OilLevelsStep: React.FC<StepProps> = ({ formData, updateFormData, errors }) => {
+export const OilLevelsStep = React.memo<StepProps>(({ formData, updateFormData, errors }) => {
   const oilLevelOptions = [
     {
       value: 'Comfortable, no shine or greasiness → Green',
@@ -86,13 +86,13 @@ export const OilLevelsStep: React.FC<StepProps> = ({ formData, updateFormData, e
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Step 12: Hydration Levels Assessment
  * Pattern: Single-select with severity bands (Green/Blue/Yellow/Red)
  */
-export const HydrationLevelsStep: React.FC<StepProps> = ({ formData, updateFormData, errors }) => {
+export const HydrationLevelsStep = React.memo<StepProps>(({ formData, updateFormData, errors }) => {
   const hydrationLevelOptions = [
     {
       value: 'Comfortable, no tightness → Green',
@@ -129,7 +129,7 @@ export const HydrationLevelsStep: React.FC<StepProps> = ({ formData, updateFormD
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Code reduction summary:

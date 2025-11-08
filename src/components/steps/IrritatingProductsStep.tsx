@@ -22,7 +22,7 @@ interface StepProps {
  * Pattern: Tag input with autocomplete for product names/ingredients
  * Stores as both comma-separated string and array
  */
-export const IrritatingProductsStep: React.FC<StepProps> = ({
+export const IrritatingProductsStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -67,7 +67,7 @@ export const IrritatingProductsStep: React.FC<StepProps> = ({
       </div>
     </FormStep>
   );
-};
+});
 
 /**
  * Code reduction summary:

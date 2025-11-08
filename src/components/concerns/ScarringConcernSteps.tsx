@@ -50,7 +50,7 @@ const mapScarringSeverityToValue = (displayText: string): string => {
  * Post Acne Scarring Type Selection Step
  * Pattern: Select scar type (Ice pick, Rolling, PIH, Keloid)
  */
-export const ScarringTypeStep: React.FC<StepProps> = ({
+export const ScarringTypeStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -103,13 +103,13 @@ export const ScarringTypeStep: React.FC<StepProps> = ({
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Post Acne Scarring Severity/Color Selection Step
  * Pattern: If PIH, select color; otherwise select severity
  */
-export const ScarringSeverityStep: React.FC<StepProps> = ({
+export const ScarringSeverityStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -194,7 +194,7 @@ export const ScarringSeverityStep: React.FC<StepProps> = ({
       </div>
     </FormStep>
   );
-};
+});
 
 /**
  * Code summary:

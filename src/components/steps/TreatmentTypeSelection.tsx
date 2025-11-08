@@ -36,4 +36,4 @@ const TreatmentTypeSelection: React.FC<TreatmentTypeSelectionProps> = ({ onSelec
   );
 };
 
-export default TreatmentTypeSelection; 
+export default React.memo(TreatmentTypeSelection); 

@@ -51,7 +51,7 @@ const SENSITIVITY_QUESTIONS = [
  * Pattern: Multiple Yes/No questions in a single step
  * Shows calculated age at the top
  */
-export const SensitivityScreeningStep: React.FC<StepProps> = ({
+export const SensitivityScreeningStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -107,7 +107,7 @@ export const SensitivityScreeningStep: React.FC<StepProps> = ({
       </div>
     </FormStep>
   );
-};
+});
 
 /**
  * Code reduction summary:

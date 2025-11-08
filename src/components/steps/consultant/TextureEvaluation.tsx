@@ -1,6 +1,6 @@
 import React from 'react';
 import { StepProps } from '../../../types';
-import FormStep from '../../FormStep';
+import FormStep from '../../form/FormStep';
 import { RadioGroup } from '../../form/RadioGroup';
 
 const TextureEvaluation: React.FC<StepProps> = ({ formData, updateFormData, onNext, onBack, errors }) => {
@@ -83,4 +83,4 @@ const TextureEvaluation: React.FC<StepProps> = ({ formData, updateFormData, onNe
   );
 };
 
-export default TextureEvaluation; 
+export default React.memo(TextureEvaluation); 

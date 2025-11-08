@@ -22,7 +22,7 @@ interface StepProps {
  * Old code: 40 lines with nested ternary styling
  * New code: 20 lines with semantic intent
  */
-export const PregnancyStep: React.FC<StepProps> = ({
+export const PregnancyStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -70,12 +70,12 @@ export const PregnancyStep: React.FC<StepProps> = ({
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Step 6: Recent isotretinoin use
  */
-export const IsotretinoinStep: React.FC<StepProps> = ({
+export const IsotretinoinStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -118,12 +118,12 @@ export const IsotretinoinStep: React.FC<StepProps> = ({
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Step 7: Severe cystic acne
  */
-export const SevereCysticAcneStep: React.FC<StepProps> = ({
+export const SevereCysticAcneStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -175,12 +175,12 @@ export const SevereCysticAcneStep: React.FC<StepProps> = ({
       </div>
     </FormStep>
   );
-};
+});
 
 /**
  * Step 8: Allergy conflicts
  */
-export const AllergyConflictStep: React.FC<StepProps> = ({
+export const AllergyConflictStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -224,12 +224,12 @@ export const AllergyConflictStep: React.FC<StepProps> = ({
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Step 9: Barrier stress
  */
-export const BarrierStressStep: React.FC<StepProps> = ({
+export const BarrierStressStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -283,7 +283,7 @@ export const BarrierStressStep: React.FC<StepProps> = ({
       </div>
     </FormStep>
   );
-};
+});
 
 /**
  * Summary of improvements:

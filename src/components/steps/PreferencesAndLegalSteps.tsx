@@ -32,7 +32,7 @@ type LegalDisclaimerField = (typeof LEGAL_DISCLAIMER_KEYS)[number];
  * Routine Steps Preference
  * Pattern: 3-step, 4-step, or 5+ step routine
  */
-export const RoutineStepsStep: React.FC<StepProps> = ({
+export const RoutineStepsStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -61,13 +61,13 @@ export const RoutineStepsStep: React.FC<StepProps> = ({
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Serum Comfort Preference
  * Pattern: 1, 2, or 3 serums
  */
-export const SerumComfortStep: React.FC<StepProps> = ({
+export const SerumComfortStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -96,13 +96,13 @@ export const SerumComfortStep: React.FC<StepProps> = ({
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Legal Disclaimer Step
  * Pattern: Multiple checkboxes + master "agree to all" checkbox
  */
-export const LegalDisclaimerStep: React.FC<StepProps> = ({
+export const LegalDisclaimerStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -294,7 +294,7 @@ export const LegalDisclaimerStep: React.FC<StepProps> = ({
       </div>
     </FormStep>
   );
-};
+});
 
 /**
  * Code summary:

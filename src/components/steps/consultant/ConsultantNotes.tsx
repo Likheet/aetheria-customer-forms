@@ -1,6 +1,6 @@
 import React from 'react';
 import { StepProps } from '../../../types';
-import FormStep from '../../FormStep';
+import FormStep from '../../form/FormStep';
 
 interface ConsultantNotesProps extends StepProps {
   onSubmit: () => void;
@@ -89,4 +89,4 @@ const ConsultantNotes: React.FC<ConsultantNotesProps> = ({ formData, updateFormD
   );
 };
 
-export default ConsultantNotes; 
+export default React.memo(ConsultantNotes); 

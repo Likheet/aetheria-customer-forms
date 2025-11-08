@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { StepProps } from "../../../types";
-import FormStep from "../../FormStep";
+import FormStep from '../../form/FormStep';
 import { getConsultationsWithoutInput } from "../../../services/consultantInputService";
 import { ConsultationData, ConsultantInputData } from "../../../lib/supabase";
 import { Badge } from "../../ui/badge";
@@ -135,4 +135,4 @@ const CustomerSelection: React.FC<StepProps & { isLoading: boolean }> = ({
   );
 };
 
-export default CustomerSelection;
+export default React.memo(CustomerSelection);

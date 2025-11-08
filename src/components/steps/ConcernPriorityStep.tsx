@@ -22,7 +22,7 @@ interface StepProps {
  * Pattern: Reorder concerns using arrow buttons
  * Special: Acne stays at #1 if selected
  */
-export const ConcernPriorityStep: React.FC<StepProps> = ({
+export const ConcernPriorityStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -122,7 +122,7 @@ export const ConcernPriorityStep: React.FC<StepProps> = ({
       </div>
     </FormStep>
   );
-};
+});
 
 /**
  * Code summary:

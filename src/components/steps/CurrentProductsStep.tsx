@@ -31,7 +31,7 @@ const DURATION_OPTIONS = [
  * Step 17: Current Products List
  * Pattern: Dynamic array of products with autocomplete and duration selection
  */
-export const CurrentProductsStep: React.FC<StepProps> = ({
+export const CurrentProductsStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -135,7 +135,7 @@ export const CurrentProductsStep: React.FC<StepProps> = ({
       </div>
     </FormStep>
   );
-};
+});
 
 /**
  * Code summary:

@@ -87,7 +87,7 @@ const getAcneTypeBadge = (acneType: string): string | null => {
  * Acne Type Selection Step
  * Pattern: Multi-select for breakout types
  */
-export const AcneTypeStep: React.FC<StepProps> = ({ formData, updateFormData, errors }) => {
+export const AcneTypeStep = React.memo<StepProps>(({ formData, updateFormData, errors }) => {
   const acneBreakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : [];
 
   const toggleAcneBreakout = (option: string) => {
@@ -142,13 +142,13 @@ export const AcneTypeStep: React.FC<StepProps> = ({ formData, updateFormData, er
       )}
     </FormStep>
   );
-};
+});
 
 /**
  * Acne Severity Selection Step
  * Pattern: For each selected breakout type, choose severity
  */
-export const AcneSeverityStep: React.FC<StepProps> = ({ formData, updateFormData, errors }) => {
+export const AcneSeverityStep = React.memo<StepProps>(({ formData, updateFormData, errors }) => {
   const acneBreakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : [];
 
   if (!acneBreakouts.length) {
@@ -243,7 +243,7 @@ export const AcneSeverityStep: React.FC<StepProps> = ({ formData, updateFormData
       </div>
     </FormStep>
   );
-};
+});
 
 /**
  * Code reduction summary:
