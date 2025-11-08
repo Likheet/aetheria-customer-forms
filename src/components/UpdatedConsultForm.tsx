@@ -2299,8 +2299,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           </button>
         )}
 
-        {/* Dev: Machine Bands Sidebar - Slides in from right */}
-        {machine && (
+        {/* Dev: Machine Bands Sidebar - Slides in from right (Development only) */}
+        {import.meta.env.DEV && machine && (
           <>
             {/* Overlay for mobile */}
             {isSidebarOpen && (
