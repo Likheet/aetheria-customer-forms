@@ -112,6 +112,9 @@ export const FormStep: React.FC<FormStepProps> = ({
           {/* Content area with better spacing */}
           <div className="max-w-3xl mx-auto w-full mt-12">{children}</div>
         </div>
+
+        {/* Content area - clean and spacious */}
+        <div className="max-w-3xl mx-auto w-full mt-12">{children}</div>
       </div>
     </div>
   );
