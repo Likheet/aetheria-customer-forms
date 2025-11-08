@@ -22,7 +22,7 @@ interface StepProps {
  * Old code: 40 lines with hard-coded classes
  * New code: 20 lines with reusable components
  */
-export const NameStep: React.FC<StepProps> = ({ formData, updateFormData, errors }) => {
+export const NameStep: React.FC<StepProps> = React.memo(({ formData, updateFormData, errors }) => {
   return (
     <FormStep
       title="What's your name?"
@@ -42,14 +42,16 @@ export const NameStep: React.FC<StepProps> = ({ formData, updateFormData, errors
       />
     </FormStep>
   );
-};
+});
+
+NameStep.displayName = 'NameStep';
 
 /**
  * Step 2: Phone number input
  * Old code: 45 lines
  * New code: 25 lines
  */
-export const PhoneStep: React.FC<StepProps> = ({ formData, updateFormData, errors }) => {
+export const PhoneStep: React.FC<StepProps> = React.memo(({ formData, updateFormData, errors }) => {
   return (
     <FormStep
       title="Your phone number?"
@@ -70,14 +72,16 @@ export const PhoneStep: React.FC<StepProps> = ({ formData, updateFormData, error
       />
     </FormStep>
   );
-};
+});
+
+PhoneStep.displayName = 'PhoneStep';
 
 /**
  * Step 3: Date of birth
  * Old code: 50 lines
  * New code: 30 lines
  */
-export const DateOfBirthStep: React.FC<StepProps> = ({ formData, updateFormData, errors }) => {
+export const DateOfBirthStep: React.FC<StepProps> = React.memo(({ formData, updateFormData, errors }) => {
   const handleDateChange = (date: Date | null) => {
     if (!date) {
       updateFormData({ dateOfBirth: '', calculatedAge: null });
@@ -144,14 +148,16 @@ export const DateOfBirthStep: React.FC<StepProps> = ({ formData, updateFormData,
       </div>
     </FormStep>
   );
-};
+});
+
+DateOfBirthStep.displayName = 'DateOfBirthStep';
 
 /**
  * Step 4: Gender selection
  * Old code: 45 lines with hard-coded button styling
  * New code: 15 lines using RadioGroup
  */
-export const GenderStep: React.FC<StepProps> = ({ formData, updateFormData, errors }) => {
+export const GenderStep: React.FC<StepProps> = React.memo(({ formData, updateFormData, errors }) => {
   return (
     <FormStep
       title="Your gender?"
@@ -175,7 +181,9 @@ export const GenderStep: React.FC<StepProps> = ({ formData, updateFormData, erro
       />
     </FormStep>
   );
-};
+});
+
+GenderStep.displayName = 'GenderStep';
 
 /**
  * Summary: Code reduction achieved

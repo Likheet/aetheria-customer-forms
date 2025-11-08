@@ -16,4 +16,40 @@ export default defineConfig({
   optimizeDeps: {
     include: ['lucide-react'],
   },
+  build: {
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          // Vendor chunks for large dependencies
+          if (id.includes('node_modules')) {
+            // Radix UI components in separate chunk
+            if (id.includes('@radix-ui')) {
+              return 'vendor-radix';
+            }
+            // Mantine components in separate chunk
+            if (id.includes('@mantine')) {
+              return 'vendor-mantine';
+            }
+            // Supabase in separate chunk
+            if (id.includes('@supabase')) {
+              return 'vendor-supabase';
+            }
+            // Lucide icons in separate chunk
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            // React and React-DOM together
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'vendor-react';
+            }
+            // All other dependencies
+            return 'vendor';
+          }
+        },
+      },
+    },
+    // Increase chunk size warning limit to 600kb (from default 500kb)
+    chunkSizeWarningLimit: 600,
+  },
 });
