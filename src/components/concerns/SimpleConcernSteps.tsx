@@ -29,7 +29,7 @@ const mapSeverityToValue = (displayText: string): string => {
  * Fine Lines & Wrinkles Severity Step
  * Pattern: Direct severity selection (Blue/Yellow/Red)
  */
-export const WrinklesStep: React.FC<StepProps> = ({
+export const WrinklesStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -72,13 +72,13 @@ export const WrinklesStep: React.FC<StepProps> = ({
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Large Pores Severity Step
  * Pattern: Direct severity selection (Blue/Yellow/Red)
  */
-export const PoresStep: React.FC<StepProps> = ({
+export const PoresStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -121,13 +121,13 @@ export const PoresStep: React.FC<StepProps> = ({
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Bumpy Skin (Texture) Severity Step
  * Pattern: Direct severity selection (Blue/Yellow/Red)
  */
-export const TextureStep: React.FC<StepProps> = ({
+export const TextureStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -170,7 +170,7 @@ export const TextureStep: React.FC<StepProps> = ({
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Code summary:

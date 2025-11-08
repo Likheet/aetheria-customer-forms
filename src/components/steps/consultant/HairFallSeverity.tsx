@@ -1,6 +1,6 @@
 import React from 'react';
 import { StepProps } from '../../../types';
-import FormStep from '../../FormStep';
+import FormStep from '../../form/FormStep';
 import { RadioGroup } from '../../form/RadioGroup';
 
 const HairFallSeverity: React.FC<StepProps> = ({ formData, updateFormData, onNext, onBack }) => {
@@ -40,4 +40,4 @@ const HairFallSeverity: React.FC<StepProps> = ({ formData, updateFormData, onNex
   );
 };
 
-export default HairFallSeverity; 
+export default React.memo(HairFallSeverity); 

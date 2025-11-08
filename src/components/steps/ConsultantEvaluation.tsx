@@ -200,4 +200,4 @@ const ConsultantEvaluation: React.FC<StepProps> = ({ formData, updateFormData, o
   );
 };
 
-export default ConsultantEvaluation; 
+export default React.memo(ConsultantEvaluation); 

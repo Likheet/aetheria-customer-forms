@@ -23,7 +23,7 @@ interface StepProps {
  * Pattern: Multi-select checkbox group with max 3 selections
  * Age-gated: "Fine lines & wrinkles" only available for age 25+
  */
-export const MainConcernsStep: React.FC<StepProps> = ({
+export const MainConcernsStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -92,7 +92,7 @@ export const MainConcernsStep: React.FC<StepProps> = ({
       </div>
     </FormStep>
   );
-};
+});
 
 /**
  * Code reduction summary:

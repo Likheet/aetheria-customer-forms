@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StepProps } from '../../../types';
-import FormStep from '../../FormStep';
+import FormStep from '../../form/FormStep';
 import { X } from 'lucide-react';
 import { Button } from '../../ui/button';
 
@@ -65,4 +65,4 @@ const UnsuitableProducts: React.FC<StepProps> = ({ formData, updateFormData, onN
   );
 };
 
-export default UnsuitableProducts; 
+export default React.memo(UnsuitableProducts); 

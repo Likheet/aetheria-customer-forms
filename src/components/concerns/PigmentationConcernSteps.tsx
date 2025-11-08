@@ -20,7 +20,7 @@ interface StepProps {
  * Pigmentation Type Selection Step
  * Pattern: Choose Red or Brown pigmentation
  */
-export const PigmentationTypeStep: React.FC<StepProps> = ({
+export const PigmentationTypeStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -48,13 +48,13 @@ export const PigmentationTypeStep: React.FC<StepProps> = ({
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Pigmentation Severity Selection Step
  * Pattern: Different severity options based on Red vs Brown type
  */
-export const PigmentationSeverityStep: React.FC<StepProps> = ({
+export const PigmentationSeverityStep = React.memo<StepProps>(({
   formData,
   updateFormData,
   errors,
@@ -113,7 +113,7 @@ export const PigmentationSeverityStep: React.FC<StepProps> = ({
       />
     </FormStep>
   );
-};
+});
 
 /**
  * Code summary:

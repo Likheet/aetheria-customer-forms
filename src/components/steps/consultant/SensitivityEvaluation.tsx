@@ -1,6 +1,6 @@
 import React from 'react';
 import { StepProps } from '../../../types';
-import FormStep from '../../FormStep';
+import FormStep from '../../form/FormStep';
 import { RadioGroup } from '../../form/RadioGroup';
 
 const SensitivityEvaluation: React.FC<StepProps> = ({ formData, updateFormData, onNext, onBack, errors }) => {
@@ -83,4 +83,4 @@ const SensitivityEvaluation: React.FC<StepProps> = ({ formData, updateFormData, 
   );
 };
 
-export default SensitivityEvaluation; 
+export default React.memo(SensitivityEvaluation); 

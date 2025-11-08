@@ -1,6 +1,6 @@
 import React from 'react';
 import { StepProps } from '../../../types';
-import FormStep from '../../FormStep';
+import FormStep from '../../form/FormStep';
 import { RadioGroup } from '../../form/RadioGroup';
 
 const VisualScalpType: React.FC<StepProps> = ({ formData, updateFormData, onNext, onBack }) => {
@@ -42,4 +42,4 @@ const VisualScalpType: React.FC<StepProps> = ({ formData, updateFormData, onNext
   );
 };
 
-export default VisualScalpType; 
+export default React.memo(VisualScalpType); 
