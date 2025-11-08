@@ -49,7 +49,7 @@ export const buttonVariants = cva(
  * Enhanced luxury theme with refined glows and borders
  */
 export const optionButtonVariants = cva(
-  'w-full px-6 py-5 text-left rounded-2xl border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background cursor-pointer',
+  'w-full px-7 py-5 text-left rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent backdrop-blur-sm active:scale-[0.99] relative overflow-hidden text-base font-medium',
   {
     variants: {
       // Selection state
@@ -198,7 +198,7 @@ export const iconContainerVariants = cva(
       size: {
         sm: 'w-8 h-8',
         md: 'w-12 h-12',
-        lg: 'w-16 h-16',
+        lg: 'w-20 h-20',
       },
     },
     defaultVariants: {
@@ -213,7 +213,7 @@ export const iconContainerVariants = cva(
  * Enhanced luxury theme with refined interactions
  */
 export const inputVariants = cva(
-  'w-full px-5 py-3.5 rounded-xl border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background',
+  'w-full px-6 py-4 rounded-xl border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent backdrop-blur-sm font-medium text-lg',
   {
     variants: {
       variant: {

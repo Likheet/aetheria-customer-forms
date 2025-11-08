@@ -2515,9 +2515,9 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
           <div className="w-32"></div> {/* Spacer for centering */}
         </div>
 
-        {/* Progress Indicator - Minimal Luxury */}
-        <div className="w-full mx-auto mb-6 animate-fade-in">
-          <div className="bg-surface/90 rounded-2xl p-6 border border-border shadow-sm">
+        {/* Progress Indicator - Sleek Modern Theme */}
+        <div className="max-w-6xl mx-auto mb-8 animate-fade-in">
+          <div className="bg-surface/80 backdrop-blur-xl rounded-2xl p-5 border border-border/60 shadow-xl">
             {/* Step Counter */}
             <div className="flex justify-between items-center text-sm text-muted-foreground mb-3 font-light">
               <span>
@@ -2538,8 +2538,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         </div>
 
         {/* Form Content - Dark Theme Container */}
-        <form onSubmit={handleFormSubmit} onKeyDownCapture={handleEnterAdvance} className="w-full mx-auto bg-transparent rounded-2xl min-h-[600px] flex flex-col">
-          <div className="flex-1">
+        <form onSubmit={handleFormSubmit} onKeyDownCapture={handleEnterAdvance} className="max-w-6xl mx-auto bg-transparent rounded-2xl min-h-[600px] flex flex-col">
+          <div className="flex-1 p-8">
             {!activeFollowUp && renderStep()}
             {activeFollowUp && (
               <div className="w-full mx-auto">

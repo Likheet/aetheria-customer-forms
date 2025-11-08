@@ -60,45 +60,57 @@ export const FormStep: React.FC<FormStepProps> = ({
 
   return (
     <div className={formStepVariants({ centered, className })}>
-      {/* Minimal luxury card - clean with subtle premium touches */}
-      <div className="relative animate-fade-in-up rounded-3xl border border-border/50 p-12 md:p-16 bg-surface/95 shadow-sm">
-        {/* Single subtle accent line at top */}
-        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+      {/* Luxury glass card wrapper with subtle fade-in animation */}
+      <div className="luxury-section relative animate-fade-in-up px-12 py-12">
+        {/* Enhanced ambient glow effect with gold and purple accents */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-amber-600/15 via-purple-600/10 to-amber-600/15 rounded-[34px] blur-2xl opacity-60 transition-opacity duration-700" />
 
-        {/* Badge at top left (if provided) */}
-        {badge && !centered && (
-          <div className="absolute -top-3 left-8">
-            <div
-              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold border ${
-                badgeColors[badge.variant || 'primary']
-              }`}
-            >
-              {badge.icon && <badge.icon className="w-3.5 h-3.5" />}
-              <span>{badge.label}</span>
+        {/* Subtle shimmer overlay */}
+        <div className="absolute inset-0 rounded-[32px] bg-gradient-to-br from-transparent via-amber-400/5 to-transparent opacity-40 pointer-events-none" />
+
+        <div className="relative z-10">
+          {/* Badge at top left (if provided) */}
+          {badge && !centered && (
+            <div className="absolute -top-3 left-6 z-20">
+              <div
+                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold border-2 ${
+                  badgeColors[badge.variant || 'primary']
+                }`}
+              >
+                {badge.icon && <badge.icon className="w-4 h-4" />}
+                <span>{badge.label}</span>
+              </div>
             </div>
+          )}
+
+          {/* Header section */}
+          <div className={centered ? 'text-center' : ''}>
+            {/* Icon */}
+            {Icon && (
+              <div
+                className={`${
+                  centered ? 'mx-auto' : ''
+                } mb-8 ${iconContainerVariants({ variant: iconVariant, size: 'lg' })}`}
+              >
+                <Icon className="w-10 h-10" />
+              </div>
+            )}
+
+            {/* Title - Using Playfair Display font with enhanced gold gradient */}
+            <h2 className="text-4xl font-bold tracking-tight mb-5 font-serif text-gradient-gold">
+              {title}
+            </h2>
+
+            {/* Subtitle - Refined contrast with warmer tones */}
+            {subtitle && (
+              <p className="text-muted-foreground/90 text-lg leading-relaxed max-w-3xl mx-auto">
+                {subtitle}
+              </p>
+            )}
           </div>
-        )}
 
-        {/* Header section */}
-        <div className={centered ? 'text-center' : ''}>
-          {/* Icon - simplified, no fancy container */}
-          {Icon && (
-            <div className={`${centered ? 'mx-auto' : ''} mb-8`}>
-              <Icon className="w-6 h-6 text-primary" strokeWidth={1.5} />
-            </div>
-          )}
-
-          {/* Title - clean serif with subtle gold accent on hover */}
-          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-3 font-serif text-foreground transition-colors hover:text-primary/90">
-            {title}
-          </h2>
-
-          {/* Subtitle - minimal, clean */}
-          {subtitle && (
-            <p className="text-muted-foreground text-base md:text-lg leading-relaxed max-w-3xl mx-auto font-light">
-              {subtitle}
-            </p>
-          )}
+          {/* Content area with better spacing */}
+          <div className="max-w-3xl mx-auto w-full mt-12">{children}</div>
         </div>
 
         {/* Content area - clean and spacious */}
