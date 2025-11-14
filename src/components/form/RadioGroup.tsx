@@ -75,17 +75,17 @@ export const RadioGroup: React.FC<RadioGroupProps> = ({
       : 'flex flex-col';
 
   return (
-    <div className="w-full">
-      {/* Label - Light text for dark theme */}
+    <div className="w-full max-w-2xl mx-auto">
+      {/* Label - Dark text on light background */}
       {label && (
-        <label className="block text-sm font-semibold text-gray-200 mb-2">
+        <label className="block text-sm font-semibold text-foreground mb-3">
           {label}
         </label>
       )}
 
-      {/* Description - Light gray for dark theme */}
+      {/* Description - Muted but readable */}
       {description && (
-        <p className="text-sm text-gray-400 mb-4">{description}</p>
+        <p className="text-sm text-muted-foreground mb-5">{description}</p>
       )}
 
       <div className={`${layoutClass} ${gapClasses[gap]}`}>
@@ -105,10 +105,10 @@ export const RadioGroup: React.FC<RadioGroupProps> = ({
         ))}
       </div>
 
-      {/* Error - Light red for dark theme */}
+      {/* Error - Clear red text */}
       {error && (
-        <p className="text-red-300 text-sm mt-2 flex items-center gap-1">
-          <span className="font-medium">⚠</span> {error}
+        <p className="text-destructive text-sm mt-3 flex items-center gap-1.5 font-medium">
+          <span className="text-base">⚠</span> {error}
         </p>
       )}
     </div>

@@ -82,8 +82,15 @@ PhoneStep.displayName = 'PhoneStep';
  * New code: 30 lines
  */
 export const DateOfBirthStep: React.FC<StepProps> = React.memo(({ formData, updateFormData, errors }) => {
-  const handleDateChange = (date: Date | null) => {
-    if (!date) {
+  const handleDateChange = (value: Date | string | null) => {
+    const date =
+      value instanceof Date
+        ? value
+        : typeof value === 'string' && value.trim()
+          ? new Date(value)
+          : null;
+
+    if (!date || Number.isNaN(date.getTime())) {
       updateFormData({ dateOfBirth: '', calculatedAge: null });
       return;
     }
@@ -127,7 +134,7 @@ export const DateOfBirthStep: React.FC<StepProps> = React.memo(({ formData, upda
             zIndex: 1000,
           }}
           classNames={{
-            input: 'w-full px-6 py-4 rounded-xl border-2 border-gray-600/50 bg-gradient-to-br from-gray-900/70 to-gray-900/60 text-gray-100 text-lg placeholder:text-gray-500 focus:border-amber-500/80 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all text-center hover:border-amber-500/60',
+            input: 'w-full px-6 py-4 rounded-xl border-2 border-border bg-white text-foreground text-lg placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-center hover:border-primary/50 shadow-sm focus:shadow-md',
           }}
           styles={{
             input: {

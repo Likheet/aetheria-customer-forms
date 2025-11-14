@@ -46,16 +46,16 @@ export const buttonVariants = cva(
 
 /**
  * Option button variants - for single/multi-select options in forms
- * Enhanced luxury theme with refined glows and borders
+ * Clean light theme with smooth, delightful interactions
  */
 export const optionButtonVariants = cva(
-  'w-full px-7 py-5 text-left rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent backdrop-blur-sm active:scale-[0.99] relative overflow-hidden text-base font-medium',
+  'w-full px-7 py-5 text-left rounded-2xl border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 active:scale-[0.98] relative overflow-hidden text-base font-medium shadow-sm hover:shadow-md',
   {
     variants: {
       // Selection state
       selected: {
         true: '',
-        false: 'border-border bg-surface/80 text-foreground hover:border-primary/40 hover:bg-surface',
+        false: 'border-border bg-white text-foreground hover:border-primary/40 hover:bg-secondary/50',
       },
 
       // Semantic meaning (when selected)
@@ -68,35 +68,35 @@ export const optionButtonVariants = cva(
       },
     },
     compoundVariants: [
-      // Default selected - minimal gold accent
+      // Default selected - teal accent
       {
         selected: true,
         intent: 'default',
-        class: 'border-primary bg-primary/10 text-foreground ring-1 ring-primary/20',
+        class: 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20 shadow-md',
       },
       // Success selected
       {
         selected: true,
         intent: 'success',
-        class: 'border-green-500/60 bg-green-500/10 text-foreground ring-1 ring-green-500/20',
+        class: 'border-green-600 bg-green-50 text-green-700 ring-2 ring-green-200 shadow-md',
       },
       // Warning selected
       {
         selected: true,
         intent: 'warning',
-        class: 'border-yellow-500/60 bg-yellow-500/10 text-foreground ring-1 ring-yellow-500/20',
+        class: 'border-amber-600 bg-amber-50 text-amber-700 ring-2 ring-amber-200 shadow-md',
       },
       // Danger selected
       {
         selected: true,
         intent: 'danger',
-        class: 'border-red-500/60 bg-red-500/10 text-foreground ring-1 ring-red-500/20',
+        class: 'border-red-600 bg-red-50 text-red-700 ring-2 ring-red-200 shadow-md',
       },
       // Primary selected
       {
         selected: true,
         intent: 'primary',
-        class: 'border-blue-500/60 bg-blue-500/10 text-foreground ring-1 ring-blue-500/20',
+        class: 'border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-200 shadow-md',
       },
     ],
     defaultVariants: {
@@ -210,15 +210,15 @@ export const iconContainerVariants = cva(
 
 /**
  * Input variants - for text inputs, selects, etc.
- * Enhanced luxury theme with refined interactions
+ * Clean light theme with smooth interactions
  */
 export const inputVariants = cva(
-  'w-full px-6 py-4 rounded-xl border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent backdrop-blur-sm font-medium text-lg',
+  'w-full px-6 py-4 rounded-xl border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 font-medium text-lg',
   {
     variants: {
       variant: {
-        default: 'bg-surface/90 border-border text-foreground placeholder:text-muted-foreground hover:border-primary/40 focus:border-primary focus:ring-primary/20',
-        error: 'bg-destructive/10 border-destructive/60 text-foreground placeholder:text-destructive/50 focus:border-destructive focus:ring-destructive/20',
+        default: 'bg-white border-border text-foreground placeholder:text-muted-foreground hover:border-primary/50 focus:border-primary focus:ring-primary/20 shadow-sm focus:shadow-md',
+        error: 'bg-red-50/50 border-destructive text-foreground placeholder:text-destructive/60 focus:border-destructive focus:ring-destructive/20 shadow-sm',
       },
     },
     defaultVariants: {

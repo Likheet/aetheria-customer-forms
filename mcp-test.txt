@@ -1,0 +1,18 @@
+MCP Filesystem Server Test File
+========================
+
+This file demonstrates the capabilities of the installed MCP filesystem server.
+
+Available Operations:
+- Read/write files
+- Create/list/delete directories  
+- Move files/directories
+- Search files
+- Get file metadata
+
+The server is configured to access:
+1. c:\Users\likhe\Desktop\Aetheria\Aetheria\aetheria-forms (current project)
+2. c:\Users\likhe\Documents (user documents)
+3. c:\Users\likhe\Downloads (downloads folder)
+
+Installation completed successfully!

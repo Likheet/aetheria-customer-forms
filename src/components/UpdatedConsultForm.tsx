@@ -2024,34 +2024,43 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
   if (matrixLoadError) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center space-y-4">
-        <div className="max-w-md space-y-3">
-          <h2 className="text-xl font-semibold text-red-700">We couldn't load the product catalogue.</h2>
-          <p className="text-sm text-red-600">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-6 text-center space-y-6">
+        <div className="max-w-md bg-white rounded-2xl shadow-none p-8 space-y-4">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto">
+            <span className="text-3xl">⚠️</span>
+          </div>
+          <h2 className="text-2xl font-semibold text-foreground">Unable to Load Catalogue</h2>
+          <p className="text-base text-destructive font-medium">
             {matrixLoadError}
           </p>
-          <p className="text-sm text-gray-600">
-            Check your connection and try again. The dashboard data has to be available before recommendations can be generated.
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Check your connection and try again. The product data must be available before recommendations can be generated.
           </p>
+          <button
+            type="button"
+            onClick={handleRetryMatrixLoad}
+            className="
+              w-full mt-4 px-6 py-3.5 rounded-xl
+              bg-slate-900
+              text-white font-semibold
+              hover:shadow-lg transition-all duration-200
+              disabled:opacity-50 disabled:cursor-not-allowed
+            "
+            disabled={matrixLoading}
+          >
+            {matrixLoading ? 'Retrying…' : 'Retry Loading Data'}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={handleRetryMatrixLoad}
-          className="px-5 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition"
-          disabled={matrixLoading}
-        >
-          {matrixLoading ? 'Retrying…' : 'Retry loading data'}
-        </button>
       </div>
     );
   }
 
   if (matrixLoading || !matrixReady) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center space-y-3">
-        <div className="w-14 h-14 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
-        <p className="text-lg font-semibold text-amber-900">Loading product catalogue…</p>
-        <p className="text-sm text-amber-800/80">Fetching the latest routines and products from Supabase.</p>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-6 text-center space-y-4">
+        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-xl font-semibold text-foreground">Loading product catalogue…</p>
+        <p className="text-sm text-muted-foreground max-w-md">Fetching the latest routines and products from Supabase.</p>
       </div>
     );
   }
@@ -2073,7 +2082,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     
     // Loading state while generating recommendations
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-6">
             <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -2271,26 +2280,28 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
     // Loading state while generating recommendations
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex items-center justify-center p-6">
-        <div className="bg-surface/80 backdrop-blur-xl border border-border/50 rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/20 rounded-full mb-6 animate-pulse">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="bg-white rounded-3xl shadow-none-elevated p-10 max-w-md w-full text-center space-y-6">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full mb-2">
+            <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin"></div>
           </div>
-          <h1 className="text-2xl font-semibold text-foreground mb-4">Generating Your Skincare Routine...</h1>
-          <p className="text-muted-foreground">Please wait while we create personalized recommendations for you.</p>
+          <h1 className="text-3xl font-semibold text-foreground">Generating Your Routine...</h1>
+          <p className="text-muted-foreground text-base leading-relaxed">
+            Please wait while we create personalized skincare recommendations based on your profile.
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
-      <div className="max-w-[1000px] mx-auto px-6 py-8 md:px-8">
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="max-w-[1400px] mx-auto px-6 py-12 md:px-10 lg:px-16">
         {/* Dev: Sidebar Toggle Button - Only visible on mobile/tablet */}
         {machine && (
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={`fixed top-32 z-50 bg-surface/90 backdrop-blur border border-border/60 hover:bg-surface text-foreground p-3 rounded-lg shadow-xl transition-all lg:hidden ${
+            className={`fixed top-32 z-50 bg-surface/90 backdrop-blur border border-slate-200 hover:bg-surface text-foreground p-3 rounded-lg shadow-xl transition-all lg:hidden ${
               isSidebarOpen ? 'right-[21rem]' : 'right-4'
             }`}
             aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
@@ -2312,13 +2323,13 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
             {/* Sidebar Panel */}
             <div
-              className={`fixed top-24 right-0 w-80 z-50 h-[calc(100vh-6rem)] bg-surface/95 backdrop-blur-xl border-l border-border/60 shadow-2xl transition-transform duration-300 ease-in-out ${
+              className={`fixed top-24 right-0 w-80 z-50 h-[calc(100vh-6rem)] bg-surface/95 backdrop-blur-xl border-l border-slate-200 shadow-2xl transition-transform duration-300 ease-in-out ${
                 isSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
               }`}
             >
               <div className="h-full overflow-y-auto p-4 space-y-4" style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--primary)) hsl(var(--muted))' }}>
             <Collapsible open={isMachineBandOpen} onOpenChange={setIsMachineBandOpen}>
-              <div className="bg-surface/80 backdrop-blur border border-border/60 rounded-xl shadow-xl overflow-hidden">
+              <div className="bg-surface/80 backdrop-blur border border-slate-200 rounded-xl shadow-xl overflow-hidden">
                 <CollapsibleTrigger className="w-full px-4 py-2 bg-primary/10 text-foreground text-sm font-semibold flex items-center justify-between hover:bg-primary/20 transition-colors">
                   <span>Machine Bands (Dev)</span>
                   <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isMachineBandOpen ? 'rotate-180' : ''}`} />
@@ -2358,7 +2369,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               </div>
             </Collapsible>
             <Collapsible open={isEffectiveBandOpen} onOpenChange={setIsEffectiveBandOpen}>
-              <div className="bg-surface/80 backdrop-blur border border-border/60 rounded-xl shadow-xl overflow-hidden">
+              <div className="bg-surface/80 backdrop-blur border border-slate-200 rounded-xl shadow-xl overflow-hidden">
                 <CollapsibleTrigger className="w-full px-4 py-2 bg-primary/10 text-foreground text-sm font-semibold flex items-center justify-between hover:bg-primary/20 transition-colors">
                   <span>Effective Bands (Dev)</span>
                   <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isEffectiveBandOpen ? 'rotate-180' : ''}`} />
@@ -2493,81 +2504,76 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         )}
         
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col gap-6 mb-12 md:flex-row md:items-center md:justify-between">
           <button
             onClick={onBack}
-            className="flex items-center space-x-2 px-4 py-2 text-foreground/70 hover:text-foreground transition-colors group"
+            className="inline-flex items-center gap-2 text-sm text-slate-600 border border-slate-200 px-4 py-2 rounded-full hover:bg-white"
           >
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-            <span>Back to Profile Selection</span>
+            <ArrowLeft className="w-4 h-4" />
+            Back
           </button>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-foreground bg-clip-text">Updated Client Consult</h1>
-            <button
-              onClick={fillWithDummyData}
-              className="mt-2 px-3 py-1 text-xs bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-colors"
-              type="button"
-              title="Fill only empty fields with sample data, keeping your existing entries"
-            >
-              Fill Remaining (Test)
-            </button>
+          <div className="text-center md:text-left space-y-2 flex-1">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Consultation</p>
+            <h1 className="text-3xl font-semibold text-slate-900">Client Consultation</h1>
+            <p className="text-sm text-slate-500 max-w-lg">Personalized skincare analysis and recommendations.</p>
+            {import.meta.env.DEV && (
+              <button
+                onClick={fillWithDummyData}
+                className="mt-4 text-xs text-slate-500 underline-offset-4 hover:underline"
+                type="button"
+                title="Fill only empty fields with sample data, keeping your existing entries"
+              >
+                Fill test data
+              </button>
+            )}
           </div>
-          <div className="w-32"></div> {/* Spacer for centering */}
         </div>
 
-        {/* Progress Indicator - Sleek Modern Theme */}
-        <div className="max-w-6xl mx-auto mb-8 animate-fade-in">
-          <div className="bg-surface/80 backdrop-blur-xl rounded-2xl p-5 border border-border/60 shadow-xl">
-            {/* Step Counter */}
-            <div className="flex justify-between items-center text-sm text-muted-foreground mb-3 font-light">
-              <span>
-                Step <span className="text-primary font-medium">{currentStep}</span> of {totalSteps}
-              </span>
-              <span className="text-primary font-medium">
-                {Math.round((currentStep / totalSteps) * 100)}% Complete
-              </span>
+        {/* Progress */}
+        <div className="max-w-4xl mx-auto mb-12">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6">
+            <div className="flex items-center justify-between text-sm text-slate-500">
+              <span>Step {currentStep} of {totalSteps}</span>
+              <span>{Math.round((currentStep / totalSteps) * 100)}% complete</span>
             </div>
-            {/* Progress Bar */}
-            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+            <div className="mt-3 h-2 rounded-full bg-slate-100">
               <div
-                className="bg-primary h-full rounded-full transition-all duration-300 ease-out"
+                className="h-full rounded-full bg-slate-800 transition-all duration-500"
                 style={{ width: `${(currentStep / totalSteps) * 100}%` }}
               />
             </div>
           </div>
         </div>
 
-        {/* Form Content - Dark Theme Container */}
-        <form onSubmit={handleFormSubmit} onKeyDownCapture={handleEnterAdvance} className="max-w-6xl mx-auto bg-transparent rounded-2xl min-h-[600px] flex flex-col">
-          <div className="flex-1 p-8">
+        {/* Form Content - Clean Container */}
+        <form onSubmit={handleFormSubmit} onKeyDownCapture={handleEnterAdvance} className="max-w-4xl mx-auto min-h-[500px] flex flex-col space-y-10">
+          <div className="flex-1">
             {!activeFollowUp && renderStep()}
             {activeFollowUp && (
-              <div className="w-full mx-auto">
-                <div className="bg-surface/95 rounded-2xl shadow-sm border border-border p-8">
-                  <div className="px-6 py-4 border-b border-border bg-secondary/50 rounded-t-xl -mx-8 -mt-8 mb-6">
-                    <div className="text-base font-medium text-foreground">Follow-up: {activeFollowUp.category === 'Grease' ? 'Sebum' : activeFollowUp.category}{activeFollowUp.dimension ? ` (${activeFollowUp.dimension})` : ''}</div>
-                    <div className="text-xs text-muted-foreground font-light">Resolve machine vs customer difference</div>
+              <div className="w-full">
+                <div className="bg-white rounded-2xl border border-slate-200 p-8 md:p-10 space-y-6">
+                  <div className="flex flex-col gap-1">
+                    <div className="text-sm uppercase tracking-[0.2em] text-slate-400">Follow-up</div>
+                    <div className="text-xl font-semibold text-slate-900">
+                      Follow-up: {activeFollowUp.category === 'Grease' ? 'Sebum' : activeFollowUp.category}
+                      {activeFollowUp.dimension ? ` (${activeFollowUp.dimension})` : ''}
+                    </div>
+                    <div className="text-sm text-slate-500">Resolve machine vs customer difference</div>
                   </div>
-                  <div className="px-6 py-5 space-y-5">
+                  <div className="space-y-5">
                     {activeFollowUp.questions.map((q) => {
-                      // Conditional rendering: Skip Q2a if Q2 is not "Yes"
                       if (q.id === 'Q2a' && followUpLocal['Q2'] !== 'Yes') {
                         return null;
                       }
-                      
-                      // Conditional rendering: Skip Q4 (dandruff question) if Q1 is not "Forehead" in texture_machineBumpy_customerSmooth
                       if (q.id === 'Q4' && activeFollowUp.ruleId === 'texture_machineBumpy_customerSmooth' && followUpLocal['Q1'] !== 'Forehead') {
                         return null;
                       }
-                      
-                      // Conditional rendering: Skip Q3 (dandruff question) if Q2 is not "Forehead" in texture_machineSmooth_customerBumpy
                       if (q.id === 'Q3' && activeFollowUp.ruleId === 'texture_machineSmooth_customerBumpy' && followUpLocal['Q2'] !== 'Forehead') {
                         return null;
                       }
-                      
                       return (
                       <div key={q.id}>
-                        <div className="text-sm font-medium text-foreground mb-2">{q.prompt}</div>
+                        <div className="text-base font-medium text-slate-900 mb-2">{q.prompt}</div>
                         {!q.multi ? (
                           <div className="flex flex-wrap gap-2">
                             {q.options.map(opt => (
@@ -2575,7 +2581,13 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                                 type="button"
                                 key={opt}
                                 onClick={() => toggleFollowUpOption(q.id, opt, false)}
-                                className={`px-3 py-2 rounded-lg border text-sm transition-all duration-300 ${followUpLocal[q.id] === opt ? 'bg-primary/20 border-primary text-foreground shadow-lg shadow-primary/30' : 'bg-muted/50 border-border text-foreground/80 hover:bg-muted hover:border-border/80'}`}
+                                className={`
+                                  px-4 py-2 rounded-lg border text-sm
+                                  ${followUpLocal[q.id] === opt
+                                    ? 'border-slate-900 text-slate-900 bg-slate-100'
+                                    : 'border-slate-200 text-slate-600 hover:border-slate-400'
+                                  }
+                                `}
                               >
                                 {opt}
                               </button>
@@ -2591,7 +2603,13 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
                                   type="button"
                                   key={opt}
                                   onClick={() => toggleFollowUpOption(q.id, opt, true)}
-                                  className={`px-3 py-2 rounded-lg border text-sm transition-all duration-300 ${selected ? 'bg-amber-900/40 border-amber-400 text-amber-200 shadow-lg shadow-amber-500/30' : 'bg-gray-800/40 border-gray-600/50 text-gray-300 hover:bg-gray-700/60 hover:border-gray-500/60'}`}
+                                  className={`
+                                    px-4 py-2 rounded-lg border text-sm
+                                    ${selected
+                                      ? 'border-slate-900 text-slate-900 bg-slate-100'
+                                      : 'border-slate-200 text-slate-600 hover:border-slate-400'
+                                    }
+                                  `}
                                 >
                                   {opt}
                                 </button>
@@ -2607,19 +2625,15 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               </div>
             )}          </div>
 
-          {/* Navigation - Minimal luxury button layout */}
-          <div className="flex justify-between items-center px-0 py-8 gap-4">
+          {/* Navigation */}
+          <div className="flex justify-between items-center gap-6 pt-8">
             <button
               type="button"
               onClick={handleBack}
               disabled={currentStep === 1}
-              className={`flex items-center gap-2 px-8 py-4 rounded-xl font-medium text-base transition-all duration-200 group ${
-                currentStep === 1
-                  ? 'bg-muted/30 text-muted-foreground/30 cursor-not-allowed'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border shadow-sm'
-              }`}
+              className={`flex items-center gap-2 rounded-full border px-6 py-3 text-sm ${currentStep === 1 ? 'text-slate-300 border-slate-100 cursor-not-allowed' : 'text-slate-600 border-slate-200 hover:border-slate-400 hover:bg-white'}`}
             >
-              <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" strokeWidth={1.5} />
+              <ArrowLeft className="w-4 h-4" strokeWidth={2} />
               <span>Back</span>
             </button>
 
@@ -2627,17 +2641,17 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-xl font-medium text-base hover:bg-primary/90 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed group min-w-[140px] justify-center"
+                className="flex items-center gap-2 px-8 py-3 rounded-full text-sm font-medium bg-slate-900 text-white disabled:bg-slate-300 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin" />
                     <span>Submitting...</span>
                   </>
                 ) : (
                   <>
                     <span>{currentStep === totalSteps ? 'Submit' : (followUp ? 'Resolve Follow-up' : 'Next')}</span>
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" strokeWidth={1.5} />
+                    <ArrowRight className="w-4 h-4" strokeWidth={2} />
                   </>
                 )}
               </button>
@@ -2645,10 +2659,10 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
               <button
                 type="button"
                 onClick={handleSubmitFollowUp}
-                className="flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-xl font-medium text-base hover:bg-primary/90 shadow-sm hover:shadow-md transition-all duration-200 group"
+                className="flex items-center gap-2 px-8 py-3 rounded-full text-sm font-medium bg-slate-900 text-white"
               >
                 <span>Continue</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" strokeWidth={1.5} />
+                <ArrowRight className="w-4 h-4" strokeWidth={2} />
               </button>
             )}
           </div>

@@ -1,6 +1,6 @@
 /**
- * TextInput - Consistent text input component
- * Replaces hard-coded input styling
+ * TextInput - Modern, accessible text input component
+ * Clean light theme with polished interactions
  */
 
 import React from 'react';
@@ -28,16 +28,16 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
     const hasError = !!error;
 
     return (
-      <div className={fullWidth ? 'w-full' : ''}>
-        {/* Label - Light text for dark theme */}
+      <div className={fullWidth ? 'w-full max-w-2xl mx-auto' : ''}>
+        {/* Label - Clear dark text on light background */}
         {label && (
-          <label className="block text-sm font-semibold text-gray-200 mb-2">
+          <label className="block text-sm font-semibold text-foreground mb-2.5">
             {label}
-            {required && <span className="text-red-400 ml-1">*</span>}
+            {required && <span className="text-destructive ml-1">*</span>}
           </label>
         )}
 
-        {/* Input field with dark theme styling */}
+        {/* Input field with clean light theme styling */}
         <input
           ref={ref}
           className={inputVariants({
@@ -51,16 +51,16 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
           {...props}
         />
 
-        {/* Error message - Light red text on dark */}
+        {/* Error message - Clear red text */}
         {error && (
-          <p id={`${props.id}-error`} className="text-red-300 text-sm mt-2 flex items-center gap-1">
-            <span className="font-medium">⚠</span> {error}
+          <p id={`${props.id}-error`} className="text-destructive text-sm mt-2.5 flex items-center gap-1.5 font-medium">
+            <span className="text-base">⚠</span> {error}
           </p>
         )}
 
-        {/* Helper text - Light gray on dark */}
+        {/* Helper text - Muted but readable */}
         {helperText && !error && (
-          <p id={`${props.id}-helper`} className="text-gray-400 text-sm mt-2">
+          <p id={`${props.id}-helper`} className="text-muted-foreground text-sm mt-2.5">
             {helperText}
           </p>
         )}
