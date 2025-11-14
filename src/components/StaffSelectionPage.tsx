@@ -30,36 +30,36 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
   const options: Option[] = [
     {
       id: "feedback",
-      label: "Client Reflections",
-      description: "Collect thoughtful post-service impressions in a calm, guided space.",
+      label: "Client Feedback",
+      description: "Collect post-service feedback and ratings",
       icon: Star,
       action: onSelectFeedback,
     },
     {
       id: "consultant",
-      label: "Consultant Input",
-      description: "Capture expert notes and craft prescriptive rituals with clarity.",
+      label: "Consultant Notes",
+      description: "Record expert observations and recommendations",
       icon: ClipboardList,
       action: onSelectConsultantInput,
     },
     {
       id: "client-consult",
-      label: "Client Consult Form",
-      description: "Open returning journeys, review scan data, and refine programmes.",
+      label: "Client Consultation",
+      description: "Start or continue client consultation sessions",
       icon: PenSquare,
       action: onSelectUpdatedConsult,
     },
     {
       id: "url-catcher",
-      label: "Machine Scan Intake",
-      description: "Launch the capture console to ingest new machine reports into Supabase.",
+      label: "Machine Data",
+      description: "Import and process machine scan reports",
       icon: Scan,
       action: onSelectMachineIntake,
     },
     {
       id: "admin-dashboard",
-      label: "Product & Matrix Studio",
-      description: "Manage the recommendation catalogue, edit matrix slots, and refine skin-type defaults.",
+      label: "Admin Dashboard",
+      description: "Manage products, recommendations, and settings",
       icon: Settings2,
       action: onSelectAdmin,
     },
@@ -67,24 +67,22 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
 
   return (
     <div className="luxury-shell">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-luxury-linear opacity-75" />
-        <div className="absolute inset-0 bg-luxury-radial opacity-55" />
-      </div>
-
       <div className="luxury-page">
-        <header className="relative z-10 flex flex-col items-center gap-4 text-center">
-          <Badge className="bg-primary/12 text-primary" variant="primary">
-            Aetheria Atelier
-          </Badge>
-          <h1 className="text-gradient-gold">Select the next experience</h1>
-          <p className="max-w-xl text-sm text-muted-foreground/85 md:text-base">
-            Choose the workspace that aligns with today&rsquo;s guest. Each pathway keeps the environment composed,
-            focused, and ready for elevated service.
+        <header className="flex flex-col items-center gap-6 text-center">
+          <div className="inline-flex items-center gap-2">
+            <div className="h-1 w-1 rounded-full bg-primary" />
+            <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+              Aetheria
+            </span>
+            <div className="h-1 w-1 rounded-full bg-primary" />
+          </div>
+          <h1 className="max-w-2xl">Select Service Module</h1>
+          <p className="max-w-lg text-sm text-muted-foreground">
+            Choose the appropriate workflow for today's service.
           </p>
         </header>
 
-  <section className="relative z-10 mx-auto grid w-full max-w-none gap-10 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 items-stretch px-6 sm:px-10 lg:px-20">
+        <section className="grid w-full gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {options.map(({ id, label, description, icon: Icon, action }) => {
             const handleActivate = () => action();
             const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -101,31 +99,28 @@ const StaffSelectionPage: React.FC<StaffSelectionPageProps> = ({
                 tabIndex={0}
                 onClick={handleActivate}
                 onKeyDown={handleKeyDown}
-                className="h-full flex min-h-[440px] flex-col justify-between border-border/40 bg-surface/85 px-10 py-12 transition-transform duration-300 hover:-translate-y-1 hover:border-primary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="group flex cursor-pointer flex-col border border-border bg-surface p-6 transition-all duration-150 hover:border-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
-              <CardHeader className="flex flex-col items-center gap-4 p-0 text-center">
-                <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/12 text-primary">
-                  <Icon className="h-7 w-7" />
-                </div>
-                <CardTitle className="text-[24px] font-semibold text-foreground">{label}</CardTitle>
-                <CardDescription className="text-sm leading-relaxed text-muted-foreground/80 max-w-[18rem]">
-                  {description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1 p-0" />
-              <CardFooter className="justify-center p-0 pt-6">
-                <Button onClick={action} size="lg" variant="primary" className="px-7">
-                  Open
-                </Button>
-              </CardFooter>
-            </Card>
+                <CardHeader className="flex flex-row items-start gap-4 p-0">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-foreground transition-colors group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <CardTitle className="text-base font-semibold leading-tight">{label}</CardTitle>
+                    <CardDescription className="text-xs leading-relaxed text-muted-foreground">
+                      {description}
+                    </CardDescription>
+                  </div>
+                </CardHeader>
+              </Card>
             );
           })}
         </section>
 
-        <footer className="relative z-10 mt-10 flex flex-col items-center gap-2 text-center text-xs uppercase tracking-[0.28em] text-muted-foreground/70">
-          <div className="luxury-divider" />
-          <span>Purposeful experiences, poised for today&apos;s guests</span>
+        <footer className="mt-4 flex items-center justify-center border-t border-border pt-8">
+          <span className="font-mono text-xs text-muted-foreground">
+            Aetheria Service Platform
+          </span>
         </footer>
       </div>
     </div>

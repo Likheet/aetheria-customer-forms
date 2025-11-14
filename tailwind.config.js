@@ -44,19 +44,17 @@ export default {
       },
       borderRadius: {
         lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 4px)',
-        sm: 'calc(var(--radius) - 8px)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        sans: ['Manrope', 'Inter', 'ui-sans-serif', 'system-ui'],
-        serif: ['Playfair Display', 'Georgia', 'serif'],
+        sans: ['DM Sans', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
-        luxury: '0 40px 120px -60px rgba(12, 12, 18, 0.9)',
-      },
-      backgroundImage: {
-        'luxury-radial': 'radial-gradient(circle at 20% 20%, rgba(217,196,157,0.28), transparent 55%)',
-        'luxury-linear': 'linear-gradient(135deg, rgba(8,10,18,1) 0%, rgba(16,18,28,1) 45%, rgba(22,18,10,0.92) 100%)',
+        sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        DEFAULT: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
       },
     },
   },
