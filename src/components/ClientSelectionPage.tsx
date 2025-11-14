@@ -1,11 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { User, Search, Clock, ArrowRight, RefreshCcw } from 'lucide-react';
+import { User, Search, Clock, ArrowLeft, RefreshCcw } from 'lucide-react';
 import { getRecentConsultationSessions } from '../services/newConsultationService';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Card, CardContent, CardFooter } from './ui/card';
-import { BackgroundGlowContainer } from './ui/background-glow';
+import { Card, CardContent } from './ui/card';
 import { LoadingState } from './ui/loading-state';
 import { EmptyState } from './ui/empty-state';
 import { ErrorState } from './ui/error-state';
@@ -93,53 +91,48 @@ const ClientSelectionPage: React.FC<ClientSelectionPageProps> = ({ onSelectClien
 
   return (
     <div className="luxury-shell">
-      <BackgroundGlowContainer variant="subtle" />
-
       <div className="luxury-page">
-        <header className="flex flex-col gap-3 text-center md:text-left">
-          <Badge className="w-fit bg-primary/15 text-primary" variant="primary">
-            Feedback Concierge
-          </Badge>
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h1 className="text-gradient-gold">Select The Guest You Assisted</h1>
-              <p className="max-w-xl text-sm text-muted-foreground/85 md:text-base">
-                Search recent consultations and step into their bespoke reflection journey.
-              </p>
-            </div>
-            <Button variant="outline" size="sm" onClick={refreshConsultations} className="gap-2">
-              <RefreshCcw className="h-4 w-4" />
-              Refresh list
+        <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1>Select Client</h1>
+            <p className="text-sm text-muted-foreground">
+              Choose a recent consultation to provide feedback.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={refreshConsultations}>
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              Refresh
             </Button>
           </div>
         </header>
 
-        <section className="relative z-10 rounded-[28px] border border-border/50 bg-surface/70 p-6 shadow-luxury backdrop-blur-md">
+        <section className="space-y-4">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Search by name or phone"
-              className="pl-12 text-base"
+              className="pl-10"
             />
           </div>
         </section>
 
-        <section className="relative z-10 flex-1">
+        <section className="flex-1">
           {loading ? (
             <LoadingState
               size="md"
-              message="Preparing recent memories…"
+              message="Loading consultations..."
               spinnerSize="lg"
             />
           ) : error ? (
             <ErrorState
               variant="error"
-              title="We could not reach Supabase"
+              title="Error loading consultations"
               message={error}
               actions={[
-                { label: 'Return to lounge', onClick: onBack, variant: 'outline' },
+                { label: 'Back', onClick: onBack, variant: 'outline' },
                 { label: 'Try again', onClick: refreshConsultations, variant: 'primary' },
               ]}
             />
@@ -147,85 +140,55 @@ const ClientSelectionPage: React.FC<ClientSelectionPageProps> = ({ onSelectClien
             <EmptyState
               icon={User}
               iconSize="md"
-              title={searchTerm ? 'No guests match your search' : 'No consultations captured today'}
+              title={searchTerm ? 'No matches found' : 'No consultations available'}
               description={
                 searchTerm
-                  ? 'Try a different spelling or phone number.'
-                  : 'Complete a consultation to invite feedback.'
+                  ? 'Try a different search term.'
+                  : 'No recent consultations found.'
               }
               size="md"
             />
           ) : (
-            <div className="grid gap-5 md:grid-cols-2">
-              {filteredConsultations.map((consultation) => {
-                const handleActivate = () => onSelectClient(consultation);
-                const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    handleActivate();
-                  }
-                };
-
-                return (
-                  <Card
-                    key={consultation.session_id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={handleActivate}
-                    onKeyDown={handleKeyDown}
-                    className="group border-border/50 bg-surface/75 transition-all duration-300 hover:-translate-y-1 hover:border-primary/60 hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                  >
-                    <CardContent className="flex flex-col gap-5 p-6">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[hsla(40,58%,62%,0.18)] to-transparent text-primary">
-                          <User className="h-6 w-6" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-foreground/90">{consultation.customer_name}</h3>
-                          <p className="text-sm text-muted-foreground/80">{consultation.customer_phone}</p>
+            <div className="grid gap-4 md:grid-cols-2">
+              {filteredConsultations.map((consultation) => (
+                <Card
+                  key={consultation.session_id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onSelectClient(consultation)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelectClient(consultation);
+                    }
+                  }}
+                  className="cursor-pointer transition-all hover:border-primary hover:shadow-md"
+                >
+                  <CardContent className="flex items-start justify-between gap-4 p-6">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-md border bg-muted">
+                        <User className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">{consultation.customer_name}</h3>
+                        <p className="text-sm text-muted-foreground">{consultation.customer_phone}</p>
+                        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>{formatDate(consultation.created_at || '')}</span>
                         </div>
                       </div>
-                      <ArrowRight className="h-5 w-5 text-muted-foreground/50 transition-transform group-hover:translate-x-1 group-hover:text-primary" />
-                    </div>
-
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground/80">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-primary" />
-                        <span>{formatDate(consultation.created_at || '')}</span>
-                      </div>
-                      {consultation.location && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs uppercase tracking-[0.28em] text-muted-foreground/70">Location</span>
-                          <span className="text-muted-foreground/90">{consultation.location}</span>
-                        </div>
-                      )}
                     </div>
                   </CardContent>
-                  <CardFooter className="justify-between border-t border-border/40 p-6 pt-4">
-                    <Badge variant="subtle">Recent Consultation</Badge>
-                    <Button
-                      size="sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleActivate();
-                      }}
-                    >
-                      Continue feedback
-                    </Button>
-                  </CardFooter>
                 </Card>
-              );
-            })}
+              ))}
             </div>
           )}
         </section>
 
-        <footer className="relative z-10 flex items-center justify-between rounded-[24px] border border-border/40 bg-surface/60 px-6 py-4 text-sm text-muted-foreground/80">
-          <span>Need to begin again?</span>
-          <Button variant="ghost" onClick={onBack} className="gap-2">
-            <ArrowRight className="h-4 w-4 rotate-180" />
-            Back to staff lounge
+        <footer className="flex items-center justify-between border-t pt-4">
+          <Button variant="ghost" onClick={onBack}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
           </Button>
         </footer>
       </div>
@@ -234,6 +197,3 @@ const ClientSelectionPage: React.FC<ClientSelectionPageProps> = ({ onSelectClien
 };
 
 export default ClientSelectionPage;
-
-
-

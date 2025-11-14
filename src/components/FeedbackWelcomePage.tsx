@@ -1,9 +1,6 @@
 import React from 'react';
-import { Quote, Sparkles, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Card, CardContent } from './ui/card';
-import { BackgroundGlowContainer } from './ui/background-glow';
 
 interface FeedbackWelcomePageProps {
   onStart: () => void;
@@ -12,55 +9,23 @@ interface FeedbackWelcomePageProps {
 const FeedbackWelcomePage: React.FC<FeedbackWelcomePageProps> = ({ onStart }) => {
   return (
     <div className="luxury-shell">
-      <BackgroundGlowContainer variant="intense" />
+      <div className="luxury-page items-center justify-center text-center">
+        <div className="mx-auto max-w-lg space-y-6">
+          <h1>Client Feedback</h1>
+          <p className="text-muted-foreground">
+            Please share your feedback about your recent consultation.
+          </p>
 
-      <div className="luxury-page items-center text-center">
-        <Badge className="bg-primary/15 text-primary" variant="primary">
-          Guest Reflections
-        </Badge>
-        <h1 className="text-gradient-gold">Thank you for choosing Aetheria</h1>
-        <p className="max-w-2xl text-base text-muted-foreground/85 md:text-lg">
-          We cherish your perspective. Share the moments that delighted you so we can continue elevating every ritual.
-        </p>
-
-        <div className="grid w-full gap-6 pt-6 md:grid-cols-3">
-          {[{
-            title: 'Two blissful minutes',
-            description: 'A refined set of prompts curated to respect your time.'
-          }, {
-            title: 'Attentive listening',
-            description: 'Your words flow directly to the specialists who cared for you.'
-          }, {
-            title: 'Elegant privacy',
-            description: 'Securely captured, never shared beyond your trusted consultant.'
-          }].map((item) => (
-            <Card key={item.title} className="border-border/40 bg-surface/70">
-              <CardContent className="flex h-full flex-col gap-3 px-6 py-6 text-left">
-                <div className="flex items-center gap-3 text-primary">
-                  <Sparkles className="h-4 w-4" />
-                  <span className="text-xs uppercase tracking-[0.28em] text-muted-foreground/80">Aetheria Promise</span>
-                </div>
-                <h3 className="font-serif text-[20px] text-foreground/90">{item.title}</h3>
-                <p className="text-sm text-muted-foreground/85">{item.description}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="flex flex-col items-center gap-4 pt-10">
-          <Button onClick={onStart} size="lg" className="px-12">
-            Begin The Reflection
-          </Button>
-          <div className="flex items-center gap-3 text-xs uppercase tracking-[0.32em] text-muted-foreground/70">
-            <Clock className="h-3.5 w-3.5" />
-            <span>Approximately 2 minutes</span>
+          <div className="flex flex-col items-center gap-4 pt-6">
+            <Button onClick={onStart} size="lg">
+              Start Feedback
+            </Button>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Takes about 2 minutes</span>
+            </div>
           </div>
         </div>
-
-        <blockquote className="mt-12 max-w-xl text-sm text-muted-foreground/75">
-          <Quote className="mx-auto mb-4 h-6 w-6 text-primary" />
-          "Luxury is in the details. Thank you for helping us keep every detail inspired."
-        </blockquote>
       </div>
     </div>
   );

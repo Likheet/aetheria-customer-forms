@@ -157,26 +157,20 @@ function App() {
 
     return (
       <div className="luxury-shell">
-        <BackgroundGlowContainer variant="default" />
-
         <div className="luxury-page items-center justify-center text-center">
-          <Badge className="bg-primary/15 text-primary" variant="primary">
-            Experience Update
-          </Badge>
-          <Card className="relative z-10 mt-6 max-w-3xl border-border/50 bg-surface/80 text-center">
+          <Card className="mt-6 max-w-2xl text-center">
             <CardHeader className="gap-4">
-              <CardTitle className="text-3xl text-gradient-gold">Feedback atelier in progress</CardTitle>
-              <CardDescription className="text-muted-foreground/80">
-                We are polishing an elevated reflection ritual to match the new luxury experience.
+              <CardTitle className="text-2xl">Feedback Module</CardTitle>
+              <CardDescription className="text-muted-foreground">
+                The feedback form is under development.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm text-muted-foreground/75">
-              <p>Return to the lounge or review the guest roster while we craft the finishing touches.</p>
-              <p className="text-muted-foreground/60">Notifications will appear here once the module is live.</p>
+            <CardContent className="space-y-4 text-sm text-muted-foreground">
+              <p>You can return home or browse the client list.</p>
             </CardContent>
             <CardFooter className="flex flex-wrap items-center justify-center gap-4">
-              <Button variant="ghost" onClick={handleGoHome}>Back to lounge</Button>
-              <Button onClick={handleStartFeedback}>Open client roster</Button>
+              <Button variant="ghost" onClick={handleGoHome}>Back</Button>
+              <Button onClick={handleStartFeedback}>View Clients</Button>
             </CardFooter>
           </Card>
         </div>
