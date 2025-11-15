@@ -216,6 +216,60 @@ const readBandFromMetrics = (metrics: Record<string, any>, key: string): string 
   return undefined
 }
 
+const coerceMetricValue = (value: any): number | undefined => {
+  if (value === null || value === undefined) return undefined
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (!Number.isNaN(parsed)) return parsed
+  }
+  return undefined
+}
+
+const convertMachineScanMetrics = (scanMetrics?: Record<string, any> | null): Record<string, any> | null => {
+  if (!scanMetrics || typeof scanMetrics !== 'object') return null
+  const normalized: Record<string, any> = {}
+  const getEntry = (key: string) => {
+    const entry = (scanMetrics as any)?.[key]
+    return entry && typeof entry === 'object' ? entry : null
+  }
+  const assign = (field: string, entry: any) => {
+    if (!entry || typeof entry !== 'object') return
+    const value = coerceMetricValue((entry as any).value ?? (entry as any).score ?? (entry as any).cloudvalue)
+    const parsedBand = parseBandString((entry as any).band ?? (entry as any).vendor_level ?? (entry as any).level)
+    if (value !== undefined) {
+      normalized[field] = value
+    }
+    if (parsedBand) {
+      normalized[`${field}_band`] = parsedBand
+    }
+  }
+
+  assign('moisture', getEntry('moisture'))
+  assign('sebum', getEntry('sebum'))
+
+  const textureEntry = getEntry('texture')
+  assign('texture', textureEntry)
+  assign('texture_aging', textureEntry)
+  assign('texture_bumpy', textureEntry)
+
+  assign('pigmentation_uv', getEntry('pigmentation_uv'))
+  assign('redness', getEntry('redness'))
+  assign('pores', getEntry('pores'))
+  assign('acne', getEntry('acne'))
+  assign('uv_spots', getEntry('uv_spots'))
+
+  const brownEntry = getEntry('brown_areas') ?? getEntry('pigmentation_uv')
+  assign('brown_areas', brownEntry)
+
+  assign('sensitivity', getEntry('sensitivity'))
+
+  if (!Object.keys(normalized).length) {
+    return null
+  }
+  return normalized
+}
+
 export const buildMachineBandsFromMetrics = (metrics?: Record<string, any> | null): MachineScanBands | null => {
   if (!metrics) return null
   const machine: MachineScanBands = {
@@ -578,13 +632,14 @@ export async function getFillingQueue() {
 export async function getSessionProfile(sessionId: string) {
   const { data: session, error: sesErr } = await supabase
     .from('assessment_session')
-    .select('id, customer:customer_id(id, full_name, phone_e164), machine_scan:machine_scan(id)')
+    .select('id, customer:customer_id(id, full_name, phone_e164), machine_scan:machine_scan(id, metrics)')
     .eq('id', sessionId)
     .single()
   if (sesErr) throw sesErr
   if (!(session as any)?.machine_scan?.id) throw new Error('No machine_scan for this session')
 
   const scanId = (session as any).machine_scan.id as string
+  const scanMetricsRaw = (session as any).machine_scan?.metrics as Record<string, any> | null
 
   const { data: ma, error: maErr } = await supabase
     .from('machine_analysis')
@@ -607,14 +662,25 @@ export async function getSessionProfile(sessionId: string) {
     .maybeSingle()
   if (maErr) throw maErr
 
-  const normalizedAcne = normalizeMachineAcneBand(ma?.acne_band)
-  const metrics = ma
-    ? {
-        ...ma,
-        acne_band: normalizedAcne.band ?? parseBandString(ma.acne_band),
-        acne_details: normalizedAcne.details ?? null,
-      }
-    : null
+  const scanMetrics = convertMachineScanMetrics(scanMetricsRaw)
+  const normalizedAcneFromAnalysis = normalizeMachineAcneBand(ma?.acne_band)
+  const normalizedAcneFromScan = normalizeMachineAcneBand(scanMetrics?.acne_band)
+
+  let metrics: Record<string, any> | null = null
+  if (ma) {
+    metrics = {
+      ...(scanMetrics || {}),
+      ...ma,
+      acne_band: normalizedAcneFromAnalysis.band ?? parseBandString(ma.acne_band),
+      acne_details: normalizedAcneFromAnalysis.details ?? (scanMetrics as any)?.acne_details ?? null,
+    }
+  } else if (scanMetrics) {
+    metrics = {
+      ...scanMetrics,
+      acne_band: normalizedAcneFromScan.band ?? parseBandString(scanMetrics.acne_band),
+      acne_details: normalizedAcneFromScan.details ?? null,
+    }
+  }
 
   return {
     session_id: sessionId,
