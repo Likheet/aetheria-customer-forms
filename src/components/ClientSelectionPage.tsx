@@ -3,7 +3,7 @@ import { User, Search, Clock, ArrowLeft, RefreshCcw } from 'lucide-react';
 import { getRecentConsultationSessions } from '../services/newConsultationService';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Card, CardContent } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { LoadingState } from './ui/loading-state';
 import { EmptyState } from './ui/empty-state';
 import { ErrorState } from './ui/error-state';
@@ -70,123 +70,106 @@ const ClientSelectionPage: React.FC<ClientSelectionPageProps> = ({ onSelectClien
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
-    if (Number.isNaN(diffInHours)) {
-      return 'Recently';
+    if (Number.isNaN(diffInHours)) return 'Recently';
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${Math.max(1, Math.floor(diffInHours))} hours ago`;
+    if (diffInHours < 48) return 'Yesterday';
+    return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const renderContent = () => {
+    if (loading) {
+      return <LoadingState size="lg" message="Loading consultations..." />;
     }
-    if (diffInHours < 1) {
-      return 'Just now';
+    if (error) {
+      return (
+        <ErrorState
+          variant="destructive"
+          title="Error Loading Consultations"
+          message={error}
+          actions={[
+            { label: 'Back', onClick: onBack, variant: 'outline' },
+            { label: 'Try Again', onClick: refreshConsultations, variant: 'default' },
+          ]}
+        />
+      );
     }
-    if (diffInHours < 24) {
-      return `${Math.max(1, Math.floor(diffInHours))} hours ago`;
+    if (filteredConsultations.length === 0) {
+      return (
+        <EmptyState
+          icon={User}
+          title={searchTerm ? 'No Matches Found' : 'No Consultations Available'}
+          description={searchTerm ? 'Try a different search term.' : 'No recent consultations found.'}
+        />
+      );
     }
-    if (diffInHours < 48) {
-      return 'Yesterday';
-    }
-    return date.toLocaleDateString('en-US', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {filteredConsultations.map((consultation) => (
+          <Card
+            key={consultation.session_id}
+            className="flex flex-col transition-all duration-150 ease-in-out hover:shadow-md hover:-translate-y-1"
+          >
+            <CardHeader className="flex flex-row items-center gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                <User className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-semibold">{consultation.customer_name}</CardTitle>
+                <p className="text-sm text-muted-foreground">{consultation.customer_phone}</p>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-grow">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>{formatDate(consultation.created_at || '')}</span>
+              </div>
+            </CardContent>
+            <div className="border-t p-4">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => onSelectClient(consultation)}
+              >
+                Select Client
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
   };
 
   return (
     <div className="luxury-shell">
-      <div className="luxury-page">
-        <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1>Select Client</h1>
-            <p className="text-sm text-muted-foreground">
-              Choose a recent consultation to provide feedback.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={refreshConsultations}>
-              <RefreshCcw className="mr-2 h-4 w-4" />
-              Refresh
-            </Button>
-          </div>
+      <div className="luxury-page-form">
+        <header className="flex flex-col items-center text-center">
+          <h1 className="text-3xl font-bold">Select a Client</h1>
+          <p className="max-w-md text-muted-foreground">
+            Choose a recent consultation session to continue.
+          </p>
         </header>
 
-        <section className="space-y-4">
-          <div className="relative">
+        <div className="flex w-full items-center gap-2">
+          <div className="relative flex-grow">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by name or phone"
+              placeholder="Search by name or phone..."
               className="pl-10"
             />
           </div>
-        </section>
+          <Button variant="outline" onClick={refreshConsultations} disabled={loading}>
+            <RefreshCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <span className="ml-2 hidden md:inline">Refresh</span>
+          </Button>
+        </div>
 
-        <section className="flex-1">
-          {loading ? (
-            <LoadingState
-              size="md"
-              message="Loading consultations..."
-              spinnerSize="lg"
-            />
-          ) : error ? (
-            <ErrorState
-              variant="error"
-              title="Error loading consultations"
-              message={error}
-              actions={[
-                { label: 'Back', onClick: onBack, variant: 'outline' },
-                { label: 'Try again', onClick: refreshConsultations, variant: 'primary' },
-              ]}
-            />
-          ) : filteredConsultations.length === 0 ? (
-            <EmptyState
-              icon={User}
-              iconSize="md"
-              title={searchTerm ? 'No matches found' : 'No consultations available'}
-              description={
-                searchTerm
-                  ? 'Try a different search term.'
-                  : 'No recent consultations found.'
-              }
-              size="md"
-            />
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {filteredConsultations.map((consultation) => (
-                <Card
-                  key={consultation.session_id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => onSelectClient(consultation)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onSelectClient(consultation);
-                    }
-                  }}
-                  className="cursor-pointer transition-all hover:border-primary hover:shadow-md"
-                >
-                  <CardContent className="flex items-start justify-between gap-4 p-6">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-md border bg-muted">
-                        <User className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">{consultation.customer_name}</h3>
-                        <p className="text-sm text-muted-foreground">{consultation.customer_phone}</p>
-                        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          <span>{formatDate(consultation.created_at || '')}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </section>
+        <main className="flex-1">{renderContent()}</main>
 
-        <footer className="flex items-center justify-between border-t pt-4">
-          <Button variant="ghost" onClick={onBack}>
+        <footer className="flex items-center justify-start border-t pt-4">
+          <Button variant="ghost" onClick={onBack} disabled={loading}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>

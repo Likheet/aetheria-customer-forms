@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ConsultantInputData } from '../lib/supabase';
 import { getConsultationsWithoutInput, submitConsultantInput } from '../services/consultantInputService';
 import CustomerSelection from './steps/consultant/CustomerSelection';
@@ -13,47 +13,28 @@ import VisualScalpType from './steps/consultant/VisualScalpType';
 import HairFallSeverity from './steps/consultant/HairFallSeverity';
 import DensityObservation from './steps/consultant/DensityObservation';
 import TextureAndEnds from './steps/consultant/TextureAndEnds';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
-import { BackgroundGlowContainer } from './ui/background-glow';
-import { ProgressBar } from './ui/progress-bar';
+import { Progress } from '@/components/ui/progress';
 
-interface ConsultantInputFormProps {
-  onBack: () => void;
-  onComplete: () => void;
+// Types
+type TreatmentType = 'Skin Only' | 'Hair Only' | 'Both';
+interface Step {
+  component: React.FC<any>;
+  title: string;
 }
 
+// Constants
 const initialFormData: Omit<ConsultantInputData, 'id' | 'created_at'> = {
   consultation_id: '',
   customer_name: '',
   customer_phone: '',
   evaluation: {},
   unsuitable_products: [],
-  skin_analysis: {
-    skin_type_confirmation: '',
-    additional_skin_concerns: [],
-    recommended_treatments: [],
-    contraindications: [],
-    patch_test_required: false,
-    patch_test_notes: ''
-  },
-  product_recommendations: {
-    cleanser: '',
-    toner: '',
-    serum: [],
-    moisturizer: '',
-    sunscreen: '',
-    treatments: [],
-    masks: []
-  },
-  treatment_plan: {
-    immediate_treatments: [],
-    future_treatments: [],
-    treatment_frequency: '',
-    special_considerations: ''
-  },
+  skin_analysis: {},
+  product_recommendations: {},
+  treatment_plan: {},
   staff_notes: '',
   follow_up_required: false,
   follow_up_date: '',
@@ -61,49 +42,90 @@ const initialFormData: Omit<ConsultantInputData, 'id' | 'created_at'> = {
   consultation_date: new Date().toISOString().split('T')[0]
 };
 
-const ConsultantInputForm: React.FC<ConsultantInputFormProps> = ({ onBack, onComplete }) => {
-  const [currentStep, setCurrentStep] = useState(1);
+const STEP_CONFIG: Record<TreatmentType, Step[]> = {
+  'Skin Only': [
+    { component: AcneEvaluation, title: 'Acne Evaluation' },
+    { component: PigmentationEvaluation, title: 'Pigmentation' },
+    { component: TextureEvaluation, title: 'Texture' },
+    { component: SensitivityEvaluation, title: 'Sensitivity' },
+    { component: UnsuitableProducts, title: 'Unsuitable Products' },
+    { component: ConsultantNotes, title: 'Final Notes' },
+  ],
+  'Hair Only': [
+    { component: VisualScalpType, title: 'Scalp Type' },
+    { component: HairFallSeverity, title: 'Hair Fall' },
+    { component: DensityObservation, title: 'Density' },
+    { component: TextureAndEnds, title: 'Texture & Ends' },
+    { component: ConsultantNotes, title: 'Final Notes' },
+  ],
+  'Both': [
+    { component: AcneEvaluation, title: 'Acne Evaluation' },
+    { component: PigmentationEvaluation, title: 'Pigmentation' },
+    { component: TextureEvaluation, title: 'Texture' },
+    { component: SensitivityEvaluation, title: 'Sensitivity' },
+    { component: UnsuitableProducts, title: 'Unsuitable Products' },
+    { component: VisualScalpType, title: 'Scalp Type' },
+    { component: HairFallSeverity, title: 'Hair Fall' },
+    { component: DensityObservation, title: 'Density' },
+    { component: TextureAndEnds, title: 'Texture & Ends' },
+    { component: ConsultantNotes, title: 'Final Notes' },
+  ],
+};
+
+// Main Component
+const ConsultantInputForm: React.FC<{ onBack: () => void; onComplete: () => void; }> = ({ onBack, onComplete }) => {
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [formData, setFormData] = useState(initialFormData);
-  const [treatmentType, setTreatmentType] = useState<'Skin Only' | 'Hair Only' | 'Both' | null>(null);
+  const [treatmentType, setTreatmentType] = useState<TreatmentType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    loadAvailableConsultations();
+    const load = async () => {
+      setIsLoading(true);
+      await getConsultationsWithoutInput();
+      setIsLoading(false);
+    };
+    load();
   }, []);
 
-  const loadAvailableConsultations = async () => {
-    setIsLoading(true);
-    const result = await getConsultationsWithoutInput();
-    setIsLoading(false);
-    if (!result.success) {
-      console.error(result.error || 'Failed to load consultations');
-    }
-  };
+  const steps = useMemo(() => {
+    const baseSteps = [
+      { component: CustomerSelection, title: 'Select Client' },
+      { component: TreatmentTypeSelection, title: 'Select Treatment Type' },
+    ];
+    if (!treatmentType) return baseSteps;
+    return [...baseSteps, ...STEP_CONFIG[treatmentType]];
+  }, [treatmentType]);
+
+  const totalSteps = steps.length;
+  const progressPercent = totalSteps > 2 ? ((currentStepIndex - 1) / (totalSteps - 2)) * 100 : 0;
 
   const updateFormData = (updates: Partial<Omit<ConsultantInputData, 'id' | 'created_at'>>) => {
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
   const handleNext = () => {
-    if (validateCurrentStep()) setCurrentStep(prev => prev + 1);
+    if (validateCurrentStep()) setCurrentStepIndex(prev => prev + 1);
   };
 
   const handleBack = () => {
-    if (currentStep > 1) setCurrentStep(prev => prev - 1);
+    if (currentStepIndex > 0) setCurrentStepIndex(prev => prev - 1);
     else onBack();
   };
 
-  const handleTreatmentTypeSelect = (type: 'Skin Only' | 'Hair Only' | 'Both') => {
+  const handleTreatmentTypeSelect = (type: TreatmentType) => {
     setTreatmentType(type);
-    setCurrentStep(prev => prev + 1);
+    setCurrentStepIndex(prev => prev + 1);
   };
 
   const validateCurrentStep = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (currentStep === 1 && !formData.consultation_id) newErrors.customer = 'Please select a customer';
+    if (currentStepIndex === 0 && !formData.consultation_id) {
+      newErrors.customer = 'Please select a customer';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -115,129 +137,73 @@ const ConsultantInputForm: React.FC<ConsultantInputFormProps> = ({ onBack, onCom
       setIsSubmitted(true);
     } else {
       console.error(result.error || 'Failed to submit consultant input');
+      // Here you might want to set an error state to show to the user
     }
     setIsSubmitting(false);
   };
 
-  const evaluationSteps = treatmentType === 'Skin Only' ? 6 : treatmentType === 'Hair Only' ? 5 : treatmentType === 'Both' ? 10 : 0;
-  const showProgress = currentStep > 2 && Boolean(treatmentType) && evaluationSteps > 0;
-  const progressPercent = showProgress ? Math.min(100, Math.max(0, ((currentStep - 2) / evaluationSteps) * 100)) : 0;
-
-  const renderStep = () => {
-    const stepProps = {
-      formData,
-      updateFormData,
-      onNext: handleNext,
-      onBack: handleBack,
-      errors
-    };
-
-    if (currentStep === 1) {
-      return <CustomerSelection {...stepProps} isLoading={isLoading} />;
-    }
-    if (currentStep === 2) {
-      return <TreatmentTypeSelection onSelect={handleTreatmentTypeSelect} onBack={handleBack} />;
-    }
-
-    if (treatmentType === 'Skin Only') {
-      if (currentStep === 3) return <AcneEvaluation {...stepProps} />;
-      if (currentStep === 4) return <PigmentationEvaluation {...stepProps} />;
-      if (currentStep === 5) return <TextureEvaluation {...stepProps} />;
-      if (currentStep === 6) return <SensitivityEvaluation {...stepProps} />;
-      if (currentStep === 7) return <UnsuitableProducts {...stepProps} />;
-      if (currentStep === 8) return <ConsultantNotes {...stepProps} onSubmit={handleSubmit} isSubmitting={isSubmitting} />;
-    }
-
-    if (treatmentType === 'Hair Only') {
-      if (currentStep === 3) return <VisualScalpType {...stepProps} />;
-      if (currentStep === 4) return <HairFallSeverity {...stepProps} />;
-      if (currentStep === 5) return <DensityObservation {...stepProps} />;
-      if (currentStep === 6) return <TextureAndEnds {...stepProps} />;
-      if (currentStep === 7) return <ConsultantNotes {...stepProps} onSubmit={handleSubmit} isSubmitting={isSubmitting} />;
-    }
-
-    if (treatmentType === 'Both') {
-      if (currentStep === 3) return <AcneEvaluation {...stepProps} />;
-      if (currentStep === 4) return <PigmentationEvaluation {...stepProps} />;
-      if (currentStep === 5) return <TextureEvaluation {...stepProps} />;
-      if (currentStep === 6) return <SensitivityEvaluation {...stepProps} />;
-      if (currentStep === 7) return <UnsuitableProducts {...stepProps} />;
-      if (currentStep === 8) return <VisualScalpType {...stepProps} />;
-      if (currentStep === 9) return <HairFallSeverity {...stepProps} />;
-      if (currentStep === 10) return <DensityObservation {...stepProps} />;
-      if (currentStep === 11) return <TextureAndEnds {...stepProps} />;
-      if (currentStep === 12) return <ConsultantNotes {...stepProps} onSubmit={handleSubmit} isSubmitting={isSubmitting} />;
-    }
-
-    return null;
-  };
+  const CurrentStepComponent = steps[currentStepIndex]?.component;
 
   if (isSubmitted) {
-    return (
-      <div className="luxury-shell">
-        <div className="luxury-page-form items-center justify-center">
-          <Card className="w-full text-center">
-            <CardHeader className="items-center gap-6 p-12">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 border border-primary">
-                <CheckCircle className="h-8 w-8 text-primary" />
-              </div>
-              <CardTitle className="text-2xl">Submitted Successfully</CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Your consultant notes have been saved.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center gap-6 pt-0 pb-12">
-              <Button size="lg" onClick={onComplete}>
-                Back to Home
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
+    return <SubmissionSuccess onComplete={onComplete} />;
   }
 
   return (
     <div className="luxury-shell">
       <div className="luxury-page-form">
-        <header className="flex flex-col gap-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div className="space-y-2">
-              <h1>Consultant Input</h1>
-              <p className="text-sm text-muted-foreground">
-                Enter your observations and recommendations.
-              </p>
-            </div>
-            {treatmentType && currentStep > 2 ? (
-              <div className="rounded-md border bg-muted px-4 py-2 text-sm font-medium">
-                {treatmentType}
-              </div>
-            ) : null}
+        <header className="space-y-4">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">Consultant Input</h1>
+            <p className="text-muted-foreground">Enter your observations and recommendations.</p>
           </div>
-
-          {showProgress ? (
-            <div className="rounded-lg border bg-surface p-4">
-              <ProgressBar
-                value={progressPercent}
-                color="purple"
-                showLabel={true}
-                labelPosition="top"
-                customLabel={`Step ${Math.max(1, currentStep - 2)} of ${evaluationSteps} (${Math.round(progressPercent)}%)`}
-                size="md"
-              />
+          {currentStepIndex > 1 && treatmentType && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm font-medium text-muted-foreground">
+                <span>{steps[currentStepIndex]?.title || ''}</span>
+                <span>Step {currentStepIndex - 1} of {totalSteps - 2}</span>
+              </div>
+              <Progress value={progressPercent} />
             </div>
-          ) : null}
+          )}
         </header>
 
-        <section>
-          <Card className="w-full">
-            <CardContent className="p-0">{renderStep()}</CardContent>
-          </Card>
-        </section>
+        <main>
+          {CurrentStepComponent && (
+            <CurrentStepComponent
+              formData={formData}
+              updateFormData={updateFormData}
+              onNext={handleNext}
+              onBack={handleBack}
+              onSelect={handleTreatmentTypeSelect} // For TreatmentTypeSelection
+              onSubmit={handleSubmit}
+              isLoading={isLoading}
+              isSubmitting={isSubmitting}
+              errors={errors}
+            />
+          )}
+        </main>
       </div>
     </div>
   );
 };
 
-export default ConsultantInputForm;
+const SubmissionSuccess: React.FC<{ onComplete: () => void }> = ({ onComplete }) => (
+  <div className="flex items-center justify-center h-full">
+    <Card className="w-full max-w-md text-center">
+      <CardHeader className="items-center gap-4">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+          <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+        </div>
+        <CardTitle className="text-2xl">Submitted Successfully</CardTitle>
+        <CardDescription>Your consultant notes have been saved.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button size="lg" onClick={onComplete}>
+          Back to Home
+        </Button>
+      </CardContent>
+    </Card>
+  </div>
+);
 
+export default ConsultantInputForm;
