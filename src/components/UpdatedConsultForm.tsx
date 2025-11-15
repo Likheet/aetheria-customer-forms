@@ -2400,8 +2400,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({
           </button>
         )}
 
-        {/* Dev: Machine Bands Sidebar - Slides in from right (Development only) */}
-        {import.meta.env.DEV && machine && (
+        {/* Machine Bands Sidebar - Slides in from right */}
+        {machine && (
           <>
             {/* Overlay for mobile */}
             {isSidebarOpen && (
@@ -2421,7 +2421,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({
             <Collapsible open={isMachineBandOpen} onOpenChange={setIsMachineBandOpen}>
               <div className="bg-surface/80 backdrop-blur border border-slate-200 rounded-xl shadow-xl overflow-hidden">
                 <CollapsibleTrigger className="w-full px-4 py-2 bg-primary/10 text-foreground text-sm font-semibold flex items-center justify-between hover:bg-primary/20 transition-colors">
-                  <span>Machine Bands (Dev)</span>
+                  <span>Machine Bands</span>
                   <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isMachineBandOpen ? 'rotate-180' : ''}`} />
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -2461,7 +2461,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({
             <Collapsible open={isEffectiveBandOpen} onOpenChange={setIsEffectiveBandOpen}>
               <div className="bg-surface/80 backdrop-blur border border-slate-200 rounded-xl shadow-xl overflow-hidden">
                 <CollapsibleTrigger className="w-full px-4 py-2 bg-primary/10 text-foreground text-sm font-semibold flex items-center justify-between hover:bg-primary/20 transition-colors">
-                  <span>Effective Bands (Dev)</span>
+                  <span>Effective Bands</span>
                   <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isEffectiveBandOpen ? 'rotate-180' : ''}`} />
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -2606,7 +2606,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({
             <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Consultation</p>
             <h1 className="text-3xl font-semibold text-slate-900">Client Consultation</h1>
             <p className="text-sm text-slate-500 max-w-lg">Personalized skincare analysis and recommendations.</p>
-            {import.meta.env.DEV && (
+            {(
               <button
                 onClick={fillWithDummyData}
                 className="mt-4 text-xs text-slate-500 underline-offset-4 hover:underline"
