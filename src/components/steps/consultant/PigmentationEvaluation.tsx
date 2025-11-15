@@ -1,6 +1,6 @@
 import React from 'react';
 import { StepProps } from '../../../types';
-import FormStep from '../../FormStep';
+import { FormStep } from '../../form/FormStep';
 import { RadioGroup } from '../../form/RadioGroup';
 
 const PigmentationEvaluation: React.FC<StepProps> = ({ formData, updateFormData, onNext, onBack, errors }) => {
