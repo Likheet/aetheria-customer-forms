@@ -1,20 +1,47 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { ShieldCheck, Table as TableIcon, Gauge, ArrowLeft } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import MatrixEditor from './MatrixEditor';
-import ProductCatalogManager from './ProductCatalogManager';
-import SkinTypeDefaultsEditor from './SkinTypeDefaultsEditor';
+import { Spinner } from '@/components/ui/spinner';
 
 interface AdminDashboardProps {
   onClose: () => void;
 }
 
+type AdminTab = 'matrix' | 'products' | 'defaults';
+
+const MatrixEditor = lazy(() => import('./MatrixEditor'));
+const ProductCatalogManager = lazy(() => import('./ProductCatalogManager'));
+const SkinTypeDefaultsEditor = lazy(() => import('./SkinTypeDefaultsEditor'));
+
+const TAB_LOADING_COPY: Record<AdminTab, string> = {
+  matrix: 'Loading concern matrix…',
+  products: 'Booting product library…',
+  defaults: 'Fetching skin-type defaults…',
+};
+
+const TabLoader = ({ message }: { message: string }) => (
+  <div className="flex h-[40vh] flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+    <Spinner className="h-5 w-5" />
+    <span>{message}</span>
+  </div>
+);
+
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
-  const [activeTab, setActiveTab] = useState<string>('matrix');
+  const [activeTab, setActiveTab] = useState<AdminTab>('matrix');
+  const [mountedTabs, setMountedTabs] = useState<Record<AdminTab, boolean>>({
+    matrix: true,
+    products: false,
+    defaults: false,
+  });
+
+  const handleTabChange = (value: string) => {
+    const tab = value as AdminTab;
+    setActiveTab(tab);
+    setMountedTabs(prev => (prev[tab] ? prev : { ...prev, [tab]: true }));
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -42,7 +69,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
           </div>
 
           {/* Main Content */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-3 h-12">
               <TabsTrigger value="matrix" className="gap-2 text-sm font-medium">
                 <TableIcon className="h-4 w-4" />
@@ -63,7 +90,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 <TabsContent value="matrix" className="mt-0">
                   <ScrollArea className="h-[calc(100vh-280px)]">
                     <div className="p-6">
-                      <MatrixEditor />
+                      {mountedTabs.matrix ? (
+                        <Suspense fallback={<TabLoader message={TAB_LOADING_COPY.matrix} />}>
+                          <MatrixEditor />
+                        </Suspense>
+                      ) : (
+                        <TabLoader message={TAB_LOADING_COPY.matrix} />
+                      )}
                     </div>
                   </ScrollArea>
                 </TabsContent>
@@ -71,7 +104,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 <TabsContent value="products" className="mt-0">
                   <ScrollArea className="h-[calc(100vh-280px)]">
                     <div className="p-6">
-                      <ProductCatalogManager />
+                      {mountedTabs.products ? (
+                        <Suspense fallback={<TabLoader message={TAB_LOADING_COPY.products} />}>
+                          <ProductCatalogManager />
+                        </Suspense>
+                      ) : (
+                        <TabLoader message={TAB_LOADING_COPY.products} />
+                      )}
                     </div>
                   </ScrollArea>
                 </TabsContent>
@@ -79,7 +118,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 <TabsContent value="defaults" className="mt-0">
                   <ScrollArea className="h-[calc(100vh-280px)]">
                     <div className="p-6">
-                      <SkinTypeDefaultsEditor />
+                      {mountedTabs.defaults ? (
+                        <Suspense fallback={<TabLoader message={TAB_LOADING_COPY.defaults} />}>
+                          <SkinTypeDefaultsEditor />
+                        </Suspense>
+                      ) : (
+                        <TabLoader message={TAB_LOADING_COPY.defaults} />
+                      )}
                     </div>
                   </ScrollArea>
                 </TabsContent>

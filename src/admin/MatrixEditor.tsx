@@ -71,7 +71,8 @@ interface DraftMap {
 }
 
 const MatrixEditor: React.FC = () => {
-  const [loading, setLoading] = useState(true);
+  const [referenceLoading, setReferenceLoading] = useState(true);
+  const [entriesLoading, setEntriesLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -125,7 +126,7 @@ const MatrixEditor: React.FC = () => {
   }, [products]);
 
   useEffect(() => {
-    void loadData();
+    void loadReferenceData();
   }, []);
 
   useEffect(() => {
@@ -134,11 +135,16 @@ const MatrixEditor: React.FC = () => {
     }
   }, [subtypes, selectedConcern]);
 
+  const filteredSubtypes = useMemo(
+    () => subtypes.filter(subtype => !selectedConcern || subtype.concern === selectedConcern),
+    [subtypes, selectedConcern]
+  );
+
   useEffect(() => {
     if (!selectedSubtype && filteredSubtypes.length) {
       setSelectedSubtype(filteredSubtypes[0]?.id ?? '');
     }
-  }, [selectedSubtype, subtypes, selectedConcern]);
+  }, [selectedSubtype, filteredSubtypes]);
 
   useEffect(() => {
     if (!selectedSkinType) {
@@ -146,54 +152,75 @@ const MatrixEditor: React.FC = () => {
     }
   }, [selectedSkinType]);
 
-  const filteredSubtypes = useMemo(
-    () => subtypes.filter(subtype => !selectedConcern || subtype.concern === selectedConcern),
-    [subtypes, selectedConcern]
-  );
+  const [entriesTrigger, setEntriesTrigger] = useState(0);
 
-  const visibleEntries = useMemo(() => {
-    return matrixEntries.filter(entry => {
-      if (selectedConcern && entry.concern !== selectedConcern) return false;
-      if (selectedSubtype && entry.subtype_id !== selectedSubtype) return false;
-      if (selectedSkinType && entry.skin_type !== selectedSkinType) return false;
-      return true;
-    });
-  }, [matrixEntries, selectedConcern, selectedSubtype, selectedSkinType]);
+  useEffect(() => {
+    if (!selectedConcern || !selectedSubtype || !selectedSkinType || referenceLoading) {
+      return;
+    }
+    void loadMatrixEntries(selectedConcern, selectedSubtype, selectedSkinType);
+  }, [selectedConcern, selectedSubtype, selectedSkinType, entriesTrigger, referenceLoading]);
 
-  async function loadData() {
+  const visibleEntries = matrixEntries;
+
+  async function loadReferenceData() {
     try {
-      setLoading(true);
+      setReferenceLoading(true);
       setError(null);
 
-      const [{ data: productData, error: productError }, { data: matrixData, error: matrixError }, { data: subtypeData, error: subtypeError }] =
-        await Promise.all([
-          supabase
-            .from('product')
-            .select('id, display_name, brand, category, ingredient_keywords, notes')
-            .order('display_name', { ascending: true }),
-          supabase.from('matrix_entry').select(
-            'id, concern, subtype_id, skin_type, band, cleanser_id, core_serum_id, secondary_serum_id, moisturizer_id, sunscreen_id, remarks, updated_at, updated_by'
-          ),
-          supabase.from('concern_subtype').select('id, concern, code, label').order('concern', { ascending: true }).order('label', { ascending: true }),
-        ]);
+      const [{ data: productData, error: productError }, { data: subtypeData, error: subtypeError }] = await Promise.all([
+        supabase
+          .from('product')
+          .select('id, display_name, brand, category, ingredient_keywords, notes')
+          .order('display_name', { ascending: true }),
+        supabase
+          .from('concern_subtype')
+          .select('id, concern, code, label')
+          .order('concern', { ascending: true })
+          .order('label', { ascending: true }),
+      ]);
 
       if (productError) throw productError;
-      if (matrixError) throw matrixError;
       if (subtypeError) throw subtypeError;
 
       setProducts(productData ?? []);
-      setMatrixEntries(matrixData ?? []);
       setSubtypes(
         (subtypeData ?? []).map(record => ({
           ...record,
           label: record.label ?? record.code,
         }))
       );
+      setMatrixEntries([]);
       setDrafts({});
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoading(false);
+      setReferenceLoading(false);
+    }
+  }
+
+  async function loadMatrixEntries(concern: ConcernKey, subtypeId: string, skinType: SkinTypeKey) {
+    try {
+      setEntriesLoading(true);
+      setError(null);
+
+      const { data, error: matrixError } = await supabase
+        .from('matrix_entry')
+        .select(
+          'id, concern, subtype_id, skin_type, band, cleanser_id, core_serum_id, secondary_serum_id, moisturizer_id, sunscreen_id, remarks, updated_at, updated_by'
+        )
+        .eq('concern', concern)
+        .eq('subtype_id', subtypeId)
+        .eq('skin_type', skinType);
+
+      if (matrixError) throw matrixError;
+      setMatrixEntries(data ?? []);
+      setDrafts({});
+      setSuccessMessage(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setEntriesLoading(false);
     }
   }
 
@@ -230,7 +257,9 @@ const MatrixEditor: React.FC = () => {
       if (firstError) throw firstError;
 
       setSuccessMessage('Matrix entries updated successfully.');
-      await loadData();
+      if (selectedConcern && selectedSubtype && selectedSkinType) {
+        await loadMatrixEntries(selectedConcern, selectedSubtype, selectedSkinType);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -241,6 +270,11 @@ const MatrixEditor: React.FC = () => {
   const resetDrafts = () => {
     setDrafts({});
     setSuccessMessage(null);
+  };
+
+  const handleRefresh = () => {
+    void loadReferenceData();
+    setEntriesTrigger(prev => prev + 1);
   };
 
   const getBadgeColor = (band: BandColor) => {
@@ -342,8 +376,8 @@ const MatrixEditor: React.FC = () => {
         <div className="flex gap-2 ml-auto">
           <Button
             size="default"
-            onClick={() => void loadData()}
-            disabled={loading}
+            onClick={handleRefresh}
+            disabled={referenceLoading}
             className="bg-slate-700 hover:bg-slate-800 text-white gap-2"
           >
             <RefreshCcw className="h-4 w-4" />
@@ -382,10 +416,15 @@ const MatrixEditor: React.FC = () => {
         </Alert>
       )}
 
-      {loading ? (
+      {referenceLoading && !subtypes.length ? (
         <div className="flex items-center justify-center gap-3 py-12">
           <Spinner className="h-6 w-6" />
-          <span className="text-slate-600">Loading matrix entries…</span>
+          <span className="text-slate-600">Loading admin datasets…</span>
+        </div>
+      ) : entriesLoading ? (
+        <div className="flex items-center justify-center gap-3 py-12">
+          <Spinner className="h-6 w-6" />
+          <span className="text-slate-600">Fetching matrix entries…</span>
         </div>
       ) : !visibleEntries.length ? (
         <Card className="border-slate-200 bg-white">
