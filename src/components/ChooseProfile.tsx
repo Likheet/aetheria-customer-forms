@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { getFillingQueue, getSessionProfile } from '../services/newConsultationService';
+import { getFillingQueue, getSessionProfile, buildMachineBandsFromMetrics } from '../services/newConsultationService';
 import UpdatedConsultForm from './UpdatedConsultForm';
 import type { MachineScanBands } from '../lib/decisionEngine';
 import { Card, CardContent } from './ui/card';
@@ -139,23 +139,7 @@ export default function ChooseProfile({ onBack }: { onBack: () => void }) {
                 const handleActivate = async () => {
                   const profile = await getSessionProfile(item.session_id);
                   const rawMetrics = (profile.metrics ?? {}) as Record<string, unknown>;
-                  const readBand = (key: string): string | undefined => {
-                    const value = rawMetrics[key];
-                    return typeof value === 'string' ? value : undefined;
-                  };
-                  const machine: MachineScanBands = {
-                    moisture: readBand('moisture_band'),
-                    sebum: readBand('sebum_band'),
-                    texture: readBand('texture_band'),
-                    textureAging: readBand('texture_aging_band'),
-                    textureBumpy: readBand('texture_bumpy_band'),
-                    pores: readBand('pores_band'),
-                    acne: readBand('acne_band'),
-                    acneDetails: (rawMetrics['acne_details'] as MachineScanBands['acneDetails']) ?? undefined,
-                    pigmentation_brown: readBand('brown_areas_band') ?? readBand('pigmentation_uv_band'),
-                    pigmentation_red: readBand('redness_band') ?? undefined,
-                    sensitivity: readBand('sensitivity_band') ?? undefined
-                  };
+                  const machine = (profile.machine as MachineScanBands | null | undefined) ?? buildMachineBandsFromMetrics(rawMetrics) ?? undefined;
                   const skinAge = typeof rawMetrics['skin_age'] === 'number' ? (rawMetrics['skin_age'] as number) : undefined;
                   setSelected({
                     session_id: item.session_id,

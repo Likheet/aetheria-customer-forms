@@ -208,6 +208,35 @@ function normalizeMachineAcneBand(value: any): { band?: Band; details?: MachineA
   return { band: derivedBand, details }
 }
 
+const readBandFromMetrics = (metrics: Record<string, any>, key: string): string | undefined => {
+  const value = metrics?.[key]
+  if (typeof value === 'string' && value.trim()) {
+    return value
+  }
+  return undefined
+}
+
+export const buildMachineBandsFromMetrics = (metrics?: Record<string, any> | null): MachineScanBands | null => {
+  if (!metrics) return null
+  const machine: MachineScanBands = {
+    moisture: readBandFromMetrics(metrics, 'moisture_band'),
+    sebum: readBandFromMetrics(metrics, 'sebum_band'),
+    texture: readBandFromMetrics(metrics, 'texture_band'),
+    textureAging: readBandFromMetrics(metrics, 'texture_aging_band'),
+    textureBumpy: readBandFromMetrics(metrics, 'texture_bumpy_band'),
+    pores: readBandFromMetrics(metrics, 'pores_band'),
+    acne: readBandFromMetrics(metrics, 'acne_band'),
+    pigmentation_brown: readBandFromMetrics(metrics, 'brown_areas_band') ?? readBandFromMetrics(metrics, 'pigmentation_uv_band'),
+    pigmentation_red: readBandFromMetrics(metrics, 'redness_band'),
+    sensitivity: readBandFromMetrics(metrics, 'sensitivity_band'),
+  }
+  const acneDetails = metrics['acne_details']
+  if (acneDetails && typeof acneDetails === 'object') {
+    machine.acneDetails = acneDetails as MachineScanBands['acneDetails']
+  }
+  return machine
+}
+
 // Transform form data into normalized structure
 function transformFormData(formData: UpdatedConsultData & { triageOutcomes?: any[] }) {
   const acneBreakouts = Array.isArray(formData.acneBreakouts) ? formData.acneBreakouts : []
@@ -594,5 +623,6 @@ export async function getSessionProfile(sessionId: string) {
     customer_phone: (session as any).customer?.phone_e164,
     scan_id: scanId,
     metrics,
+    machine: buildMachineBandsFromMetrics(metrics),
   }
 }

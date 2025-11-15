@@ -57,12 +57,38 @@ export const PRODUCT_DURATION_OPTIONS = [
 
 export const MAIN_CONCERN_OPTIONS = [
   'Acne',
+  'Post Acne Scarring',
   'Pigmentation',
-  'Sensitivity',
   'Fine lines & wrinkles',
   'Large pores',
   'Bumpy skin',
 ] as const;
+
+const POST_ACNE_SCARRING_TYPE_OPTIONS = [
+  {
+    value: 'Small, shallow, round or pitted scars  Ice pick / pitted scars',
+    subtype: 'IcePick',
+    requiresColor: false,
+  },
+  {
+    value: 'Broad, shallow depressions  Rolling scars',
+    subtype: 'Rolling',
+    requiresColor: false,
+  },
+  {
+    value: 'Flat or slightly raised dark marks  post-inflammatory pigmentation',
+    subtype: 'PostInflammatoryPigmentation',
+    requiresColor: true,
+  },
+  {
+    value: 'Raised, thick scars  Keloid / hypertrophic scars',
+    subtype: 'Keloid',
+    requiresColor: false,
+  },
+] as const;
+
+const POST_ACNE_COLOR_VALUES = ['Red', 'Brown', 'Both'] as const;
+const POST_ACNE_SEVERITY_VALUES = ['Blue', 'Yellow', 'Red'] as const;
 
 export const PIGMENTATION_TYPE_OPTIONS = ['Red', 'Brown'] as const;
 
@@ -437,6 +463,21 @@ const pickConcernSubset = (rng: () => number): string[] => {
   return randomSubset(MAIN_CONCERN_OPTIONS, { min: size, max: size, rng });
 };
 
+const buildConcernPriority = (selected: string[], basePriority?: string[]): string[] => {
+  const normalizedSelected = Array.from(new Set(selected.filter(Boolean)));
+  if (!normalizedSelected.length) return [];
+  const baseOrder = Array.isArray(basePriority)
+    ? basePriority.filter(item => normalizedSelected.includes(item))
+    : [];
+  const remaining = normalizedSelected.filter(item => !baseOrder.includes(item));
+  const merged = [...baseOrder, ...remaining];
+  if (!merged.length) return [];
+  if (merged.includes('Acne')) {
+    return ['Acne', ...merged.filter(item => item !== 'Acne')];
+  }
+  return merged;
+};
+
 const resolvePigmentationSeverity = (type: string, rng: () => number): string => {
   const key = type === 'Red' ? 'Red' : 'Brown';
   const options = PIGMENTATION_SEVERITY_OPTIONS[key as keyof typeof PIGMENTATION_SEVERITY_OPTIONS] || [];
@@ -503,7 +544,10 @@ export const generateConsultAutoFill = ({ base, machine, rng }: ConsultAutoFillP
   const name = `${randomFrom(SAMPLE_FIRST_NAMES, random)} ${randomFrom(SAMPLE_LAST_NAMES, random)}`;
   const products = uniqueProducts(random);
   const routineNarrative = randomFrom(SAMPLE_ROUTINE_NOTES, random);
-  const concerns = pickConcernSubset(random);
+  const baseConcerns = Array.isArray(base.mainConcerns) && base.mainConcerns.length ? base.mainConcerns : null;
+  const concerns = baseConcerns
+    ? Array.from(new Set(baseConcerns.filter(Boolean)))
+    : pickConcernSubset(random);
 
   const filled: UpdatedConsultData = {
     ...base,
@@ -530,6 +574,7 @@ export const generateConsultAutoFill = ({ base, machine, rng }: ConsultAutoFillP
     productDuration: randomFrom(PRODUCT_DURATION_OPTIONS, random),
     irritatingProducts: joinList(randomSubset(SAMPLE_IRRITATING_INGREDIENTS, { min: 1, max: 3, rng: random }), ', '),
     mainConcerns: concerns,
+    concernPriority: buildConcernPriority(concerns, Array.isArray(base.concernPriority) ? base.concernPriority : []),
     acneBreakouts: [],
     acneDuration: randomFrom(SAMPLE_ACNE_BREAKOUT_NOTES, random),
     pigmentationType: '',
@@ -608,6 +653,24 @@ export const generateConsultAutoFill = ({ base, machine, rng }: ConsultAutoFillP
 
   if (concerns.includes('Bumpy skin')) {
     filled.textureType = randomFrom(TEXTURE_SEVERITY_OPTIONS, random);
+  }
+
+  if (concerns.includes('Post Acne Scarring')) {
+    const option = randomFrom(POST_ACNE_SCARRING_TYPE_OPTIONS, random);
+    filled.postAcneScarringType = option.value;
+    filled.postAcneScarringSubtype = option.subtype as UpdatedConsultData['postAcneScarringSubtype'];
+    if (option.requiresColor) {
+      filled.postAcneScarringColor = randomFrom(POST_ACNE_COLOR_VALUES, random);
+      filled.postAcneScarringSeverity = '';
+    } else {
+      filled.postAcneScarringSeverity = randomFrom(POST_ACNE_SEVERITY_VALUES, random);
+      filled.postAcneScarringColor = '';
+    }
+  } else {
+    filled.postAcneScarringType = '';
+    filled.postAcneScarringSubtype = undefined;
+    filled.postAcneScarringColor = '';
+    filled.postAcneScarringSeverity = '';
   }
 
   if (!concerns.includes('Sensitivity')) {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle, ArrowLeft, ArrowRight, FileText, Droplets, Shield, Heart, Sparkles, Sun, Clock, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
-import { saveConsultationData } from '../services/newConsultationService';
+import { saveConsultationData, getSessionProfile, buildMachineBandsFromMetrics } from '../services/newConsultationService';
 import {
   deriveSelfBands as deriveSelfBandsRt,
   getFollowUpQuestions as getFollowUpsRt,
@@ -335,6 +335,26 @@ const AUTO_FILL_FOLLOWUP_ANSWERS: Record<string, Record<string, string | string[
   },
 };
 
+const hasMachineBands = (bands?: MachineScanBands | null): boolean => {
+  if (!bands) return false;
+  const keys: (keyof MachineScanBands)[] = [
+    'moisture',
+    'sebum',
+    'texture',
+    'textureAging',
+    'textureBumpy',
+    'pores',
+    'acne',
+    'pigmentation_brown',
+    'pigmentation_red',
+    'sensitivity',
+  ];
+  return keys.some(key => {
+    const value = bands[key];
+    return typeof value === 'string' && value.trim().length > 0;
+  });
+};
+
 const deriveAcneCategory = (acneType: string): string => deriveAcneCategoryLabel(acneType) || '';
 
 // Helper to extract Post Acne Scarring subtype from display text
@@ -485,7 +505,42 @@ function computeAgeFromDOB(dob?: string | null): number | null {
   return age >= 0 ? age : null;
 }
 
-const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onComplete, machine, machineRaw, sessionId, prefill }) => {
+const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({
+  onBack,
+  onComplete,
+  machine: initialMachine,
+  machineRaw: initialMachineRaw,
+  sessionId,
+  prefill,
+}) => {
+  const derivedMachine = initialMachine ?? buildMachineBandsFromMetrics(initialMachineRaw ?? null) ?? null;
+  const [machine, setMachine] = useState<MachineScanBands | null>(derivedMachine);
+  const [machineRaw, setMachineRaw] = useState<any>(initialMachineRaw ?? null);
+  useEffect(() => {
+    const nextMachine = initialMachine ?? buildMachineBandsFromMetrics(initialMachineRaw ?? null) ?? null;
+    setMachine(nextMachine);
+  }, [initialMachine, initialMachineRaw]);
+  useEffect(() => {
+    setMachineRaw(initialMachineRaw ?? null);
+  }, [initialMachineRaw]);
+  useEffect(() => {
+    if (!sessionId) return;
+    if (hasMachineBands(machine)) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const profile = await getSessionProfile(sessionId);
+        if (cancelled) return;
+        if (profile.machine) setMachine(profile.machine);
+        if (profile.metrics) setMachineRaw(profile.metrics);
+      } catch (error) {
+        console.warn('Unable to hydrate machine bands from Supabase:', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, machine]);
   const buildInitialFormData = (): UpdatedConsultData => {
     const base: any = { ...initialFormData, ...(prefill || {}) }
     const providedBreakouts = Array.isArray(base.acneBreakouts) ? base.acneBreakouts : []
@@ -585,6 +640,17 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
     ensureTextureAggregate(seed)
     return seed
   });
+  useEffect(() => {
+    if (!machine) return;
+    setEffectiveBands(prev => {
+      const next = { ...(machine || {}) };
+      if (prev) {
+        Object.assign(next, prev);
+      }
+      ensureTextureAggregate(next as Record<string, any>);
+      return next;
+    });
+  }, [machine]);
   const [computedSensitivity, setComputedSensitivity] = useState<{ score: number; tier: string; band: string; remark: string } | null>(null);
   const [decisions, setDecisions] = useState<any[]>([]);
   const [gateRemarks, setGateRemarks] = useState<string[]>([]);
@@ -1402,6 +1468,19 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
 
   const fillWithDummyData = () => {
     const machineBands: MachineScanBands = { ...AUTO_FILL_MACHINE_FALLBACK, ...(machine || {}) };
+    setMachine(machineBands);
+    setMachineRaw({
+      moisture_band: machineBands.moisture,
+      sebum_band: machineBands.sebum,
+      texture_band: machineBands.texture,
+      texture_aging_band: machineBands.textureAging,
+      texture_bumpy_band: machineBands.textureBumpy,
+      pores_band: machineBands.pores,
+      acne_band: machineBands.acne,
+      brown_areas_band: machineBands.pigmentation_brown,
+      redness_band: machineBands.pigmentation_red,
+      sensitivity_band: machineBands.sensitivity,
+    });
 
     const filledData: UpdatedConsultData = {
       ...AUTO_FILL_FORM_TEMPLATE,

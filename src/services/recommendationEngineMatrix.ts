@@ -15,6 +15,18 @@ import { computeSensitivityFromForm, deriveSelfBands } from '../lib/decisionEngi
 
 type Maybe<T> = T | undefined | null;
 
+const CONCERN_TITLES: Record<ConcernKey, string> = {
+  acne: 'Acne',
+  pigmentation: 'Pigmentation',
+  pores: 'Pores',
+  texture: 'Texture',
+  sebum: 'Sebum',
+  acnescars: 'Acne Scars',
+};
+
+const formatConcernTitle = (concern: ConcernKey): string =>
+  CONCERN_TITLES[concern] ?? `${concern.charAt(0).toUpperCase()}${concern.slice(1)}`;
+
 export interface ProductRecommendation {
   cleanser: string;
   coreSerum: string;
@@ -88,10 +100,18 @@ export interface RecommendationContext {
   };
 }
 
+export interface ConsideredConcern {
+  concern: ConcernKey;
+  subtype?: string;
+  band: BandColor;
+  label: string;
+}
+
 export interface EnhancedRecommendation extends ProductRecommendation {
   primaryConcern: string;
   concernBand: string;
   rationale?: string;
+  alsoConsidered?: ConsideredConcern[];
   serumCount: number;
   additionalSerums?: string[];
   notes: string[];
@@ -1068,7 +1088,14 @@ function routineToRecommendation(
   };
 
   if (otherConcerns.length) {
-    recommendation.rationale = `Also considered: ${otherConcerns.map(c => `${c.concern} (${c.band})`).join(', ')}.`;
+    const alsoConsidered = otherConcerns.map(c => ({
+      concern: c.concern,
+      band: c.band,
+      subtype: c.subtype,
+      label: formatConcernTitle(c.concern),
+    }));
+    recommendation.alsoConsidered = alsoConsidered;
+    recommendation.rationale = `Also considered: ${alsoConsidered.map(c => `${c.label} (${c.band})`).join(', ')}.`;
   }
 
   try {

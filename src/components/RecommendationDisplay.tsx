@@ -9,7 +9,6 @@ import {
   Info,
   CalendarDays,
   Moon,
-  AlertTriangle,
   Star,
   ChevronDown,
   ChevronUp,
@@ -21,13 +20,24 @@ import { RoutineOptionsResponse, RoutineVariant } from "../services/recommendati
 import { PRODUCT_DATABASE, type ProductOption } from "../data/productDatabase";
 import { buildFacialProtocol, type FacialProfile, type FacialStep } from "../data/facialProtocol";
 import { cn } from "@/lib/utils";
+import type { BandColor } from "../data/concernMatrix";
 
 // Types and Constants
 type RoutineStepKey = "cleanser" | "coreSerum" | "secondarySerum" | "moisturizer" | "sunscreen";
 type PriceMode = "budget" | "luxury";
+type ViewMode = "routine" | "facial";
 
 const DAY_LABELS: Record<string, string> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun" };
 const DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+const BAND_BADGE_STYLES: Record<BandColor, string> = {
+  blue: "bg-blue-100 text-blue-900 border-blue-200 dark:bg-blue-900/60 dark:text-blue-100 dark:border-blue-500/60",
+  green: "bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-900/60 dark:text-emerald-100 dark:border-emerald-500/60",
+  yellow: "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-900/60 dark:text-amber-100 dark:border-amber-500/60",
+  red: "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-900/60 dark:text-rose-100 dark:border-rose-500/60",
+};
+
+const getBandBadgeClasses = (band: BandColor) => BAND_BADGE_STYLES[band] ?? BAND_BADGE_STYLES.blue;
+const formatBandLabel = (band: BandColor) => `${band.charAt(0).toUpperCase()}${band.slice(1)}`;
 
 // Main Component
 interface RecommendationDisplayProps {
@@ -55,6 +65,7 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({
   const initialIndex = routines.length ? Math.min(recommendation.selectedIndex ?? 0, routines.length - 1) : 0;
 
   const [priceMode, setPriceMode] = useState<PriceMode>("budget");
+  const [viewMode, setViewMode] = useState<ViewMode>("routine");
   const [expandedIndex, setExpandedIndex] = useState(initialIndex);
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
 
@@ -67,8 +78,9 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({
 
   useEffect(() => {
     if (!routines.length || selectedIndex < 0 || selectedIndex >= routines.length) return;
+    if (recommendation.selectedIndex === selectedIndex) return;
     onRoutineSelect?.(routines[selectedIndex], selectedIndex);
-  }, [onRoutineSelect, routines, selectedIndex]);
+  }, [recommendation.selectedIndex, onRoutineSelect, routines, selectedIndex]);
 
   const activeRoutine = routines[selectedIndex] ?? routines[0];
   const facialSteps = clientProfile ? buildFacialProtocol(clientProfile) : [];
@@ -90,31 +102,46 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({
     if (!routine || !routine.available) return;
     setSelectedIndex(index);
     setExpandedIndex(index);
-    onRoutineSelect?.(routine, index);
   };
 
   return (
     <div className="space-y-8">
-      <PriceToggle mode={priceMode} onModeChange={setPriceMode} />
+      <RecommendationTabs
+        mode={priceMode}
+        onModeChange={setPriceMode}
+        viewMode={viewMode}
+        onViewChange={setViewMode}
+      />
       <RecommendationHeader routine={activeRoutine} userName={userName} />
 
-      {facialSteps.length > 0 && <FacialProtocolSection steps={facialSteps} />}
+      {viewMode === "facial" ? (
+        facialSteps.length > 0 ? (
+          <FacialProtocolPanel steps={facialSteps} />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Facial Treatment Products</CardTitle>
+              <CardDescription>No facial protocol available for this consultation.</CardDescription>
+            </CardHeader>
+          </Card>
+        )
+      ) : (
+        <div className="space-y-4">
+          {routines.map((routine, index) => (
+            <RoutineCard
+              key={routine.type}
+              routine={routine}
+              priceMode={priceMode}
+              isExpanded={expandedIndex === index}
+              isSelected={selectedIndex === index}
+              onToggleExpand={() => handleToggleExpand(index)}
+              onSelect={() => handleSelectRoutine(index)}
+            />
+          ))}
+        </div>
+      )}
 
-      <div className="space-y-4">
-        {routines.map((routine, index) => (
-          <RoutineCard
-            key={routine.type}
-            routine={routine}
-            priceMode={priceMode}
-            isExpanded={expandedIndex === index}
-            isSelected={selectedIndex === index}
-            onToggleExpand={() => handleToggleExpand(index)}
-            onSelect={() => handleSelectRoutine(index)}
-          />
-        ))}
-      </div>
-
-      <GeneralAdvice />
+      {viewMode === "routine" && <GeneralAdvice />}
 
       <ActionButtons
         onSubmit={onSubmit}
@@ -127,41 +154,105 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({
 };
 
 // Sub-components
-const PriceToggle: React.FC<{ mode: PriceMode; onModeChange: (mode: PriceMode) => void }> = ({ mode, onModeChange }) => (
-  <div className="flex items-center justify-center">
-    <div className="inline-flex rounded-md bg-muted p-1">
-      <Button variant={mode === 'budget' ? 'default' : 'ghost'} size="sm" onClick={() => onModeChange('budget')}>
-        Budget-Friendly
-      </Button>
-      <Button variant={mode === 'luxury' ? 'default' : 'ghost'} size="sm" onClick={() => onModeChange('luxury')}>
-        Luxury
-      </Button>
-    </div>
-  </div>
-);
+const RecommendationTabs: React.FC<{
+  mode: PriceMode;
+  onModeChange: (mode: PriceMode) => void;
+  viewMode: ViewMode;
+  onViewChange: (mode: ViewMode) => void;
+}> = ({ mode, onModeChange, viewMode, onViewChange }) => {
+  const buildVariant = (tab: ViewMode | PriceMode) => {
+    if (tab === 'facial') return viewMode === 'facial' ? 'default' : 'ghost';
+    const isSelected = viewMode === 'routine' && mode === tab;
+    return isSelected ? 'default' : 'ghost';
+  };
 
-const RecommendationHeader: React.FC<{ routine: RoutineVariant; userName: string }> = ({ routine, userName }) => (
-  <header className="space-y-2 text-center">
-    <h1 className="text-3xl font-bold tracking-tight">
-      {userName.split(" ")[0]}'s Recommendations
-    </h1>
-    <p className="text-muted-foreground">
-      Selected: <span className="font-semibold text-primary">{routine.label}</span>
-    </p>
-    {routine.rationale && (
-      <div className="mx-auto max-w-2xl">
-        <Card className="bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-200">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <Info className="mt-1 h-4 w-4 flex-shrink-0" />
-              <p className="text-sm">{routine.rationale}</p>
-            </div>
-          </CardContent>
-        </Card>
+  return (
+    <div className="flex items-center justify-center">
+      <div className="inline-flex rounded-full bg-muted p-1">
+        <Button
+          variant={buildVariant('budget')}
+          size="sm"
+          className="rounded-full px-4"
+          onClick={() => {
+            onViewChange('routine');
+            onModeChange('budget');
+          }}
+        >
+          Budget-Friendly
+        </Button>
+        <Button
+          variant={buildVariant('luxury')}
+          size="sm"
+          className="rounded-full px-4"
+          onClick={() => {
+            onViewChange('routine');
+            onModeChange('luxury');
+          }}
+        >
+          Luxury
+        </Button>
+        <Button
+          variant={buildVariant('facial')}
+          size="sm"
+          className="rounded-full px-4"
+          onClick={() => onViewChange('facial')}
+        >
+          Facial
+        </Button>
       </div>
-    )}
-  </header>
-);
+    </div>
+  );
+};
+
+const RecommendationHeader: React.FC<{ routine: RoutineVariant; userName: string }> = ({ routine, userName }) => {
+  const hasAlsoConsidered = Boolean(routine.alsoConsidered?.length);
+  const fallbackRationale = hasAlsoConsidered ? undefined : routine.rationale;
+
+  return (
+    <header className="space-y-2 text-center">
+      <h1 className="text-3xl font-bold tracking-tight">
+        {userName.split(" ")[0]}'s Recommendations
+      </h1>
+      <p className="text-muted-foreground">
+        Selected: <span className="font-semibold text-primary">{routine.label}</span>
+      </p>
+      {(hasAlsoConsidered || fallbackRationale) && (
+        <div className="mx-auto max-w-3xl">
+          <Card className="bg-muted border-border text-muted-foreground dark:bg-surface-900 dark:border-border/40">
+            <CardContent className="pt-1.5 pb-1 px-4">
+              <div className="flex items-center gap-3 text-left min-h-[40px]">
+                <Info className="h-4 w-4 text-muted-foreground/70 flex-shrink-0 self-center" />
+                <div className="flex-1">
+                  {hasAlsoConsidered && (
+                    <>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
+                        Also considered
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-0.5">
+                        {routine.alsoConsidered!.map(concern => (
+                          <span
+                            key={`${concern.concern}-${concern.band}-${concern.subtype ?? "none"}`}
+                            className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground border-border")}
+                          >
+                            {concern.label}
+                            <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+                              {formatBandLabel(concern.band)}
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {fallbackRationale && <p className="text-sm mt-1">{fallbackRationale}</p>}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </header>
+  );
+};
 
 const RoutineCard: React.FC<{
   routine: RoutineVariant;
@@ -371,41 +462,47 @@ const GeneralAdvice: React.FC = () => (
   </div>
 );
 
-const FacialProtocolSection: React.FC<{ steps: FacialStep[] }> = ({ steps }) => (
-  <Card className="border-primary/10 bg-card">
-    <CardHeader>
-      <CardTitle>Facial Treatment Products</CardTitle>
-      <CardDescription>Exactly what we’ll use in the cabin facial, tailored from the intake.</CardDescription>
-    </CardHeader>
-    <CardContent>
-      <ul className="divide-y divide-border">
-        {steps.map(step => (
-          <li key={step.step} className="py-3 space-y-1">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Step {step.step} · {step.title}
-                </p>
-                <p className="text-base font-semibold text-foreground">{step.product}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="whitespace-nowrap">
-                  {step.productType}
-                </Badge>
-                {step.skipped && (
-                  <span className="flex items-center gap-1 text-amber-600 text-xs font-semibold">
-                    <AlertTriangle className="h-4 w-4" />
-                    Skip
-                  </span>
-                )}
-              </div>
+const FacialProtocolPanel: React.FC<{ steps: FacialStep[] }> = ({ steps }) => (
+  <section className="space-y-6">
+    <Card className="border-primary/10 bg-card">
+      <CardHeader>
+        <CardTitle>Facial Treatment Products</CardTitle>
+        <CardDescription>Exactly what we’ll use in the cabin facial, tailored from the intake.</CardDescription>
+      </CardHeader>
+    </Card>
+    <div className="grid gap-4 md:grid-cols-2">
+      {steps.map(step => (
+        <div
+          key={step.step}
+          className={cn(
+            "rounded-2xl border bg-gradient-to-br from-white to-muted/30 p-5 shadow-sm transition hover:shadow-md",
+            step.skipped && "opacity-60"
+          )}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
+                Step {step.step} · {step.title}
+              </p>
+              <h3 className="mt-1 text-xl font-semibold leading-tight text-foreground">{step.product}</h3>
+              <p className="text-sm text-muted-foreground">{step.productType}</p>
             </div>
-            {step.remarks && <p className="text-sm text-muted-foreground">{step.remarks}</p>}
-          </li>
-        ))}
-      </ul>
-    </CardContent>
-  </Card>
+            <div className="flex flex-col items-end gap-2">
+              <Badge variant="secondary" className="rounded-full">
+                {step.productType}
+              </Badge>
+              {step.skipped && (
+                <span className="text-xs font-semibold uppercase tracking-wide text-amber-600">Skip</span>
+              )}
+            </div>
+          </div>
+          {step.remarks && (
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{step.remarks}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
 );
 
 const ActionButtons: React.FC<Pick<RecommendationDisplayProps, 'onSubmit' | 'onComplete' | 'onBackToEdit' | 'submitting'>> = ({
