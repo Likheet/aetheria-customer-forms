@@ -20,6 +20,7 @@ import {
   getConcernMatrixLoadError,
 } from '../data/concernMatrix';
 import RecommendationDisplay from './RecommendationDisplay';
+import type { FacialProfile } from '../data/facialProtocol';
 
 // Refactored form step components
 import {
@@ -594,6 +595,13 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
   const [isMachineBandOpen, setIsMachineBandOpen] = useState(true);
   const [isEffectiveBandOpen, setIsEffectiveBandOpen] = useState(true);
+  const clientProfile: FacialProfile = {
+    skinType: formData.skinType,
+    mainConcerns: Array.isArray(formData.mainConcerns) ? formData.mainConcerns : [],
+    concernPriority: Array.isArray(formData.concernPriority) ? formData.concernPriority : [],
+    sensitivityAnswer: formData.sensitivity,
+    sensitivityBand: computedSensitivity?.band || String(effectiveBands?.sensitivity || ''),
+  };
 
   useEffect(() => {
     setCalculatedAge(computeAgeFromDOB(formData.dateOfBirth));
@@ -2071,6 +2079,7 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
         <RecommendationDisplay 
           recommendation={recommendation}
           userName={formData.name || 'Guest'}
+          clientProfile={clientProfile}
           onComplete={onComplete}
           onSubmit={handleFinalizeSubmit}
           submitting={isSubmitting}
@@ -2270,6 +2279,8 @@ const UpdatedConsultForm: React.FC<UpdatedConsultFormProps> = ({ onBack, onCompl
       return (
         <RecommendationDisplay
           recommendation={recommendation}
+          userName={formData.name || 'Guest'}
+          clientProfile={clientProfile}
           onComplete={onComplete}
           onSubmit={handleFinalizeSubmit}
           submitting={isSubmitting}

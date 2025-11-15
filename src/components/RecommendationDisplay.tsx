@@ -19,6 +19,7 @@ import { Badge, badgeVariants } from "./ui/badge";
 import { Button } from "./ui/button";
 import { RoutineOptionsResponse, RoutineVariant } from "../services/recommendationEngine";
 import { PRODUCT_DATABASE, type ProductOption } from "../data/productDatabase";
+import { buildFacialProtocol, type FacialProfile, type FacialStep } from "../data/facialProtocol";
 import { cn } from "@/lib/utils";
 
 // Types and Constants
@@ -37,6 +38,7 @@ interface RecommendationDisplayProps {
   submitting?: boolean;
   onBackToEdit?: () => void;
   onRoutineSelect?: (routine: RoutineVariant, index: number) => void;
+  clientProfile?: FacialProfile;
 }
 
 const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({
@@ -47,6 +49,7 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({
   submitting,
   onBackToEdit,
   onRoutineSelect,
+  clientProfile,
 }) => {
   const routines = recommendation.routines;
   const initialIndex = routines.length ? Math.min(recommendation.selectedIndex ?? 0, routines.length - 1) : 0;
@@ -68,6 +71,7 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({
   }, [onRoutineSelect, routines, selectedIndex]);
 
   const activeRoutine = routines[selectedIndex] ?? routines[0];
+  const facialSteps = clientProfile ? buildFacialProtocol(clientProfile) : [];
 
   if (!routines.length || !activeRoutine) {
     return (
@@ -93,6 +97,8 @@ const RecommendationDisplay: React.FC<RecommendationDisplayProps> = ({
     <div className="space-y-8">
       <PriceToggle mode={priceMode} onModeChange={setPriceMode} />
       <RecommendationHeader routine={activeRoutine} userName={userName} />
+
+      {facialSteps.length > 0 && <FacialProtocolSection steps={facialSteps} />}
 
       <div className="space-y-4">
         {routines.map((routine, index) => (
@@ -363,6 +369,43 @@ const GeneralAdvice: React.FC = () => (
       </CardContent>
     </Card>
   </div>
+);
+
+const FacialProtocolSection: React.FC<{ steps: FacialStep[] }> = ({ steps }) => (
+  <Card className="border-primary/10 bg-card">
+    <CardHeader>
+      <CardTitle>Facial Treatment Products</CardTitle>
+      <CardDescription>Exactly what we’ll use in the cabin facial, tailored from the intake.</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <ul className="divide-y divide-border">
+        {steps.map(step => (
+          <li key={step.step} className="py-3 space-y-1">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Step {step.step} · {step.title}
+                </p>
+                <p className="text-base font-semibold text-foreground">{step.product}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="whitespace-nowrap">
+                  {step.productType}
+                </Badge>
+                {step.skipped && (
+                  <span className="flex items-center gap-1 text-amber-600 text-xs font-semibold">
+                    <AlertTriangle className="h-4 w-4" />
+                    Skip
+                  </span>
+                )}
+              </div>
+            </div>
+            {step.remarks && <p className="text-sm text-muted-foreground">{step.remarks}</p>}
+          </li>
+        ))}
+      </ul>
+    </CardContent>
+  </Card>
 );
 
 const ActionButtons: React.FC<Pick<RecommendationDisplayProps, 'onSubmit' | 'onComplete' | 'onBackToEdit' | 'submitting'>> = ({
