@@ -9,7 +9,6 @@ import React from 'react';
 import { User, Phone, Calendar, Users } from 'lucide-react';
 import { FormStep, TextInput, RadioGroup } from '../form';
 import { UpdatedConsultData } from '../../types';
-import { DatePickerInput } from '@mantine/dates';
 
 interface StepProps {
   formData: UpdatedConsultData;
@@ -82,35 +81,34 @@ PhoneStep.displayName = 'PhoneStep';
  * New code: 30 lines
  */
 export const DateOfBirthStep: React.FC<StepProps> = React.memo(({ formData, updateFormData, errors }) => {
-  const handleDateChange = (value: Date | string | null) => {
-    const date =
-      value instanceof Date
-        ? value
-        : typeof value === 'string' && value.trim()
-          ? new Date(value)
-          : null;
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value; // YYYY-MM-DD format from input
 
-    if (!date || Number.isNaN(date.getTime())) {
+    if (!value) {
       updateFormData({ dateOfBirth: '', calculatedAge: null });
       return;
     }
 
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    const formatted = `${yyyy}-${mm}-${dd}`;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      updateFormData({ dateOfBirth: '', calculatedAge: null });
+      return;
+    }
 
+    // Calculate age
     const today = new Date();
+    const yyyy = date.getFullYear();
     let age = today.getFullYear() - yyyy;
     const monthDiff = today.getMonth() - date.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
       age--;
     }
 
-    updateFormData({ dateOfBirth: formatted, calculatedAge: age });
+    updateFormData({ dateOfBirth: value, calculatedAge: age });
   };
 
-  const parsedDate = formData.dateOfBirth ? new Date(formData.dateOfBirth) : null;
+  // Get today's date in YYYY-MM-DD format for max attribute
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <FormStep
@@ -121,28 +119,12 @@ export const DateOfBirthStep: React.FC<StepProps> = React.memo(({ formData, upda
       centered
     >
       <div className="space-y-2 flex flex-col items-center w-full">
-        <DatePickerInput
-          value={parsedDate}
+        <input
+          type="date"
+          value={formData.dateOfBirth}
           onChange={handleDateChange}
-          placeholder="Select your date of birth"
-          maxDate={new Date()}
-          valueFormat="DD/MM/YYYY"
-          clearable
-          popoverProps={{
-            position: 'bottom',
-            withinPortal: true,
-            zIndex: 1000,
-          }}
-          classNames={{
-            input: 'w-full px-6 py-4 rounded-xl border-2 border-border bg-white text-foreground text-lg placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-center hover:border-primary/50 shadow-sm focus:shadow-md',
-          }}
-          styles={{
-            input: {
-              textAlign: 'center',
-              fontWeight: 500,
-            },
-          }}
-          className="w-full max-w-2xl"
+          max={today}
+          className="w-full max-w-2xl px-6 py-4 rounded-xl border-2 border-border bg-white text-foreground text-lg placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-center hover:border-primary/50 shadow-sm focus:shadow-md font-medium"
         />
         {formData.calculatedAge !== null && (
           <p className="text-sm text-muted-foreground/70 text-center">Age: {formData.calculatedAge} years</p>

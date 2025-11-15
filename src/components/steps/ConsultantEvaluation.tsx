@@ -1,6 +1,6 @@
 import React from 'react';
 import { StepProps } from '../../types';
-import FormStep from '../FormStep';
+import { FormStep } from '../form/FormStep';
 
 interface EvaluationSection {
   title: string;
