@@ -152,7 +152,7 @@ function App() {
 
   if (currentFlow === 'feedback') {
     if (showFeedbackWelcome) {
-      return <FeedbackWelcomePage onStart={handleStartFeedback} />;
+      return <FeedbackWelcomePage onStart={handleStartFeedback} onBack={handleGoHome} />;
     }
 
     return (

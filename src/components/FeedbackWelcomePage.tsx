@@ -1,16 +1,23 @@
 import React from 'react';
-import { Clock } from 'lucide-react';
+import { Clock, ArrowLeft } from 'lucide-react';
 import { Button } from './ui/button';
 
 interface FeedbackWelcomePageProps {
   onStart: () => void;
+  onBack: () => void;
 }
 
-const FeedbackWelcomePage: React.FC<FeedbackWelcomePageProps> = ({ onStart }) => {
+const FeedbackWelcomePage: React.FC<FeedbackWelcomePageProps> = ({ onStart, onBack }) => {
   return (
     <div className="luxury-shell">
       <div className="luxury-page items-center justify-center text-center">
         <div className="mx-auto max-w-lg space-y-6">
+          <div className="flex justify-start">
+            <Button variant="ghost" size="sm" className="gap-2" onClick={onBack}>
+              <ArrowLeft className="h-4 w-4" />
+              Back to Lounge
+            </Button>
+          </div>
           <h1>Client Feedback</h1>
           <p className="text-muted-foreground">
             Please share your feedback about your recent consultation.

@@ -110,7 +110,7 @@ const ClientSelectionPage: React.FC<ClientSelectionPageProps> = ({ onSelectClien
             key={consultation.session_id}
             className="flex flex-col transition-all duration-150 ease-in-out hover:shadow-md hover:-translate-y-1"
           >
-            <CardHeader className="flex flex-row items-center gap-4">
+            <CardHeader className="flex flex-row items-center gap-4 px-8 py-6 pb-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
                 <User className="h-5 w-5 text-muted-foreground" />
               </div>
@@ -119,13 +119,13 @@ const ClientSelectionPage: React.FC<ClientSelectionPageProps> = ({ onSelectClien
                 <p className="text-sm text-muted-foreground">{consultation.customer_phone}</p>
               </div>
             </CardHeader>
-            <CardContent className="flex-grow">
+            <CardContent className="flex-grow px-8 pb-6 pt-0">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
                 <span>{formatDate(consultation.created_at || '')}</span>
               </div>
             </CardContent>
-            <div className="border-t p-4">
+            <div className="border-t px-8 py-6">
               <Button
                 variant="outline"
                 className="w-full"

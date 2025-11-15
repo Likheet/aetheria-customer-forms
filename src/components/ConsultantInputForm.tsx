@@ -13,7 +13,7 @@ import VisualScalpType from './steps/consultant/VisualScalpType';
 import HairFallSeverity from './steps/consultant/HairFallSeverity';
 import DensityObservation from './steps/consultant/DensityObservation';
 import TextureAndEnds from './steps/consultant/TextureAndEnds';
-import { CheckCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -152,6 +152,12 @@ const ConsultantInputForm: React.FC<{ onBack: () => void; onComplete: () => void
     <div className="luxury-shell">
       <div className="luxury-page-form">
         <header className="space-y-4">
+          <div className="flex justify-start">
+            <Button variant="ghost" size="sm" className="gap-2" onClick={onBack}>
+              <ArrowLeft className="h-4 w-4" />
+              Back to Lounge
+            </Button>
+          </div>
           <div className="text-center">
             <h1 className="text-2xl font-bold">Consultant Input</h1>
             <p className="text-muted-foreground">Enter your observations and recommendations.</p>
